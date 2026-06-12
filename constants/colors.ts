@@ -1,0 +1,15 @@
+export const C = {
+  bg:       '#F2F0ED',
+  navy:     '#1B2B4A',
+  blue:     '#1B4FD8',
+  white:    '#FFFFFF',
+  slate100: '#F1F5F9',
+  slate200: '#E2E8F0',
+  slate400: '#94A3B8',
+  slate500: '#64748B',
+  slate600: '#475569',
+  green400: '#4ADE80',
+  orange500:'#F97316',
+  red500:   '#EF4444',
+  purple600:'#9333EA',
+}
