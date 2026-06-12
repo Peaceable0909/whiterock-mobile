@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "149816206182",
+    "project_id": "whiterock-connect-730989",
+    "storage_bucket": "whiterock-connect-730989.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:149816206182:android:52819bf84edf456f29dea7",
+        "android_client_info": {
+          "package_name": "com.whiterock.connect"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB8RHe6HfkphXIJ7arJOsG42Wn2hs2_-9A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

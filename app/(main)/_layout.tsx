@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Tabs } from 'expo-router'
+import { Tabs, router } from 'expo-router'
 import { View, Text, StyleSheet } from 'react-native'
 import { Home, MessageCircle, Users, Bell, Bot } from 'lucide-react-native'
+import * as Notifications from 'expo-notifications'
 import { supabase } from '@/lib/supabase'
+import { registerForPush } from '@/lib/notifications'
 import { C } from '@/constants/colors'
 
 function TabIcon({ icon: Icon, focused, label }: { icon: any; focused: boolean; label: string }) {
@@ -34,6 +36,15 @@ export default function MainLayout() {
       }
     }
     fetchUnread()
+  }, [])
+
+  // Push notifications: register this device + open the app on tap
+  useEffect(() => {
+    registerForPush()
+    const sub = Notifications.addNotificationResponseReceivedListener(() => {
+      router.push('/(main)/notifications')
+    })
+    return () => sub.remove()
   }, [])
 
   return (
