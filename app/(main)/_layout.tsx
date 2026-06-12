@@ -75,6 +75,7 @@ export default function MainLayout() {
       {/* Hide nested screens from tab bar */}
       <Tabs.Screen name="messages/[id]" options={{ href: null }} />
       <Tabs.Screen name="students/[id]" options={{ href: null }} />
+      <Tabs.Screen name="notifications" options={{ href: null }} />
     </Tabs>
   )
 }

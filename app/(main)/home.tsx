@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
 import { useRouter } from 'expo-router'
-import { FileText, MessageCircle, Bot, Calendar, ChevronRight } from 'lucide-react-native'
+import { FileText, MessageCircle, Bot, Calendar, ChevronRight, Bell } from 'lucide-react-native'
 import { supabase } from '@/lib/supabase'
 import { C } from '@/constants/colors'
 
@@ -15,6 +15,7 @@ export default function HomeScreen() {
   const [agent, setAgent]   = useState<any>(null)
   const [convId, setConvId] = useState<string|null>(null)
   const [loading, setLoading] = useState(true)
+  const [notifUnread, setNotifUnread] = useState(0)
 
   useEffect(() => {
     const load = async () => {
@@ -23,10 +24,21 @@ export default function HomeScreen() {
       const { data: dbUser } = await supabase.from('users').select('*').eq('id', authUser.id).single()
       setUser(dbUser)
 
+      // live notification badge
+      const { count } = await supabase.from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', authUser.id).eq('is_read', false)
+      setNotifUnread(count ?? 0)
+
       if (dbUser?.role === 'student') {
         const { data: prof } = await supabase.from('student_profiles').select('*').eq('user_id', authUser.id).single()
         setProfile(prof)
-        const { data: conv } = await supabase.from('conversations').select('id, agent_id, counselor_id').eq('student_id', authUser.id).single()
+        // earliest thread = the agent thread (students may have extra staff threads now)
+        const { data: conv } = await supabase.from('conversations')
+          .select('id, agent_id, counselor_id')
+          .eq('student_id', authUser.id)
+          .order('created_at', { ascending: true })
+          .limit(1).maybeSingle()
         if (conv) {
           setConvId(conv.id)
           const staffId = conv.agent_id || conv.counselor_id
@@ -39,7 +51,28 @@ export default function HomeScreen() {
       setLoading(false)
     }
     load()
+
+    // bell badge updates live
+    let uid: string | null = null
+    supabase.auth.getUser().then(({ data: { user: u } }) => { uid = u?.id ?? null })
+    const sub = supabase.channel('home-notifs')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' },
+        payload => { if (uid && (payload.new as any).user_id === uid) setNotifUnread(n => n + 1) })
+      .subscribe()
+    return () => { supabase.removeChannel(sub) }
   }, [])
+
+  const BellButton = () => (
+    <TouchableOpacity style={s.bellBtn} accessibilityLabel="Notifications"
+      onPress={() => { setNotifUnread(0); router.push('/(main)/notifications' as any) }}>
+      <Bell size={20} color={C.slate500} />
+      {notifUnread > 0 && (
+        <View style={s.bellBadge}>
+          <Text style={s.bellBadgeText}>{notifUnread > 9 ? '9+' : notifUnread}</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  )
 
   if (loading) return <View style={s.center}><ActivityIndicator color={C.blue} size="large" /></View>
 
@@ -52,9 +85,12 @@ export default function HomeScreen() {
   if (isStudent) return (
     <ScrollView style={s.bg} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
       {/* Greeting */}
-      <View style={s.pt}>
-        <Text style={s.overline}>Dashboard Overview</Text>
-        <Text style={s.heading}>Welcome back, {firstName}.</Text>
+      <View style={[s.pt, { flexDirection: 'row', alignItems: 'flex-start' }]}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.overline}>Dashboard Overview</Text>
+          <Text style={s.heading}>Welcome back, {firstName}.</Text>
+        </View>
+        <BellButton />
       </View>
 
       {/* Progress card */}
@@ -142,9 +178,12 @@ export default function HomeScreen() {
   // Staff home
   return (
     <ScrollView style={s.bg} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
-      <View style={s.pt}>
-        <Text style={s.overline}>Dashboard Overview</Text>
-        <Text style={s.heading}>Good morning, {firstName}.</Text>
+      <View style={[s.pt, { flexDirection: 'row', alignItems: 'flex-start' }]}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.overline}>Dashboard Overview</Text>
+          <Text style={s.heading}>Good morning, {firstName}.</Text>
+        </View>
+        <BellButton />
       </View>
       <View style={[s.card, { flexDirection: 'row', justifyContent: 'space-around' }]}>
         {[{ label: 'Students', val: '—' }, { label: 'Active', val: '—' }, { label: 'Pending', val: '—' }].map(stat => (
@@ -175,6 +214,9 @@ import { Users } from 'lucide-react-native'
 
 const s = StyleSheet.create({
   bg:          { flex: 1, backgroundColor: C.bg },
+  bellBtn:     { width: 44, height: 44, borderRadius: 14, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
+  bellBadge:   { position: 'absolute', top: 6, right: 6, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
+  bellBadgeText:{ fontSize: 9, fontWeight: '800', color: C.white },
   content:     { padding: 16, paddingBottom: 32 },
   center:      { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg },
   pt:          { paddingTop: 8, marginBottom: 16 },
