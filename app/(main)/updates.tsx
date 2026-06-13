@@ -3,7 +3,7 @@ import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
   ActivityIndicator, Image, Linking, RefreshControl,
 } from 'react-native'
-import { Video, ResizeMode } from 'expo-av'
+import { VideoView, useVideoPlayer } from 'expo-video'
 import {
   Bell, Heart, Bookmark, Share2, Eye, Megaphone,
   Award, GraduationCap, Globe, Tag, Calendar, Users, Mic, FileText,
@@ -43,6 +43,11 @@ const formatRelativeTime = (iso: string) => {
 
 const getInitials = (name: string) =>
   (name ?? '').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'WR'
+
+function UpdateVideoPlayer({ uri }: { uri: string }) {
+  const player = useVideoPlayer(uri)
+  return <VideoView player={player} style={c.mediaVideo} nativeControls allowsFullscreen />
+}
 
 export default function UpdatesScreen() {
   const [updates, setUpdates]   = useState<any[]>([])
@@ -155,13 +160,7 @@ export default function UpdatesScreen() {
 
         {/* Video */}
         {item.media_url && item.media_type === 'video' && (
-          <Video
-            source={{ uri: item.media_url }}
-            style={c.mediaVideo}
-            useNativeControls
-            resizeMode={ResizeMode.COVER}
-            shouldPlay={false}
-          />
+          <UpdateVideoPlayer uri={item.media_url} />
         )}
 
         {/* Audio */}

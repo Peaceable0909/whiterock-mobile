@@ -4,7 +4,7 @@ import {
   KeyboardAvoidingView, Platform, ActivityIndicator, Image, Linking, Alert,
 } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { Video, ResizeMode } from 'expo-av'
+import { VideoView, useVideoPlayer } from 'expo-video'
 import * as ImagePicker from 'expo-image-picker'
 import { ArrowLeft, Send, Bot, Paperclip, Check, CheckCheck, Ban, Mic, FileText } from 'lucide-react-native'
 import { supabase } from '@/lib/supabase'
@@ -23,6 +23,11 @@ const formatFileSize = (bytes: number) => {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function VideoMsg({ uri }: { uri: string }) {
+  const player = useVideoPlayer(uri)
+  return <VideoView player={player} style={ms.mediaVideo} nativeControls allowsFullscreen />
 }
 
 export default function ChatScreen() {
@@ -129,7 +134,7 @@ export default function ChatScreen() {
       return
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      mediaTypes: ['images', 'videos'],
       quality: 0.85,
       videoMaxDuration: 300, // 5 min
     })
@@ -218,13 +223,7 @@ export default function ChatScreen() {
               <Image source={{ uri: item.file_url }} style={ms.mediaImg} resizeMode="cover" />
             </TouchableOpacity>
           ) : item.type === 'video' && item.file_url ? (
-            <Video
-              source={{ uri: item.file_url }}
-              style={ms.mediaVideo}
-              useNativeControls
-              resizeMode={ResizeMode.CONTAIN}
-              shouldPlay={false}
-            />
+            <VideoMsg uri={item.file_url} />
           ) : item.type === 'voice' && item.file_url ? (
             <TouchableOpacity onPress={() => Linking.openURL(item.file_url)}
               style={ms.audioRow} activeOpacity={0.8}>
