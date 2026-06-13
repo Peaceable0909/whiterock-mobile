@@ -1,20 +1,48 @@
-import { useEffect, useState, useRef } from 'react'
-import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native'
+import { useEffect, useState, useRef, useCallback } from 'react'
+import {
+  View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Image, Linking, Alert,
+} from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { ArrowLeft, Send, Bot } from 'lucide-react-native'
+import { Video, ResizeMode } from 'expo-av'
+import * as ImagePicker from 'expo-image-picker'
+import { ArrowLeft, Send, Bot, Paperclip, Check, CheckCheck, Ban, Mic, FileText } from 'lucide-react-native'
 import { supabase } from '@/lib/supabase'
+import { uploadVideo } from '@/lib/cloudinary'
 import { C } from '@/constants/colors'
+
+const getInitials = (name: string) =>
+  (name ?? '').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || '?'
+
+const formatTime = (iso: string) => {
+  const d = new Date(iso)
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+const formatFileSize = (bytes: number) => {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
 
 export default function ChatScreen() {
   const { id }  = useLocalSearchParams<{ id: string }>()
   const router  = useRouter()
-  const [msgs, setMsgs]       = useState<any[]>([])
-  const [input, setInput]     = useState('')
-  const [myId, setMyId]       = useState('')
-  const [sending, setSending] = useState(false)
-  const [otherUser, setOther] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
   const listRef = useRef<FlatList>(null)
+
+  const [msgs, setMsgs]         = useState<any[]>([])
+  const [input, setInput]       = useState('')
+  const [myId, setMyId]         = useState('')
+  const [myRole, setMyRole]     = useState('student')
+  const [sending, setSending]   = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadPct, setUploadPct] = useState(0)
+  const [otherUser, setOther]   = useState<any>(null)
+  const [loading, setLoading]   = useState(true)
+
+  const scrollToEnd = useCallback(() => {
+    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100)
+  }, [])
 
   useEffect(() => {
     const load = async () => {
@@ -22,125 +50,348 @@ export default function ChatScreen() {
       if (!user) return
       setMyId(user.id)
 
-      const { data: conv } = await supabase.from('conversations')
-        .select('*, student:student_id(id,name,avatar_url,is_online), agent:agent_id(id,name,avatar_url), counselor:counselor_id(id,name,avatar_url)')
-        .eq('id', id).single()
+      const [{ data: conv }, { data: dbUser }, { data: history }] = await Promise.all([
+        supabase.from('conversations')
+          .select('*, student:student_id(id,name,avatar_url,is_online), agent:agent_id(id,name,avatar_url), counselor:counselor_id(id,name,avatar_url)')
+          .eq('id', id).single(),
+        supabase.from('users').select('role').eq('id', user.id).single(),
+        supabase.from('messages').select('*').eq('conversation_id', id).order('created_at', { ascending: true }),
+      ])
 
-      const { data: dbUser } = await supabase.from('users').select('role').eq('id', user.id).single()
       const role = dbUser?.role ?? 'student'
+      setMyRole(role)
       if (conv) {
-        const other = role === 'student' ? (conv.agent || conv.counselor) : conv.student
+        const other = role === 'student' ? (conv.counselor || conv.agent) : conv.student
         setOther(other)
       }
-
-      const { data: history } = await supabase.from('messages')
-        .select('*').eq('conversation_id', id).order('created_at', { ascending: true })
       setMsgs(history ?? [])
       setLoading(false)
+      scrollToEnd()
 
-      // Mark as read
-      const col = role === 'student' ? 'unread_student' : 'unread_staff'
-      await supabase.from('conversations').update({ [col]: 0 }).eq('id', id)
+      // Mark all received messages as read
+      await supabase.rpc('mark_conversation_read', { conv_id: id })
+      await supabase.from('conversations')
+        .update({ [role === 'student' ? 'unread_student' : 'unread_staff']: 0 })
+        .eq('id', id)
     }
     load()
 
-    // Realtime subscription
-    const sub = supabase.channel(`chat-${id}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${id}` },
-        payload => setMsgs(prev => [...prev, payload.new]))
+    // Real-time: new messages + edits/deletes/read-receipts
+    const sub = supabase.channel(`chat-mob-${id}`)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'messages',
+        filter: `conversation_id=eq.${id}`,
+      }, async (payload) => {
+        const msg = payload.new as any
+        setMsgs(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg])
+        scrollToEnd()
+        // Auto-mark as read since user is viewing chat
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user && msg.sender_id !== user.id) {
+          await supabase.rpc('mark_conversation_read', { conv_id: id })
+        }
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'messages',
+        filter: `conversation_id=eq.${id}`,
+      }, (payload) => {
+        const updated = payload.new as any
+        setMsgs(prev => prev.map(m => m.id === updated.id ? { ...m, ...updated } : m))
+      })
       .subscribe()
+
     return () => { supabase.removeChannel(sub) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   const sendMessage = async () => {
-    if (!input.trim() || sending) return
     const content = input.trim()
+    if (!content || sending) return
     setInput('')
     setSending(true)
-    await supabase.from('messages').insert({
-      conversation_id: id, sender_id: myId, content, message_type: 'text',
-    })
-    await supabase.from('conversations').update({ last_message: content, last_message_at: new Date().toISOString() }).eq('id', id)
+    const { data: saved } = await supabase.from('messages').insert({
+      conversation_id: id, sender_id: myId, content, type: 'text', is_ai: false,
+    }).select().single()
+    if (saved) setMsgs(prev => [...prev, saved])
+    await supabase.from('conversations').update({
+      last_message: content, last_message_at: new Date().toISOString(),
+      unread_staff: myRole === 'student' ? 1 : 0,
+      unread_student: myRole !== 'student' ? 1 : 0,
+    }).eq('id', id)
+    scrollToEnd()
     setSending(false)
   }
 
-  const getInitials = (name: string) => name?.split(' ').map((n:string) => n[0]).join('').slice(0, 2).toUpperCase() ?? '?'
+  const pickAndSendMedia = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (!permission.granted) {
+      Alert.alert('Permission needed', 'Allow access to your photos and videos in Settings.')
+      return
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      quality: 0.85,
+      videoMaxDuration: 300, // 5 min
+    })
+    if (result.canceled || !result.assets?.[0]) return
+    const asset = result.assets[0]
+    const isVideo = asset.type === 'video'
+    const mimeType = isVideo
+      ? (asset.mimeType ?? 'video/mp4')
+      : (asset.mimeType ?? 'image/jpeg')
+    const ext = asset.uri.split('.').pop() ?? (isVideo ? 'mp4' : 'jpg')
+    const fileName = `${isVideo ? 'video' : 'photo'}-${Date.now()}.${ext}`
+    const kind: string = isVideo ? 'video' : 'image'
 
-  if (loading) return <View style={s.center}><ActivityIndicator color={C.blue} /></View>
+    setUploading(true)
+    setUploadPct(0)
+    try {
+      let publicUrl: string
+      if (isVideo) {
+        publicUrl = await uploadVideo(asset.uri, mimeType, fileName, pct => setUploadPct(pct))
+      } else {
+        // Images → Supabase Storage
+        const path = `chat/${myId}/${Date.now()}.${ext}`
+        const blob = await fetch(asset.uri).then(r => r.blob())
+        const { error } = await supabase.storage.from('documents').upload(path, blob, { contentType: mimeType })
+        if (error) throw error
+        publicUrl = supabase.storage.from('documents').getPublicUrl(path).data.publicUrl
+      }
+
+      const content = isVideo ? '🎬 Video' : '📷 Photo'
+      const { data: saved } = await supabase.from('messages').insert({
+        conversation_id: id, sender_id: myId,
+        content, type: kind, file_url: publicUrl,
+        file_name: fileName, file_size: asset.fileSize ?? null,
+        is_ai: false,
+      }).select().single()
+      if (saved) setMsgs(prev => [...prev, saved])
+      await supabase.from('conversations').update({
+        last_message: content, last_message_at: new Date().toISOString(),
+      }).eq('id', id)
+      scrollToEnd()
+    } catch (err) {
+      Alert.alert('Upload failed', (err as Error).message)
+    } finally {
+      setUploading(false)
+      setUploadPct(0)
+    }
+  }
+
+  const renderMessage = ({ item }: { item: any }) => {
+    const isMe      = item.sender_id === myId
+    const isDeleted = !!item.deleted_at
+
+    return (
+      <View style={[ms.row, isMe ? ms.rowMe : ms.rowThem]}>
+        {!isMe && (
+          <View style={ms.avatar}>
+            {otherUser?.avatar_url
+              ? <Image source={{ uri: otherUser.avatar_url }} style={ms.avatarImg} />
+              : <Text style={ms.avatarText}>{getInitials(item.is_ai ? 'AI' : otherUser?.name ?? '')}</Text>}
+          </View>
+        )}
+
+        <View style={[ms.bubbleWrap, isMe ? ms.bubbleWrapMe : ms.bubbleWrapThem]}>
+          {/* Reply preview */}
+          {item.reply_to_id && !isDeleted && (
+            <View style={[ms.replyBar, isMe ? ms.replyBarMe : ms.replyBarThem]}>
+              <Text style={[ms.replyLabel, isMe && { color: 'rgba(255,255,255,0.7)' }]} numberOfLines={1}>
+                Replied to a message
+              </Text>
+            </View>
+          )}
+
+          {/* Forwarded label */}
+          {item.forwarded && !isDeleted && (
+            <Text style={[ms.forwardedLabel, !isMe && { color: C.slate400 }]}>↪ Forwarded</Text>
+          )}
+
+          {/* Content */}
+          {isDeleted ? (
+            <View style={ms.deletedRow}>
+              <Ban size={12} color={isMe ? 'rgba(255,255,255,0.5)' : C.slate400} />
+              <Text style={[ms.deletedText, isMe && ms.deletedTextMe]}>This message was deleted</Text>
+            </View>
+          ) : item.type === 'image' && item.file_url ? (
+            <TouchableOpacity onPress={() => Linking.openURL(item.file_url)} activeOpacity={0.85}>
+              <Image source={{ uri: item.file_url }} style={ms.mediaImg} resizeMode="cover" />
+            </TouchableOpacity>
+          ) : item.type === 'video' && item.file_url ? (
+            <Video
+              source={{ uri: item.file_url }}
+              style={ms.mediaVideo}
+              useNativeControls
+              resizeMode={ResizeMode.CONTAIN}
+              shouldPlay={false}
+            />
+          ) : item.type === 'voice' && item.file_url ? (
+            <TouchableOpacity onPress={() => Linking.openURL(item.file_url)}
+              style={ms.audioRow} activeOpacity={0.8}>
+              <View style={ms.audioIcon}><Mic size={16} color={isMe ? C.white : C.blue} /></View>
+              <Text style={[ms.audioLabel, isMe && ms.textMe]}>Voice note · tap to play</Text>
+            </TouchableOpacity>
+          ) : item.file_url ? (
+            <TouchableOpacity onPress={() => Linking.openURL(item.file_url)}
+              style={ms.fileRow} activeOpacity={0.8}>
+              <View style={[ms.fileIcon, isMe && ms.fileIconMe]}>
+                <FileText size={16} color={isMe ? C.white : C.blue} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[ms.fileName, isMe && ms.textMe]} numberOfLines={1}>{item.file_name ?? 'File'}</Text>
+                {item.file_size && (
+                  <Text style={[ms.fileSize, isMe && { color: 'rgba(255,255,255,0.65)' }]}>
+                    {formatFileSize(item.file_size)}
+                  </Text>
+                )}
+              </View>
+            </TouchableOpacity>
+          ) : (
+            <Text style={[ms.text, isMe && ms.textMe]}>{item.content ?? ''}</Text>
+          )}
+
+          {/* Timestamp + read receipt */}
+          <View style={[ms.meta, isMe ? ms.metaMe : ms.metaThem]}>
+            <Text style={[ms.time, isMe && ms.timeMe]}>
+              {formatTime(item.created_at)}
+              {item.edited_at && !isDeleted ? '  · edited' : ''}
+            </Text>
+            {isMe && !isDeleted && (
+              item.is_read
+                ? <CheckCheck size={13} color="#60A5FA" style={ms.tick} />
+                : <Check size={13} color="rgba(255,255,255,0.55)" style={ms.tick} />
+            )}
+          </View>
+        </View>
+      </View>
+    )
+  }
+
+  if (loading) return <View style={g.center}><ActivityIndicator color={C.blue} size="large" /></View>
 
   return (
-    <KeyboardAvoidingView style={s.bg} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
+    <KeyboardAvoidingView style={g.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
       {/* Header */}
-      <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+      <View style={g.header}>
+        <TouchableOpacity onPress={() => router.back()} style={g.backBtn}>
           <ArrowLeft size={22} color={C.navy} />
         </TouchableOpacity>
-        <View style={s.avatar}><Text style={s.avatarText}>{getInitials(otherUser?.name ?? '')}</Text></View>
+        <View style={g.headerAvatar}>
+          {otherUser?.avatar_url
+            ? <Image source={{ uri: otherUser.avatar_url }} style={g.headerAvatarImg} />
+            : <Text style={g.headerAvatarText}>{getInitials(otherUser?.name ?? 'WR')}</Text>}
+        </View>
         <View style={{ flex: 1 }}>
-          <Text style={s.headerName}>{otherUser?.name ?? 'Chat'}</Text>
-          <View style={s.onlineRow}><View style={s.dot} /><Text style={s.onlineText}>Online</Text></View>
+          <Text style={g.headerName} numberOfLines={1}>
+            {myRole === 'student' ? (otherUser?.name ?? 'WhiteRock Counseling') : (otherUser?.name ?? 'Student')}
+          </Text>
+          <View style={g.onlineRow}>
+            {otherUser?.is_online && <View style={g.onlineDot} />}
+            <Text style={g.onlineTxt}>{otherUser?.is_online ? 'Online' : 'Tap for info'}</Text>
+          </View>
         </View>
       </View>
 
       {/* Messages */}
       <FlatList
-        ref={listRef} data={msgs} keyExtractor={m => m.id}
-        style={s.list} contentContainerStyle={s.listContent}
-        onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
-        renderItem={({ item }) => {
-          const isMe = item.sender_id === myId
-          return (
-            <View style={[s.msgWrap, isMe ? s.msgWrapMe : s.msgWrapThem]}>
-              {!isMe && <View style={s.msgAvatar}><Text style={s.msgAvatarText}>{getInitials(otherUser?.name ?? '')}</Text></View>}
-              <View style={[s.bubble, isMe ? s.bubbleMe : s.bubbleThem]}>
-                <Text style={[s.bubbleText, isMe && s.bubbleTextMe]}>{item.content}</Text>
-              </View>
-            </View>
-          )
-        }}
+        ref={listRef}
+        data={msgs}
+        keyExtractor={m => m.id}
+        style={{ flex: 1, backgroundColor: '#F1F5F9' }}
+        contentContainerStyle={{ padding: 12, paddingBottom: 8 }}
+        renderItem={renderMessage}
+        onContentSizeChange={scrollToEnd}
       />
 
+      {/* Upload progress */}
+      {uploading && (
+        <View style={g.progressBar}>
+          <View style={[g.progressFill, { width: `${uploadPct}%` }]} />
+          <Text style={g.progressTxt}>{uploadPct}%</Text>
+        </View>
+      )}
+
       {/* Input */}
-      <View style={s.inputBar}>
+      <View style={g.bar}>
+        <TouchableOpacity onPress={pickAndSendMedia} disabled={uploading} style={g.attach}>
+          <Paperclip size={20} color={uploading ? C.slate300 : C.slate500} />
+        </TouchableOpacity>
         <TextInput
-          style={s.input} value={input} onChangeText={setInput}
+          style={g.input} value={input} onChangeText={setInput}
           placeholder="Type a message…" placeholderTextColor={C.slate400}
-          multiline maxLength={500}
-          onSubmitEditing={sendMessage} blurOnSubmit={false}
+          multiline maxLength={2000}
         />
-        <TouchableOpacity style={[s.sendBtn, !input.trim() && s.sendBtnDisabled]} onPress={sendMessage} disabled={!input.trim() || sending}>
-          {sending ? <ActivityIndicator color={C.white} size="small" /> : <Send size={18} color={C.white} />}
+        <TouchableOpacity
+          style={[g.sendBtn, (!input.trim() || sending) && g.sendBtnOff]}
+          onPress={sendMessage}
+          disabled={!input.trim() || sending}>
+          {sending
+            ? <ActivityIndicator color={C.white} size="small" />
+            : <Send size={18} color={C.white} />}
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   )
 }
 
-const s = StyleSheet.create({
-  bg:           { flex: 1, backgroundColor: C.bg },
-  center:       { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg },
-  header:       { flexDirection: 'row', alignItems: 'center', backgroundColor: C.white, paddingTop: 52, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderColor: C.slate100 },
-  backBtn:      { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
-  avatar:       { width: 40, height: 40, borderRadius: 20, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
-  avatarText:   { color: C.white, fontWeight: '700', fontSize: 14 },
-  headerName:   { fontSize: 15, fontWeight: '700', color: C.navy },
-  onlineRow:    { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
-  dot:          { width: 6, height: 6, borderRadius: 3, backgroundColor: C.green400, marginRight: 4 },
-  onlineText:   { fontSize: 11, color: C.slate500 },
-  list:         { flex: 1 },
-  listContent:  { padding: 14, paddingBottom: 8 },
-  msgWrap:      { flexDirection: 'row', marginBottom: 10 },
-  msgWrapMe:    { justifyContent: 'flex-end' },
-  msgWrapThem:  { justifyContent: 'flex-start' },
-  msgAvatar:    { width: 28, height: 28, borderRadius: 14, backgroundColor: C.slate200, alignItems: 'center', justifyContent: 'center', marginRight: 6, alignSelf: 'flex-end' },
-  msgAvatarText:{ fontSize: 11, fontWeight: '700', color: C.slate600 },
-  bubble:       { maxWidth: '78%', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18 },
-  bubbleMe:     { backgroundColor: C.blue, borderBottomRightRadius: 4 },
-  bubbleThem:   { backgroundColor: C.white, borderBottomLeftRadius: 4, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
-  bubbleText:   { fontSize: 14, color: C.navy, lineHeight: 20 },
-  bubbleTextMe: { color: C.white },
-  inputBar:     { flexDirection: 'row', alignItems: 'flex-end', padding: 12, backgroundColor: C.white, borderTopWidth: 1, borderColor: C.slate100 },
-  input:        { flex: 1, backgroundColor: C.bg, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, fontSize: 14, color: C.navy, maxHeight: 100, marginRight: 8 },
-  sendBtn:      { width: 40, height: 40, borderRadius: 20, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
-  sendBtnDisabled: { opacity: 0.4 },
+// ─── Message bubble styles ────────────────────────────────────────────────────
+const ms = StyleSheet.create({
+  row:           { flexDirection: 'row', marginBottom: 10, alignItems: 'flex-end' },
+  rowMe:         { justifyContent: 'flex-end' },
+  rowThem:       { justifyContent: 'flex-start' },
+  avatar:        { width: 28, height: 28, borderRadius: 14, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', marginRight: 6, flexShrink: 0 },
+  avatarImg:     { width: 28, height: 28, borderRadius: 14 },
+  avatarText:    { fontSize: 10, fontWeight: '700', color: C.white },
+  bubbleWrap:    { maxWidth: '78%', borderRadius: 18, overflow: 'hidden' },
+  bubbleWrapMe:  { backgroundColor: C.blue, borderBottomRightRadius: 4 },
+  bubbleWrapThem:{ backgroundColor: C.white, borderBottomLeftRadius: 4, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
+  replyBar:      { borderLeftWidth: 3, borderColor: 'rgba(255,255,255,0.5)', backgroundColor: 'rgba(0,0,0,0.1)', paddingHorizontal: 8, paddingVertical: 4, marginBottom: 4 },
+  replyBarThem:  { borderColor: C.blue, backgroundColor: '#EFF6FF' },
+  replyBarMe:    {},
+  replyLabel:    { fontSize: 11, color: C.white, fontStyle: 'italic' },
+  forwardedLabel:{ fontSize: 11, color: 'rgba(255,255,255,0.65)', fontStyle: 'italic', paddingHorizontal: 12, paddingTop: 8 },
+  text:          { fontSize: 14, color: C.navy, lineHeight: 20, paddingHorizontal: 14, paddingVertical: 10 },
+  textMe:        { color: C.white },
+  deletedRow:    { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 10 },
+  deletedText:   { fontSize: 13, color: C.slate400, fontStyle: 'italic' },
+  deletedTextMe: { color: 'rgba(255,255,255,0.55)' },
+  mediaImg:      { width: 220, height: 180, borderRadius: 14 },
+  mediaVideo:    { width: 240, height: 160, borderRadius: 12, backgroundColor: '#000' },
+  audioRow:      { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 10 },
+  audioIcon:     { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  audioLabel:    { fontSize: 13, color: C.navy },
+  fileRow:       { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 10 },
+  fileIcon:      { width: 36, height: 36, borderRadius: 10, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center' },
+  fileIconMe:    { backgroundColor: 'rgba(255,255,255,0.2)' },
+  fileName:      { fontSize: 13, fontWeight: '600', color: C.navy },
+  fileSize:      { fontSize: 11, color: C.slate400 },
+  meta:          { flexDirection: 'row', alignItems: 'center', gap: 3, paddingBottom: 6 },
+  metaMe:        { justifyContent: 'flex-end', paddingRight: 10 },
+  metaThem:      { paddingLeft: 12 },
+  time:          { fontSize: 10, color: C.slate400 },
+  timeMe:        { color: 'rgba(255,255,255,0.6)' },
+  tick:          { marginLeft: 2 },
+})
+
+// ─── Global / header styles ───────────────────────────────────────────────────
+const g = StyleSheet.create({
+  flex:           { flex: 1, backgroundColor: '#F1F5F9' },
+  center:         { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F5F9' },
+  header:         { flexDirection: 'row', alignItems: 'center', backgroundColor: C.white, paddingTop: 52, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderColor: C.slate100 },
+  backBtn:        { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', marginRight: 6 },
+  headerAvatar:   { width: 38, height: 38, borderRadius: 19, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', marginRight: 10, overflow: 'hidden' },
+  headerAvatarImg:{ width: 38, height: 38, borderRadius: 19 },
+  headerAvatarText:{ fontSize: 13, fontWeight: '700', color: C.white },
+  headerName:     { fontSize: 15, fontWeight: '700', color: C.navy },
+  onlineRow:      { flexDirection: 'row', alignItems: 'center', marginTop: 2, gap: 4 },
+  onlineDot:      { width: 6, height: 6, borderRadius: 3, backgroundColor: '#22C55E' },
+  onlineTxt:      { fontSize: 11, color: C.slate500 },
+  progressBar:    { height: 4, backgroundColor: C.slate100, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12 },
+  progressFill:   { height: 4, backgroundColor: C.blue, borderRadius: 2, position: 'absolute', left: 0, top: 0 },
+  progressTxt:    { fontSize: 10, color: C.slate400, marginLeft: 'auto' },
+  bar:            { flexDirection: 'row', alignItems: 'flex-end', padding: 10, paddingBottom: Platform.OS === 'ios' ? 28 : 10, backgroundColor: C.white, borderTopWidth: 1, borderColor: C.slate100, gap: 8 },
+  attach:         { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
+  input:          { flex: 1, backgroundColor: '#F1F5F9', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: C.navy, maxHeight: 100 },
+  sendBtn:        { width: 38, height: 38, borderRadius: 19, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
+  sendBtnOff:     { opacity: 0.4 },
 })
