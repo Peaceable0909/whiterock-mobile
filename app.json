@@ -30,6 +30,12 @@
       "expo-router",
       "expo-secure-store",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow WhiteRock Connect to access your photos and videos to send them in chat."
+        }
+      ],
+      [
         "expo-notifications",
         {
           "color": "#1B2B4A"

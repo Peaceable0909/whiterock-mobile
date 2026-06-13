@@ -287,7 +287,7 @@ const c = StyleSheet.create({
   authorAvatar:  { width: 34, height: 34, borderRadius: 17, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   authorAvatarImg:{ width: 34, height: 34, borderRadius: 17 },
   authorInitials:{ fontSize: 12, fontWeight: '700', color: C.white },
-  authorName:    { fontSize: 12, fontWeight: '700', color: C.slate700 ?? C.navy },
+  authorName:    { fontSize: 12, fontWeight: '700', color: C.navy },
   authorTime:    { fontSize: 10, color: C.slate400, marginTop: 1 },
   catBadge:      { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20 },
   catText:       { fontSize: 9, fontWeight: '700', textTransform: 'capitalize' },
