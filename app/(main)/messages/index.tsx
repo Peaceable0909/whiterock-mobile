@@ -21,8 +21,13 @@ export default function MessagesScreen() {
       setRole(r)
 
       const { data } = r === 'student'
-        ? await supabase.from('conversations').select('*, agent:agent_id(id,name,avatar_url,is_online), counselor:counselor_id(id,name,avatar_url,is_online)').eq('student_id', user.id)
-        : await supabase.from('conversations').select('*, student:student_id(id,name,avatar_url,is_online)')
+        ? await supabase.from('conversations')
+            .select('*, agent:agent_id(id,name,avatar_url,is_online), counselor:counselor_id(id,name,avatar_url,is_online)')
+            .eq('student_id', user.id)
+        : await supabase.from('conversations')
+            .select('*, student:student_id(id,name,avatar_url,is_online)')
+            .or(`agent_id.eq.${user.id},counselor_id.eq.${user.id}`)
+            .order('last_message_at', { ascending: false, nullsFirst: false })
       setConvs(data ?? [])
       setLoading(false)
     }

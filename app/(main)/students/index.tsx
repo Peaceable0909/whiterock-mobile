@@ -27,10 +27,12 @@ export default function StudentsScreen() {
 
       if (r === 'student') { setLoading(false); return }
 
-      const { data } = await supabase.from('users')
-        .select('*, profile:student_profiles(*)')
-        .eq('role', 'student')
-      setStudents(data ?? [])
+      const { data: convData } = await supabase
+        .from('conversations')
+        .select('student:student_id(*, profile:student_profiles(*))')
+        .or(`agent_id.eq.${user.id},counselor_id.eq.${user.id}`)
+      const students = (convData ?? []).map((c: any) => c.student).filter(Boolean)
+      setStudents(students)
       setLoading(false)
     }
     load()

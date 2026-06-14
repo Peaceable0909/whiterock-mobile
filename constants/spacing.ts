@@ -1,0 +1,27 @@
+export const S = {
+  xs:   4,
+  sm:   8,
+  md:   12,
+  lg:   16,
+  xl:   20,
+  xxl:  24,
+  xxxl: 32,
+
+  screenPadding: 16,
+  cardPadding:   18,
+  cardGap:       12,
+  sectionGap:    24,
+  inputHeight:   48,
+  buttonHeight:  44,
+  avatarSm:      36,
+  avatarMd:      48,
+  avatarLg:      64,
+
+  radiusSm:   8,
+  radiusMd:   12,
+  radiusLg:   16,
+  radiusXl:   20,
+  radiusCard: 20,
+  radiusAuth: 24,
+  radiusFull: 9999,
+}
