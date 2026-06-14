@@ -10,11 +10,8 @@ import { GoogleSignin, statusCodes, isErrorWithCode } from '@react-native-google
 import { supabase } from '@/lib/supabase'
 import { C } from '@/constants/colors'
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Fill this in: Supabase Dashboard → Authentication → Providers → Google → "Client ID"
-// It looks like: 1234567890-xxxxxxxxxxxxxxxx.apps.googleusercontent.com
-const GOOGLE_WEB_CLIENT_ID = 'YOUR_GOOGLE_WEB_CLIENT_ID_HERE'
-// ─────────────────────────────────────────────────────────────────────────────
+// Supabase Google OAuth Web Client ID (configured in Supabase Auth → Providers → Google)
+const GOOGLE_WEB_CLIENT_ID = '247168518231-tf489dbnvcnv2951brfarre3bbqtdsal.apps.googleusercontent.com'
 
 GoogleSignin.configure({
   webClientId: GOOGLE_WEB_CLIENT_ID,
@@ -52,13 +49,6 @@ export default function LoginScreen() {
   }
 
   const handleGoogleSignIn = async () => {
-    if (GOOGLE_WEB_CLIENT_ID === 'YOUR_GOOGLE_WEB_CLIENT_ID_HERE') {
-      Alert.alert(
-        'Setup needed',
-        'A Google Web Client ID is required.\n\nGo to: Supabase Dashboard → Authentication → Providers → Google → copy the Client ID, then paste it into login.tsx.',
-      )
-      return
-    }
     try {
       setGoogleLoading(true)
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true })
