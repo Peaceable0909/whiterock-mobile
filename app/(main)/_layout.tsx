@@ -87,6 +87,7 @@ export default function MainLayout() {
       <Tabs.Screen name="messages/[id]" options={{ href: null }} />
       <Tabs.Screen name="students/[id]" options={{ href: null }} />
       <Tabs.Screen name="notifications" options={{ href: null }} />
+      <Tabs.Screen name="update-compose" options={{ href: null }} />
     </Tabs>
   )
 }
