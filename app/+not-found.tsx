@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router'
 import { supabase } from '@/lib/supabase'
 import { C } from '@/constants/colors'
 
-export default function Index() {
+export default function NotFound() {
   const router = useRouter()
 
   useEffect(() => {
