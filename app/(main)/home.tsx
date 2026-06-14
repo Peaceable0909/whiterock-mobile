@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
@@ -182,19 +182,16 @@ export default function HomeScreen() {
         </View>
         <BellButton />
       </View>
-      <View style={[s.card, { flexDirection: 'row', justifyContent: 'space-around' }]}>
-        {[{ label: 'Students', val: '—' }, { label: 'Active', val: '—' }, { label: 'Pending', val: '—' }].map(stat => (
-          <View key={stat.label} style={{ alignItems: 'center' }}>
-            <Text style={s.bigPct}>{stat.val}</Text>
-            <Text style={s.cardSub}>{stat.label}</Text>
-          </View>
-        ))}
-      </View>
+
+      {/* Real stats */}
+      <StaffStats userId={user?.id} />
+
       <View style={s.grid}>
         {([
-          { label: 'Messages', iconName: 'chatbubble-outline', route: '/(main)/messages/index' as const },
-          { label: 'Students', iconName: 'people-outline',     route: '/(main)/students/index' as const },
+          { label: 'Messages', iconName: 'chatbubble-outline',    route: '/(main)/messages/index' as const },
+          { label: 'Students', iconName: 'people-outline',        route: '/(main)/students/index' as const },
           { label: 'AI Tools', iconName: 'hardware-chip-outline', route: '/(main)/ai' as const },
+          { label: 'Updates',  iconName: 'newspaper-outline',     route: '/(main)/updates' as const },
         ] as const).map(({ label, iconName, route }) => (
           <TouchableOpacity key={label} style={s.gridCard} onPress={() => router.push(route)}>
             <Ionicons name={iconName} size={22} color={C.blue} />
@@ -202,9 +199,63 @@ export default function HomeScreen() {
           </TouchableOpacity>
         ))}
       </View>
+
+      {/* Logout */}
+      <TouchableOpacity style={s.logoutRow} onPress={async () => {
+        await supabase.auth.signOut()
+      }}>
+        <Ionicons name="log-out-outline" size={18} color={C.slate400} />
+        <Text style={s.logoutText}>Sign Out</Text>
+      </TouchableOpacity>
     </ScrollView>
   )
 }
+
+function StaffStats({ userId }: { userId?: string }) {
+  const [stats, setStats] = useState({ students: 0, active: 0, pendingDocs: 0 })
+  useEffect(() => {
+    if (!userId) return
+    const load = async () => {
+      const [{ data: convs }, { data: docs }] = await Promise.all([
+        supabase.from('conversations')
+          .select('id, student_id, last_message_at')
+          .or(`counselor_id.eq.${userId},agent_id.eq.${userId}`),
+        supabase.from('documents').select('id, status, student_id'),
+      ])
+      const studentIds = [...new Set((convs ?? []).map((c: any) => c.student_id))]
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+      const active = (convs ?? []).filter((c: any) => c.last_message_at && c.last_message_at > sevenDaysAgo).length
+      const pending = (docs ?? []).filter((d: any) => d.status === 'pending' && studentIds.includes(d.student_id)).length
+      setStats({ students: studentIds.length, active, pendingDocs: pending })
+    }
+    load()
+  }, [userId])
+
+  const items = [
+    { label: 'Students', val: stats.students, color: C.blue },
+    { label: 'Active',   val: stats.active,   color: '#059669' },
+    { label: 'Pending Docs', val: stats.pendingDocs, color: stats.pendingDocs > 0 ? '#F59E0B' : C.slate400 },
+  ]
+
+  return (
+    <View style={ss.statsCard}>
+      {items.map((item, i) => (
+        <View key={item.label} style={[ss.statItem, i < items.length - 1 && ss.statBorder]}>
+          <Text style={[ss.statNum, { color: item.color }]}>{item.val}</Text>
+          <Text style={ss.statLabel}>{item.label}</Text>
+        </View>
+      ))}
+    </View>
+  )
+}
+
+const ss = StyleSheet.create({
+  statsCard:  { flexDirection: 'row', backgroundColor: C.white, borderRadius: 20, paddingVertical: 16, marginBottom: 14, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  statItem:   { flex: 1, alignItems: 'center' },
+  statBorder: { borderRightWidth: 1, borderColor: C.slate100 },
+  statNum:    { fontSize: 28, fontWeight: '900' },
+  statLabel:  { fontSize: 11, color: C.slate400, fontWeight: '600', marginTop: 2 },
+})
 
 const s = StyleSheet.create({
   bg:          { flex: 1, backgroundColor: C.bg },
@@ -249,4 +300,6 @@ const s = StyleSheet.create({
   updateSub:   { fontSize: 12, color: C.slate400, marginTop: 2 },
   viewAll:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 14 },
   viewAllText: { fontSize: 12, fontWeight: '700', color: C.blue, marginRight: 2 },
+  logoutRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, marginTop: 4 },
+  logoutText:  { fontSize: 14, fontWeight: '600', color: C.slate400 },
 })

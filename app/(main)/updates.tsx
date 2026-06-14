@@ -4,6 +4,7 @@ import {
   ActivityIndicator, Image, Linking, RefreshControl,
 } from 'react-native'
 import { VideoView, useVideoPlayer } from 'expo-video'
+import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { C } from '@/constants/colors'
@@ -47,6 +48,7 @@ function UpdateVideoPlayer({ uri }: { uri: string }) {
 }
 
 export default function UpdatesScreen() {
+  const router = useRouter()
   const [updates, setUpdates]   = useState<any[]>([])
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set())
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
@@ -238,6 +240,8 @@ export default function UpdatesScreen() {
     )
   }
 
+  const canPost = myRole === 'counselor' || myRole === 'agent' || myRole === 'admin'
+
   if (loading) return <View style={g.center}><ActivityIndicator color={C.blue} size="large" /></View>
 
   return (
@@ -250,19 +254,28 @@ export default function UpdatesScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load() }} tintColor={C.blue} />}
         ListHeaderComponent={
           <View style={g.header}>
-            <Ionicons name="notifications-outline" size={20} color={C.blue} />
+            <Ionicons name="newspaper-outline" size={20} color={C.blue} />
             <Text style={g.headerTitle}>Updates</Text>
           </View>
         }
         ListEmptyComponent={
           <View style={g.empty}>
-            <Ionicons name="notifications-outline" size={44} color={C.slate200} />
+            <Ionicons name="newspaper-outline" size={44} color={C.slate200} />
             <Text style={g.emptyTitle}>No updates yet</Text>
             <Text style={g.emptySub}>Agency announcements will appear here</Text>
           </View>
         }
         renderItem={renderUpdate}
       />
+      {canPost && (
+        <TouchableOpacity
+          style={g.fab}
+          onPress={() => router.push('/(main)/update-compose' as any)}
+          accessibilityLabel="Create update"
+        >
+          <Ionicons name="add" size={26} color={C.white} />
+        </TouchableOpacity>
+      )}
     </View>
   )
 }
@@ -303,4 +316,5 @@ const g = StyleSheet.create({
   empty:       { alignItems: 'center', paddingTop: 80, gap: 8, paddingHorizontal: 32 },
   emptyTitle:  { fontSize: 15, fontWeight: '700', color: C.slate500 },
   emptySub:    { fontSize: 13, color: C.slate400, textAlign: 'center' },
+  fab:         { position: 'absolute', bottom: 20, right: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', elevation: 6, shadowColor: C.blue, shadowOpacity: 0.35, shadowRadius: 8 },
 })

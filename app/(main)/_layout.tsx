@@ -22,16 +22,18 @@ const ti = StyleSheet.create({
 
 export default function MainLayout() {
   const [unread, setUnread] = useState(0)
+  const [role, setRole]     = useState<string | null>(null)
 
   useEffect(() => {
     const fetchUnread = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       const { data: dbUser } = await supabase.from('users').select('role').eq('id', user.id).single()
-      const role = dbUser?.role ?? 'student'
+      const r = dbUser?.role ?? 'student'
+      setRole(r)
       const { data: convs } = await supabase.from('conversations').select('unread_student, unread_staff')
       if (convs) {
-        const total = convs.reduce((s, c) => s + (role === 'student' ? (c.unread_student ?? 0) : (c.unread_staff ?? 0)), 0)
+        const total = convs.reduce((s, c) => s + (r === 'student' ? (c.unread_student ?? 0) : (c.unread_staff ?? 0)), 0)
         setUnread(total)
       }
     }
@@ -41,11 +43,20 @@ export default function MainLayout() {
   // Push notifications: register this device + open the app on tap
   useEffect(() => {
     registerForPush()
-    const sub = Notifications.addNotificationResponseReceivedListener(() => {
-      router.push('/(main)/notifications')
+    const sub = Notifications.addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data as any
+      if (data?.screen === 'messages' && data?.convId) {
+        router.push(`/(main)/messages/${data.convId}` as any)
+      } else if (data?.screen === 'students' && data?.studentId) {
+        router.push(`/(main)/students/${data.studentId}` as any)
+      } else {
+        router.push('/(main)/notifications')
+      }
     })
     return () => sub.remove()
   }, [])
+
+  const isStudent = role === 'student'
 
   return (
     <Tabs screenOptions={{
@@ -73,11 +84,12 @@ export default function MainLayout() {
       }} />
       <Tabs.Screen name="students/index" options={{
         title: 'Students',
+        href: isStudent ? null : undefined,
         tabBarIcon: ({ focused }) => <TabIcon name="people-outline" focused={focused} />,
       }} />
       <Tabs.Screen name="updates" options={{
         title: 'Updates',
-        tabBarIcon: ({ focused }) => <TabIcon name="notifications-outline" focused={focused} />,
+        tabBarIcon: ({ focused }) => <TabIcon name="newspaper-outline" focused={focused} />,
       }} />
       <Tabs.Screen name="ai" options={{
         title: 'AI',
