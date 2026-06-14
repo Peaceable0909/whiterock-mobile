@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Image, Linking, RefreshControl,
+  ActivityIndicator, Image, Linking, RefreshControl, Share, Vibration,
   Modal, TextInput, KeyboardAvoidingView, Platform, ScrollView as RNScrollView,
 } from 'react-native'
 import { VideoView, useVideoPlayer } from 'expo-video'
@@ -114,6 +114,7 @@ export default function UpdatesScreen() {
   }, [viewedIds, myId])
 
   const toggleLike = async (updateId: string) => {
+    Vibration.vibrate(10)
     const isLiked = likedIds.has(updateId)
     setLikedIds(prev => {
       const next = new Set(prev)
@@ -170,9 +171,11 @@ export default function UpdatesScreen() {
 
   const shareUpdate = async (update: any) => {
     try {
-      const text = `${update.title}\n\n${update.content ?? ''}`
-      await Linking.openURL(`https://wa.me/?text=${encodeURIComponent(text)}`)
-    } catch { /* silent */ }
+      await Share.share({
+        title: update.title,
+        message: `${update.title}\n\n${update.content ?? ''}\n\n— WhiteRock Connect`,
+      })
+    } catch { /* user cancelled */ }
   }
 
   const renderUpdate = ({ item }: { item: any }) => {
@@ -442,8 +445,8 @@ const c = StyleSheet.create({
 })
 
 const g = StyleSheet.create({
-  flex:               { flex: 1, backgroundColor: '#F1F5F9' },
-  center:             { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F5F9' },
+  flex:               { flex: 1, backgroundColor: C.bg },
+  center:             { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg },
   header:             { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingTop: 56, paddingBottom: 14 },
   headerTitle:        { fontSize: 20, fontWeight: '800', color: C.navy },
   empty:              { alignItems: 'center', paddingTop: 80, gap: 8, paddingHorizontal: 32 },

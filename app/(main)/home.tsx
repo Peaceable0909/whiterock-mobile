@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native'
+import { useEffect, useState, useRef } from 'react'
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Animated } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
@@ -74,10 +74,19 @@ export default function HomeScreen() {
   if (loading) return <View style={s.center}><ActivityIndicator color={C.blue} size="large" /></View>
 
   const isStudent = user?.role === 'student'
-  const stageIdx  = profile ? (JOURNEY_STAGES.indexOf(profile.stage) ?? 0) : 0
+  const stageIdx  = profile ? Math.max(JOURNEY_STAGES.indexOf(profile.stage), 0) : 0
   const pct       = Math.round((stageIdx / (JOURNEY_STAGES.length - 1)) * 100)
   const firstName = (user?.name ?? 'User').split(' ')[0]
   const nextStage = JOURNEY_STAGES[stageIdx + 1]
+
+  const progressAnim = useRef(new Animated.Value(0)).current
+  useEffect(() => {
+    Animated.timing(progressAnim, {
+      toValue: pct / 100,
+      duration: 900,
+      useNativeDriver: false,
+    }).start()
+  }, [pct])
 
   if (isStudent) return (
     <ScrollView style={s.bg} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
@@ -111,7 +120,9 @@ export default function HomeScreen() {
           </View>
           <Text style={s.bigPct}>{pct}%</Text>
         </View>
-        <View style={s.barBg}><View style={[s.barFg, { width: `${Math.max(pct, 4)}%` as any }]} /></View>
+        <View style={s.barBg}>
+          <Animated.View style={[s.barFg, { width: progressAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }]} />
+        </View>
         <Text style={s.nextStep}>Next: <Text style={s.nextStepBold}>{STAGE_LABEL[nextStage] ?? 'Visa Decision'}</Text></Text>
         <TouchableOpacity style={s.btn}><Text style={s.btnText}>View Progress</Text></TouchableOpacity>
       </View>
@@ -129,7 +140,7 @@ export default function HomeScreen() {
               <View style={s.avatar}><Text style={s.avatarText}>{agent.name.split(' ').map((n:string)=>n[0]).join('').slice(0,2)}</Text></View>
               <View>
                 <Text style={s.agentName}>{agent.name}</Text>
-                <Text style={s.agentRole}>Senior Visa Consultant</Text>
+                <Text style={s.agentRole}>{agent.role === 'counselor' ? 'Senior Counselor' : agent.role === 'admin' ? 'Administrator' : 'Visa Agent'}</Text>
               </View>
             </View>
             {convId && (
@@ -150,11 +161,25 @@ export default function HomeScreen() {
           <Text style={s.gridTitle}>Upcoming Sessions</Text>
           <View style={s.gridBtn}><Text style={s.gridBtnText}>View Calendar</Text></View>
         </TouchableOpacity>
+        <TouchableOpacity style={s.gridCard} onPress={() => router.push('/(main)/documents' as any)}>
+          <Ionicons name="folder-outline" size={20} color={C.blue} />
+          <Text style={s.gridLabel}>Digital Vault</Text>
+          <Text style={s.gridTitle}>My Documents</Text>
+          <View style={s.gridBtn}><Text style={s.gridBtnText}>Open Vault</Text></View>
+        </TouchableOpacity>
+      </View>
+      <View style={[s.grid, { marginTop: 0 }]}>
         <TouchableOpacity style={s.gridCard} onPress={() => router.push('/(main)/ai')}>
           <Ionicons name="hardware-chip-outline" size={20} color={C.blue} />
           <Text style={s.gridLabel}>AI Assistant</Text>
           <Text style={s.gridSub}>Ask anything about visa laws...</Text>
           <View style={s.gridBtn}><Text style={s.gridBtnText}>Open AI</Text></View>
+        </TouchableOpacity>
+        <TouchableOpacity style={s.gridCard} onPress={() => router.push('/(main)/updates')}>
+          <Ionicons name="newspaper-outline" size={20} color={C.blue} />
+          <Text style={s.gridLabel}>Updates</Text>
+          <Text style={s.gridSub}>Latest news & announcements</Text>
+          <View style={s.gridBtn}><Text style={s.gridBtnText}>Read News</Text></View>
         </TouchableOpacity>
       </View>
 

@@ -5,8 +5,11 @@ import {
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import Constants from 'expo-constants'
 import { supabase } from '@/lib/supabase'
 import { C } from '@/constants/colors'
+
+const VERSION = Constants.expoConfig?.version ?? '1.0.0'
 
 export default function LoginScreen() {
   const router = useRouter()
@@ -37,8 +40,9 @@ export default function LoginScreen() {
       {/* Brand */}
       <View style={s.hero}>
         <View style={s.iconBox}>
-          <Ionicons name="school-outline" size={32} color="#fff" />
+          <Ionicons name="airplane-outline" size={30} color="#fff" />
         </View>
+        <Text style={s.wordmark}>WhiteRock Connect</Text>
         <Text style={s.title}>Welcome Back</Text>
         <Text style={s.subtitle}>Secure access to your global{'\n'}recruitment dashboard</Text>
       </View>
@@ -46,31 +50,33 @@ export default function LoginScreen() {
       {/* Card */}
       <View style={s.card}>
         <Text style={s.label}>EMAIL ADDRESS</Text>
-        <TextInput
-          style={s.input} value={email} onChangeText={setEmail}
-          placeholder="you@example.com" placeholderTextColor={C.slate400}
-          keyboardType="email-address" autoCapitalize="none" autoComplete="email"
-        />
+        <View style={s.inputWrap}>
+          <Ionicons name="mail-outline" size={16} color={C.slate400} style={s.inputIcon} />
+          <TextInput
+            style={s.input} value={email} onChangeText={setEmail}
+            placeholder="you@example.com" placeholderTextColor={C.slate400}
+            keyboardType="email-address" autoCapitalize="none" autoComplete="email"
+          />
+        </View>
 
         <Text style={[s.label, { marginTop: 16 }]}>PASSWORD</Text>
-        <View style={s.pwWrap}>
+        <View style={s.inputWrap}>
+          <Ionicons name="lock-closed-outline" size={16} color={C.slate400} style={s.inputIcon} />
           <TextInput
-            style={[s.input, { flex: 1, marginBottom: 0 }]}
+            style={[s.input, { flex: 1 }]}
             value={password} onChangeText={setPassword}
             placeholder="Enter your password" placeholderTextColor={C.slate400}
             secureTextEntry={!showPw} autoComplete="password"
           />
           <TouchableOpacity onPress={() => setShowPw(!showPw)} style={s.eyeBtn}>
-            {showPw
-              ? <Ionicons name="eye-off-outline" size={18} color={C.slate400} />
-              : <Ionicons name="eye-outline"     size={18} color={C.slate400} />}
+            <Ionicons name={showPw ? 'eye-off-outline' : 'eye-outline'} size={18} color={C.slate400} />
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity style={s.btn} onPress={handleLogin} disabled={loading}>
           {loading
             ? <ActivityIndicator color="#fff" />
-            : <Text style={s.btnText}>Login</Text>}
+            : <Text style={s.btnText}>Sign In</Text>}
         </TouchableOpacity>
 
         {/* OR divider */}
@@ -80,43 +86,54 @@ export default function LoginScreen() {
           <View style={s.dividerLine} />
         </View>
 
-        <TouchableOpacity style={s.googleBtn} onPress={() => Alert.alert('Google Sign-In', 'Use Google Sign-In via browser on the web app.')}>
-          <Text style={s.googleText}>Sign In With Google</Text>
+        <TouchableOpacity
+          style={s.googleBtn}
+          onPress={() => Alert.alert('Google Sign-In', 'Use the web app at whiterock-connect.vercel.app to sign in with Google.')}
+        >
+          <View style={s.googleG}>
+            <Text style={s.googleGText}>G</Text>
+          </View>
+          <Text style={s.googleText}>Continue with Google</Text>
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
+      <TouchableOpacity onPress={() => router.push('/(auth)/register')} style={s.switchRow}>
         <Text style={s.registerLink}>
-          New to WhiteRock Connect?{' '}
+          New to WhiteRock?{' '}
           <Text style={s.registerBold}>Create account</Text>
         </Text>
       </TouchableOpacity>
 
-      <Text style={s.version}>WhiteRock Connect v1.0.0{'\n'}Premium UK Student Placement</Text>
+      <Text style={s.version}>v{VERSION} · Premium UK Student Placement</Text>
     </ScrollView>
   )
 }
 
 const s = StyleSheet.create({
-  bg:          { flex: 1, backgroundColor: C.bg },
-  container:   { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  hero:        { alignItems: 'center', marginBottom: 28 },
-  iconBox:     { width: 64, height: 64, borderRadius: 18, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', marginBottom: 20, shadowColor: C.blue, shadowOpacity: 0.35, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
-  title:       { fontSize: 26, fontWeight: '800', color: C.navy, textAlign: 'center' },
-  subtitle:    { fontSize: 14, color: C.slate500, textAlign: 'center', marginTop: 8, lineHeight: 22 },
-  card:        { width: '100%', backgroundColor: C.white, borderRadius: 24, padding: 24, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3, marginBottom: 16 },
-  label:       { fontSize: 10, fontWeight: '800', color: C.slate500, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 },
-  input:       { height: 48, backgroundColor: C.bg, borderRadius: 12, paddingHorizontal: 16, fontSize: 14, color: C.navy, borderWidth: 1, borderColor: C.slate200, marginBottom: 4 },
-  pwWrap:      { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: C.slate200, borderRadius: 12, backgroundColor: C.bg, marginBottom: 4 },
-  eyeBtn:      { paddingHorizontal: 14 },
-  btn:         { height: 48, backgroundColor: C.blue, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 20, shadowColor: C.blue, shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 4 },
-  btnText:     { color: C.white, fontWeight: '700', fontSize: 15 },
-  divider:     { flexDirection: 'row', alignItems: 'center', marginVertical: 18 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: C.slate100 },
-  dividerText: { fontSize: 12, color: C.slate400, fontWeight: '600', marginHorizontal: 12 },
-  googleBtn:   { height: 48, backgroundColor: C.white, borderRadius: 12, borderWidth: 1, borderColor: C.slate200, alignItems: 'center', justifyContent: 'center' },
-  googleText:  { fontSize: 14, fontWeight: '600', color: C.navy },
-  registerLink:{ fontSize: 14, color: C.slate500, textAlign: 'center', marginTop: 8 },
-  registerBold:{ color: C.blue, fontWeight: '700' },
-  version:     { fontSize: 10, color: C.slate400, textAlign: 'center', marginTop: 24, lineHeight: 16 },
+  bg:           { flex: 1, backgroundColor: C.bg },
+  container:    { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  hero:         { alignItems: 'center', marginBottom: 28 },
+  iconBox:      { width: 72, height: 72, borderRadius: 22, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', marginBottom: 16, shadowColor: C.blue, shadowOpacity: 0.4, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 8 },
+  wordmark:     { fontSize: 13, fontWeight: '700', color: C.blue, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 },
+  title:        { fontSize: 28, fontWeight: '800', color: C.navy, textAlign: 'center' },
+  subtitle:     { fontSize: 14, color: C.slate500, textAlign: 'center', marginTop: 8, lineHeight: 22 },
+  card:         { width: '100%', backgroundColor: C.white, borderRadius: 24, padding: 24, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3, marginBottom: 16 },
+  label:        { fontSize: 10, fontWeight: '800', color: C.slate500, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 },
+  inputWrap:    { flexDirection: 'row', alignItems: 'center', height: 50, backgroundColor: C.bg, borderRadius: 14, borderWidth: 1, borderColor: C.slate200, marginBottom: 4 },
+  inputIcon:    { marginLeft: 14, marginRight: 4 },
+  input:        { flex: 1, height: 50, paddingHorizontal: 10, fontSize: 14, color: C.navy },
+  eyeBtn:       { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  btn:          { height: 52, backgroundColor: C.blue, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 20, shadowColor: C.blue, shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 5 },
+  btnText:      { color: C.white, fontWeight: '800', fontSize: 16 },
+  divider:      { flexDirection: 'row', alignItems: 'center', marginVertical: 20 },
+  dividerLine:  { flex: 1, height: 1, backgroundColor: C.slate100 },
+  dividerText:  { fontSize: 12, color: C.slate400, fontWeight: '600', marginHorizontal: 12 },
+  googleBtn:    { height: 52, backgroundColor: C.white, borderRadius: 14, borderWidth: 1.5, borderColor: C.slate200, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  googleG:      { width: 24, height: 24, borderRadius: 12, backgroundColor: '#4285F4', alignItems: 'center', justifyContent: 'center' },
+  googleGText:  { fontSize: 13, fontWeight: '800', color: C.white },
+  googleText:   { fontSize: 14, fontWeight: '600', color: C.navy },
+  switchRow:    { paddingVertical: 8 },
+  registerLink: { fontSize: 14, color: C.slate500, textAlign: 'center' },
+  registerBold: { color: C.blue, fontWeight: '700' },
+  version:      { fontSize: 10, color: C.slate400, textAlign: 'center', marginTop: 20, letterSpacing: 0.5 },
 })

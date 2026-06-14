@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import {
   View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ActivityIndicator, Image, Linking, Alert, AppState,
+  useWindowDimensions, Vibration,
 } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { VideoView, useVideoPlayer } from 'expo-video'
@@ -21,6 +22,17 @@ const formatTime = (iso: string) => {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
+const formatDateSep = (iso: string) => {
+  const d = new Date(iso)
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const yesterday = new Date(today.getTime() - 86400000)
+  const msgDay = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  if (msgDay.getTime() === today.getTime()) return 'Today'
+  if (msgDay.getTime() === yesterday.getTime()) return 'Yesterday'
+  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+}
+
 const formatFileSize = (bytes: number) => {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
@@ -33,9 +45,11 @@ function VideoMsg({ uri }: { uri: string }) {
 }
 
 export default function ChatScreen() {
-  const { id }  = useLocalSearchParams<{ id: string }>()
-  const router  = useRouter()
-  const listRef = useRef<FlatList>(null)
+  const { id }   = useLocalSearchParams<{ id: string }>()
+  const router   = useRouter()
+  const listRef  = useRef<FlatList>(null)
+  const { width: screenW } = useWindowDimensions()
+  const mediaW   = Math.min(screenW - 80, 280)
 
   const [msgs, setMsgs]         = useState<any[]>([])
   const [input, setInput]       = useState('')
@@ -157,6 +171,7 @@ export default function ChatScreen() {
   const sendMessage = async () => {
     const content = input.trim()
     if (!content || sending) return
+    Vibration.vibrate(10)
     setInput('')
     setSending(true)
     const replyId = replyTo?.id ?? null
@@ -230,7 +245,30 @@ export default function ChatScreen() {
     }
   }
 
+  const withSeparators = useMemo(() => {
+    const result: any[] = []
+    let lastDate = ''
+    msgs.forEach(msg => {
+      const d = new Date(msg.created_at).toDateString()
+      if (d !== lastDate) {
+        result.push({ _sep: true, date: msg.created_at, _id: `sep-${msg.created_at}` })
+        lastDate = d
+      }
+      result.push(msg)
+    })
+    return result
+  }, [msgs])
+
   const renderMessage = ({ item }: { item: any }) => {
+    if (item._sep) {
+      return (
+        <View style={g.dateSep}>
+          <View style={g.dateSepLine} />
+          <Text style={g.dateSepText}>{formatDateSep(item.date)}</Text>
+          <View style={g.dateSepLine} />
+        </View>
+      )
+    }
     const isMe      = item.sender_id === myId
     const isDeleted = !!item.deleted_at
     const repliedMsg = item.reply_to_id ? msgsMap.get(item.reply_to_id) : null
@@ -238,7 +276,7 @@ export default function ChatScreen() {
     return (
       <TouchableOpacity
         activeOpacity={0.85}
-        onLongPress={() => !isDeleted && setReplyTo(item)}
+        onLongPress={() => { if (!isDeleted) { Vibration.vibrate(20); setReplyTo(item) } }}
         delayLongPress={400}
       >
         <View style={[ms.row, isMe ? ms.rowMe : ms.rowThem]}>
@@ -270,7 +308,7 @@ export default function ChatScreen() {
             </View>
           ) : item.type === 'image' && item.file_url ? (
             <TouchableOpacity onPress={() => Linking.openURL(item.file_url)} activeOpacity={0.85}>
-              <Image source={{ uri: item.file_url }} style={ms.mediaImg} resizeMode="cover" />
+              <Image source={{ uri: item.file_url }} style={[ms.mediaImg, { width: mediaW, height: Math.round(mediaW * 0.75) }]} resizeMode="cover" />
             </TouchableOpacity>
           ) : item.type === 'video' && item.file_url ? (
             <VideoMsg uri={item.file_url} />
@@ -344,9 +382,9 @@ export default function ChatScreen() {
       {/* Messages */}
       <FlatList
         ref={listRef}
-        data={msgs}
-        keyExtractor={m => m.id}
-        style={{ flex: 1, backgroundColor: '#F1F5F9' }}
+        data={withSeparators}
+        keyExtractor={m => m._id ?? m.id}
+        style={{ flex: 1, backgroundColor: C.bg }}
         contentContainerStyle={{ padding: 12, paddingBottom: 8 }}
         renderItem={renderMessage}
         onContentSizeChange={scrollToEnd}
@@ -443,10 +481,10 @@ const ms = StyleSheet.create({
 
 // ─── Global / header styles ───────────────────────────────────────────────────
 const g = StyleSheet.create({
-  flex:           { flex: 1, backgroundColor: '#F1F5F9' },
+  flex:           { flex: 1, backgroundColor: C.bg },
   loadMoreBtn:    { alignSelf: 'center', marginBottom: 12, paddingHorizontal: 16, paddingVertical: 7, backgroundColor: C.white, borderRadius: 20, borderWidth: 1, borderColor: C.slate200, minWidth: 48, alignItems: 'center' },
   loadMoreTxt:    { fontSize: 12, color: C.blue, fontWeight: '600' },
-  center:         { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F5F9' },
+  center:         { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg },
   header:         { flexDirection: 'row', alignItems: 'center', backgroundColor: C.white, paddingTop: 52, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderColor: C.slate100 },
   backBtn:        { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', marginRight: 6 },
   headerAvatar:   { width: 38, height: 38, borderRadius: 19, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', marginRight: 10, overflow: 'hidden' },
@@ -462,8 +500,11 @@ const g = StyleSheet.create({
   replyPreviewBar:{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#EFF6FF', paddingHorizontal: 16, paddingVertical: 8, borderTopWidth: 1, borderColor: '#DBEAFE' },
   replyPreviewText:{ flex: 1, fontSize: 12, color: C.blue, fontStyle: 'italic' },
   bar:            { flexDirection: 'row', alignItems: 'flex-end', padding: 10, paddingBottom: Platform.OS === 'ios' ? 28 : 10, backgroundColor: C.white, borderTopWidth: 1, borderColor: C.slate100, gap: 8 },
-  attach:         { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
+  attach:         { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: C.slate100, borderRadius: 12 },
   input:          { flex: 1, backgroundColor: '#F1F5F9', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: C.navy, maxHeight: 100 },
-  sendBtn:        { width: 38, height: 38, borderRadius: 19, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
+  sendBtn:        { width: 44, height: 44, borderRadius: 14, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
   sendBtnOff:     { opacity: 0.4 },
+  dateSep:        { flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 10, paddingHorizontal: 4 },
+  dateSepLine:    { flex: 1, height: 1, backgroundColor: C.slate200 },
+  dateSepText:    { fontSize: 11, fontWeight: '700', color: C.slate400, paddingHorizontal: 6 },
 })

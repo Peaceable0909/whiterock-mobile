@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import {
   View, Text, TextInput, FlatList, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator,
-  ScrollView, Alert,
+  ScrollView, Alert, Vibration,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
@@ -76,6 +76,7 @@ export default function AIScreen() {
 
   const send = async (text: string) => {
     if (!text.trim() || loading) return
+    Vibration.vibrate(10)
 
     const userMsg: Msg = { role: 'user', content: text.trim() }
     const next = [...msgs, userMsg]
@@ -278,7 +279,7 @@ const s = StyleSheet.create({
   chipText:       { fontSize: 12, fontWeight: '600', color: C.slate600 },
   msgRow:         { flexDirection: 'row', marginBottom: 10, gap: 8 },
   msgMe:          { justifyContent: 'flex-end' },
-  msgThem:        { justifyContent: 'flex-start', alignItems: 'flex-end' },
+  msgThem:        { justifyContent: 'flex-start', alignItems: 'flex-start' },
   botMini:        { width: 28, height: 28, borderRadius: 14, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
   bubble:         { maxWidth: '80%', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18 },
   bubbleMe:       { backgroundColor: C.blue, borderBottomRightRadius: 4 },
