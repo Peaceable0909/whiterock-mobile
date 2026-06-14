@@ -87,8 +87,6 @@ export default function HomeScreen() {
     </View>
   )
 
-  if (loading) return <View style={[s.center, { paddingTop: insets.top }]}><ActivityIndicator color={C.blue} size="large" /></View>
-
   const isStudent = user?.role === 'student'
   const stageIdx  = profile ? Math.max(JOURNEY_STAGES.indexOf(profile.stage), 0) : 0
   const pct       = Math.round((stageIdx / (JOURNEY_STAGES.length - 1)) * 100)
@@ -103,6 +101,8 @@ export default function HomeScreen() {
       useNativeDriver: false,
     }).start()
   }, [pct])
+
+  if (loading) return <View style={[s.center, { paddingTop: insets.top }]}><ActivityIndicator color={C.blue} size="large" /></View>
 
   if (isStudent) return (
     <ScrollView style={s.bg} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]} showsVerticalScrollIndicator={false}>
