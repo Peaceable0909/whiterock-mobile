@@ -100,6 +100,7 @@ export default function MainLayout() {
       <Tabs.Screen name="students/[id]" options={{ href: null }} />
       <Tabs.Screen name="notifications" options={{ href: null }} />
       <Tabs.Screen name="update-compose" options={{ href: null }} />
+      <Tabs.Screen name="appointments" options={{ href: null }} />
     </Tabs>
   )
 }

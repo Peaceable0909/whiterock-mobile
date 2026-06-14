@@ -90,6 +90,17 @@ export default function HomeScreen() {
         <BellButton />
       </View>
 
+      {/* Visa outcome celebration banner */}
+      {(profile?.visa_outcome === 'approved' || profile?.visa_outcome === 'granted') && (
+        <View style={s.visaBanner}>
+          <Text style={s.visaEmoji}>🎉</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={s.visaBannerTitle}>Visa Approved!</Text>
+            <Text style={s.visaBannerSub}>Congratulations {firstName} — your UK visa has been granted. Your journey begins!</Text>
+          </View>
+        </View>
+      )}
+
       {/* Progress card */}
       <View style={s.card}>
         <View style={s.row}>
@@ -133,11 +144,11 @@ export default function HomeScreen() {
 
       {/* 2-col grid */}
       <View style={s.grid}>
-        <TouchableOpacity style={s.gridCard} onPress={() => router.push('/(main)/ai')}>
+        <TouchableOpacity style={s.gridCard} onPress={() => router.push('/(main)/appointments' as any)}>
           <Ionicons name="calendar-outline" size={20} color={C.blue} />
-          <Text style={s.gridLabel}>Interview</Text>
-          <Text style={s.gridTitle}>Practice Session</Text>
-          <View style={s.gridBtn}><Text style={s.gridBtnText}>Start Practice</Text></View>
+          <Text style={s.gridLabel}>Appointments</Text>
+          <Text style={s.gridTitle}>Upcoming Sessions</Text>
+          <View style={s.gridBtn}><Text style={s.gridBtnText}>View Calendar</Text></View>
         </TouchableOpacity>
         <TouchableOpacity style={s.gridCard} onPress={() => router.push('/(main)/ai')}>
           <Ionicons name="hardware-chip-outline" size={20} color={C.blue} />
@@ -300,6 +311,10 @@ const s = StyleSheet.create({
   updateSub:   { fontSize: 12, color: C.slate400, marginTop: 2 },
   viewAll:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 14 },
   viewAllText: { fontSize: 12, fontWeight: '700', color: C.blue, marginRight: 2 },
-  logoutRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, marginTop: 4 },
-  logoutText:  { fontSize: 14, fontWeight: '600', color: C.slate400 },
+  logoutRow:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, marginTop: 4 },
+  logoutText:    { fontSize: 14, fontWeight: '600', color: C.slate400 },
+  visaBanner:    { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#ECFDF5', borderWidth: 1.5, borderColor: '#6EE7B7', borderRadius: 20, padding: 16, marginBottom: 14 },
+  visaEmoji:     { fontSize: 28 },
+  visaBannerTitle: { fontSize: 15, fontWeight: '800', color: '#065F46', marginBottom: 3 },
+  visaBannerSub:   { fontSize: 12, color: '#059669', lineHeight: 17 },
 })

@@ -2,12 +2,23 @@ import { useEffect, useState, useCallback } from 'react'
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
   ActivityIndicator, Image, Linking, RefreshControl,
+  Modal, TextInput, KeyboardAvoidingView, Platform, ScrollView as RNScrollView,
 } from 'react-native'
 import { VideoView, useVideoPlayer } from 'expo-video'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { C } from '@/constants/colors'
+
+const CATEGORY_FILTERS = [
+  { key: 'all',          label: 'All'         },
+  { key: 'announcement', label: 'Announce'    },
+  { key: 'visa_update',  label: 'Visa'        },
+  { key: 'scholarship',  label: 'Scholarship' },
+  { key: 'new_school',   label: 'School'      },
+  { key: 'event',        label: 'Event'       },
+  { key: 'training',     label: 'Training'    },
+]
 
 const CAT_COLORS: Record<string, { bg: string; text: string }> = {
   announcement: { bg: '#DBEAFE', text: '#1D4ED8' },
@@ -49,14 +60,22 @@ function UpdateVideoPlayer({ uri }: { uri: string }) {
 
 export default function UpdatesScreen() {
   const router = useRouter()
-  const [updates, setUpdates]   = useState<any[]>([])
-  const [likedIds, setLikedIds] = useState<Set<string>>(new Set())
-  const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
-  const [myId, setMyId]         = useState('')
-  const [myRole, setMyRole]     = useState('student')
-  const [loading, setLoading]   = useState(true)
+  const [updates, setUpdates]     = useState<any[]>([])
+  const [likedIds, setLikedIds]   = useState<Set<string>>(new Set())
+  const [savedIds, setSavedIds]   = useState<Set<string>>(new Set())
+  const [myId, setMyId]           = useState('')
+  const [myRole, setMyRole]       = useState('student')
+  const [loading, setLoading]     = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [viewedIds, setViewedIds] = useState<Set<string>>(new Set())
+  const [catFilter, setCatFilter] = useState('all')
+
+  // Comments
+  const [commentsModal, setCommentsModal]   = useState<string | null>(null)
+  const [comments, setComments]             = useState<any[]>([])
+  const [commentText, setCommentText]       = useState('')
+  const [loadingComments, setLoadingComments] = useState(false)
+  const [addingComment, setAddingComment]   = useState(false)
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -124,6 +143,29 @@ export default function UpdatesScreen() {
     } else {
       await supabase.from('update_saves').insert({ update_id: updateId, user_id: myId })
     }
+  }
+
+  const openComments = async (updateId: string) => {
+    setCommentsModal(updateId)
+    setLoadingComments(true)
+    const { data } = await supabase
+      .from('update_comments')
+      .select('*, author:author_id(name)')
+      .eq('update_id', updateId)
+      .order('created_at', { ascending: true })
+    setComments(data ?? [])
+    setLoadingComments(false)
+  }
+
+  const addComment = async () => {
+    if (!commentText.trim() || !commentsModal) return
+    setAddingComment(true)
+    const { data, error } = await supabase.from('update_comments')
+      .insert({ update_id: commentsModal, author_id: myId, content: commentText.trim() })
+      .select('*, author:author_id(name)').single()
+    if (!error && data) setComments(prev => [...prev, data])
+    setCommentText('')
+    setAddingComment(false)
   }
 
   const shareUpdate = async (update: any) => {
@@ -231,6 +273,10 @@ export default function UpdatesScreen() {
               </View>
             )}
 
+            <TouchableOpacity onPress={() => openComments(item.id)} style={c.actionBtn}>
+              <Ionicons name="chatbubble-outline" size={16} color={C.slate400} />
+            </TouchableOpacity>
+
             <TouchableOpacity onPress={() => shareUpdate(item)} style={[c.actionBtn, { marginLeft: 'auto' }]}>
               <Ionicons name="share-social-outline" size={16} color={C.slate400} />
             </TouchableOpacity>
@@ -240,6 +286,10 @@ export default function UpdatesScreen() {
     )
   }
 
+  const displayUpdates = catFilter === 'all'
+    ? updates
+    : updates.filter(u => u.category === catFilter)
+
   const canPost = myRole === 'counselor' || myRole === 'agent' || myRole === 'admin'
 
   if (loading) return <View style={g.center}><ActivityIndicator color={C.blue} size="large" /></View>
@@ -247,16 +297,30 @@ export default function UpdatesScreen() {
   return (
     <View style={g.flex}>
       <FlatList
-        data={updates}
+        data={displayUpdates}
         keyExtractor={u => u.id}
         contentContainerStyle={{ paddingBottom: 100 }}
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load() }} tintColor={C.blue} />}
         ListHeaderComponent={
-          <View style={g.header}>
-            <Ionicons name="newspaper-outline" size={20} color={C.blue} />
-            <Text style={g.headerTitle}>Updates</Text>
-          </View>
+          <>
+            <View style={g.header}>
+              <Ionicons name="newspaper-outline" size={20} color={C.blue} />
+              <Text style={g.headerTitle}>Updates</Text>
+            </View>
+            {/* Category filters */}
+            <RNScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 14, paddingBottom: 12, gap: 8 }}>
+              {CATEGORY_FILTERS.map(f => (
+                <TouchableOpacity
+                  key={f.key}
+                  style={[g.catChip, catFilter === f.key && g.catChipActive]}
+                  onPress={() => setCatFilter(f.key)}
+                >
+                  <Text style={[g.catChipText, catFilter === f.key && g.catChipTextActive]}>{f.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </RNScrollView>
+          </>
         }
         ListEmptyComponent={
           <View style={g.empty}>
@@ -276,6 +340,75 @@ export default function UpdatesScreen() {
           <Ionicons name="add" size={26} color={C.white} />
         </TouchableOpacity>
       )}
+
+      {/* Comments modal */}
+      <Modal visible={!!commentsModal} transparent animationType="slide" onRequestClose={() => setCommentsModal(null)}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={g.commentsModalBg}>
+            <View style={g.commentsModal}>
+              <View style={g.commentsHeader}>
+                <Text style={g.commentsTitle}>Comments</Text>
+                <TouchableOpacity onPress={() => { setCommentsModal(null); setComments([]); setCommentText('') }}>
+                  <Ionicons name="close" size={20} color={C.slate400} />
+                </TouchableOpacity>
+              </View>
+
+              {loadingComments
+                ? <ActivityIndicator color={C.blue} style={{ padding: 24 }} />
+                : (
+                  <FlatList
+                    data={comments}
+                    keyExtractor={c => c.id}
+                    style={{ maxHeight: 280 }}
+                    ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+                    contentContainerStyle={{ padding: 4, paddingBottom: 8 }}
+                    ListEmptyComponent={
+                      <View style={{ alignItems: 'center', padding: 24 }}>
+                        <Text style={{ color: C.slate400, fontSize: 13 }}>No comments yet. Be the first!</Text>
+                      </View>
+                    }
+                    renderItem={({ item }) => (
+                      <View style={g.commentCard}>
+                        <View style={g.commentAvatar}>
+                          <Text style={g.commentAvatarText}>
+                            {(item.author?.name ?? 'U').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                          </Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={g.commentAuthor}>{item.author?.name ?? 'User'}</Text>
+                          <Text style={g.commentContent}>{item.content}</Text>
+                          <Text style={g.commentTime}>
+                            {new Date(item.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+                  />
+                )}
+
+              <View style={g.commentInput}>
+                <TextInput
+                  style={g.commentTextInput}
+                  value={commentText}
+                  onChangeText={setCommentText}
+                  placeholder="Write a comment..."
+                  placeholderTextColor={C.slate400}
+                  maxLength={300}
+                />
+                <TouchableOpacity
+                  style={[g.commentSend, (!commentText.trim() || addingComment) && { opacity: 0.4 }]}
+                  onPress={addComment}
+                  disabled={!commentText.trim() || addingComment}
+                >
+                  {addingComment
+                    ? <ActivityIndicator size="small" color={C.white} />
+                    : <Ionicons name="send-outline" size={16} color={C.white} />}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   )
 }
@@ -309,12 +442,31 @@ const c = StyleSheet.create({
 })
 
 const g = StyleSheet.create({
-  flex:        { flex: 1, backgroundColor: '#F1F5F9' },
-  center:      { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F5F9' },
-  header:      { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingTop: 56, paddingBottom: 14 },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: C.navy },
-  empty:       { alignItems: 'center', paddingTop: 80, gap: 8, paddingHorizontal: 32 },
-  emptyTitle:  { fontSize: 15, fontWeight: '700', color: C.slate500 },
-  emptySub:    { fontSize: 13, color: C.slate400, textAlign: 'center' },
-  fab:         { position: 'absolute', bottom: 20, right: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', elevation: 6, shadowColor: C.blue, shadowOpacity: 0.35, shadowRadius: 8 },
+  flex:               { flex: 1, backgroundColor: '#F1F5F9' },
+  center:             { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F5F9' },
+  header:             { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingTop: 56, paddingBottom: 14 },
+  headerTitle:        { fontSize: 20, fontWeight: '800', color: C.navy },
+  empty:              { alignItems: 'center', paddingTop: 80, gap: 8, paddingHorizontal: 32 },
+  emptyTitle:         { fontSize: 15, fontWeight: '700', color: C.slate500 },
+  emptySub:           { fontSize: 13, color: C.slate400, textAlign: 'center' },
+  fab:                { position: 'absolute', bottom: 20, right: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', elevation: 6, shadowColor: C.blue, shadowOpacity: 0.35, shadowRadius: 8 },
+  // Category filter chips
+  catChip:            { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: C.white, borderWidth: 1, borderColor: C.slate200 },
+  catChipActive:      { backgroundColor: C.blue, borderColor: C.blue },
+  catChipText:        { fontSize: 12, fontWeight: '600', color: C.slate500 },
+  catChipTextActive:  { color: C.white },
+  // Comments modal
+  commentsModalBg:    { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
+  commentsModal:      { backgroundColor: C.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 12, paddingBottom: 24, maxHeight: '75%' },
+  commentsHeader:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderColor: C.slate100 },
+  commentsTitle:      { fontSize: 15, fontWeight: '800', color: C.navy },
+  commentCard:        { flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingVertical: 6 },
+  commentAvatar:      { width: 30, height: 30, borderRadius: 15, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
+  commentAvatarText:  { fontSize: 10, fontWeight: '800', color: C.white },
+  commentAuthor:      { fontSize: 12, fontWeight: '700', color: C.navy },
+  commentContent:     { fontSize: 13, color: C.slate600, marginTop: 2, lineHeight: 18 },
+  commentTime:        { fontSize: 10, color: C.slate400, marginTop: 3 },
+  commentInput:       { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingTop: 12, borderTopWidth: 1, borderColor: C.slate100 },
+  commentTextInput:   { flex: 1, backgroundColor: '#F8FAFC', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, fontSize: 14, color: C.navy, borderWidth: 1, borderColor: C.slate200 },
+  commentSend:        { width: 38, height: 38, borderRadius: 19, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
 })

@@ -10,11 +10,13 @@ import { supabase } from '@/lib/supabase'
 import { C } from '@/constants/colors'
 
 const CATEGORIES = [
-  { key: 'visa',        label: 'Visa',        color: '#7C3AED', icon: 'document-text-outline' },
-  { key: 'offer',       label: 'Offer',       color: '#059669', icon: 'school-outline'        },
-  { key: 'deadline',    label: 'Deadline',    color: '#DC2626', icon: 'alarm-outline'          },
-  { key: 'general',     label: 'General',     color: '#F59E0B', icon: 'megaphone-outline'      },
-  { key: 'scholarship', label: 'Scholarship', color: '#EC4899', icon: 'ribbon-outline'         },
+  { key: 'announcement', label: 'Announce',   color: '#1D4ED8', icon: 'megaphone-outline'      },
+  { key: 'visa_update',  label: 'Visa',       color: '#7C3AED', icon: 'document-text-outline'  },
+  { key: 'scholarship',  label: 'Scholarship',color: '#059669', icon: 'ribbon-outline'          },
+  { key: 'new_school',   label: 'School',     color: '#EC4899', icon: 'school-outline'          },
+  { key: 'event',        label: 'Event',      color: '#F59E0B', icon: 'calendar-outline'        },
+  { key: 'training',     label: 'Training',   color: '#0E7490', icon: 'people-outline'          },
+  { key: 'promotion',    label: 'Promo',      color: '#BE185D', icon: 'pricetag-outline'        },
 ] as const
 
 const AUDIENCES = [
@@ -47,7 +49,7 @@ export default function UpdateComposeScreen() {
 
       const payload = {
         title:        title.trim(),
-        body:         body.trim(),
+        content:      body.trim(),
         category,
         is_pinned:    isPinned,
         target_roles: targetRoles,

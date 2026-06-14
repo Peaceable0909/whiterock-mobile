@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import {
   View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ActivityIndicator, Image, Linking, Alert, AppState,
@@ -48,7 +48,10 @@ export default function ChatScreen() {
   const [loading, setLoading]   = useState(true)
   const [hasMore, setHasMore]   = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [replyTo, setReplyTo]   = useState<any>(null)
   const oldestTs = useRef<string | null>(null)
+
+  const msgsMap = useMemo(() => new Map(msgs.map(m => [m.id, m])), [msgs])
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   const appState = useRef(AppState.currentState)
 
@@ -156,8 +159,11 @@ export default function ChatScreen() {
     if (!content || sending) return
     setInput('')
     setSending(true)
+    const replyId = replyTo?.id ?? null
+    setReplyTo(null)
     const { data: saved } = await supabase.from('messages').insert({
       conversation_id: id, sender_id: myId, content, type: 'text', is_ai: false,
+      reply_to_id: replyId,
     }).select().single()
     if (saved) setMsgs(prev => [...prev, saved])
     await supabase.from('conversations').update({
@@ -227,9 +233,15 @@ export default function ChatScreen() {
   const renderMessage = ({ item }: { item: any }) => {
     const isMe      = item.sender_id === myId
     const isDeleted = !!item.deleted_at
+    const repliedMsg = item.reply_to_id ? msgsMap.get(item.reply_to_id) : null
 
     return (
-      <View style={[ms.row, isMe ? ms.rowMe : ms.rowThem]}>
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onLongPress={() => !isDeleted && setReplyTo(item)}
+        delayLongPress={400}
+      >
+        <View style={[ms.row, isMe ? ms.rowMe : ms.rowThem]}>
         {!isMe && (
           <View style={ms.avatar}>
             {otherUser?.avatar_url
@@ -242,7 +254,7 @@ export default function ChatScreen() {
           {item.reply_to_id && !isDeleted && (
             <View style={[ms.replyBar, isMe ? ms.replyBarMe : ms.replyBarThem]}>
               <Text style={[ms.replyLabel, isMe && { color: 'rgba(255,255,255,0.7)' }]} numberOfLines={1}>
-                Replied to a message
+                {repliedMsg?.content ?? '↩ Replied to a message'}
               </Text>
             </View>
           )}
@@ -299,7 +311,8 @@ export default function ChatScreen() {
             )}
           </View>
         </View>
-      </View>
+        </View>
+      </TouchableOpacity>
     )
   }
 
@@ -352,6 +365,17 @@ export default function ChatScreen() {
         <View style={g.progressBar}>
           <View style={[g.progressFill, { width: `${uploadPct}%` }]} />
           <Text style={g.progressTxt}>{uploadPct}%</Text>
+        </View>
+      )}
+
+      {/* Reply preview */}
+      {replyTo && (
+        <View style={g.replyPreviewBar}>
+          <Ionicons name="return-down-forward-outline" size={14} color={C.blue} />
+          <Text style={g.replyPreviewText} numberOfLines={1}>{replyTo.content}</Text>
+          <TouchableOpacity onPress={() => setReplyTo(null)}>
+            <Ionicons name="close" size={16} color={C.slate400} />
+          </TouchableOpacity>
         </View>
       )}
 
@@ -435,6 +459,8 @@ const g = StyleSheet.create({
   progressBar:    { height: 4, backgroundColor: C.slate100, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12 },
   progressFill:   { height: 4, backgroundColor: C.blue, borderRadius: 2, position: 'absolute', left: 0, top: 0 },
   progressTxt:    { fontSize: 10, color: C.slate400, marginLeft: 'auto' },
+  replyPreviewBar:{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#EFF6FF', paddingHorizontal: 16, paddingVertical: 8, borderTopWidth: 1, borderColor: '#DBEAFE' },
+  replyPreviewText:{ flex: 1, fontSize: 12, color: C.blue, fontStyle: 'italic' },
   bar:            { flexDirection: 'row', alignItems: 'flex-end', padding: 10, paddingBottom: Platform.OS === 'ios' ? 28 : 10, backgroundColor: C.white, borderTopWidth: 1, borderColor: C.slate100, gap: 8 },
   attach:         { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
   input:          { flex: 1, backgroundColor: '#F1F5F9', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: C.navy, maxHeight: 100 },
