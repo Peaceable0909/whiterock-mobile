@@ -223,16 +223,19 @@ export default function AIScreen() {
         ) : null}
       />
 
-      {/* Quick chips (after first message) */}
-      {!isEmpty && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.quickBar} contentContainerStyle={{ paddingHorizontal: 12, gap: 8 }}>
-          {SUGGESTED.slice(0, 4).map(a => (
-            <TouchableOpacity key={a.label} style={s.quickChip} onPress={() => send(a.prompt)}>
-              <Text style={s.quickChipText}>{a.icon} {a.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
+      {/* Quick chips — always rendered; invisible when chat is empty to avoid layout shift */}
+      <ScrollView
+        horizontal showsHorizontalScrollIndicator={false}
+        style={[s.quickBar, isEmpty && { opacity: 0 }]}
+        contentContainerStyle={{ paddingHorizontal: 12, gap: 8 }}
+        pointerEvents={isEmpty ? 'none' : 'auto'}
+      >
+        {SUGGESTED.slice(0, 4).map(a => (
+          <TouchableOpacity key={a.label} style={s.quickChip} onPress={() => send(a.prompt)}>
+            <Text style={s.quickChipText}>{a.icon} {a.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
       {/* Input */}
       <View style={s.inputBar}>

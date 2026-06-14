@@ -6,6 +6,7 @@ import {
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import Constants from 'expo-constants'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { supabase } from '@/lib/supabase'
 import { C } from '@/constants/colors'
 
@@ -52,8 +53,14 @@ export default function RegisterScreen() {
       if (redeemErr) { Alert.alert('Setup Failed', redeemErr.message); return }
       router.replace('/(main)/home')
     } else {
+      // Email confirmation required — store the invite code so it can be
+      // redeemed automatically after the user confirms and signs in.
+      await AsyncStorage.setItem(`pending_invite_${email.trim().toLowerCase()}`, code)
       setLoading(false)
-      Alert.alert('Confirm Email', 'Check your email to confirm your account, then sign in. Keep your invite code handy.')
+      Alert.alert(
+        'Confirm your email',
+        'Check your inbox and click the confirmation link, then sign in. Your account will be set up automatically.',
+      )
       router.back()
     }
   }

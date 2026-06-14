@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ScrollView, ActivityIndicator, Alert
+  StyleSheet, ScrollView, ActivityIndicator, Alert, Modal,
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import Constants from 'expo-constants'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { GoogleSignin, statusCodes, isErrorWithCode } from '@react-native-google-signin/google-signin'
 import { supabase } from '@/lib/supabase'
 import { C } from '@/constants/colors'
@@ -27,6 +28,9 @@ export default function LoginScreen() {
   const [showPw, setShowPw]         = useState(false)
   const [loading, setLoading]       = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
+  const [forgotModal, setForgotModal] = useState(false)
+  const [resetEmail, setResetEmail] = useState('')
+  const [resetSending, setResetSending] = useState(false)
 
   const handleLogin = async () => {
     if (!email || !password) { Alert.alert('Error', 'Please fill in all fields'); return }
@@ -43,9 +47,31 @@ export default function LoginScreen() {
         { id: data.user.id, email: data.user.email ?? '', name },
         { onConflict: 'id', ignoreDuplicates: true }
       )
+
+      // Redeem any invite code stored during email-confirmation registration
+      const key = `pending_invite_${email.trim().toLowerCase()}`
+      const pendingCode = await AsyncStorage.getItem(key)
+      if (pendingCode) {
+        await supabase.rpc('redeem_invite', { p_code: pendingCode, p_name: name })
+        await AsyncStorage.removeItem(key)
+      }
     }
     setLoading(false)
     // Routing is handled by _layout.tsx onAuthStateChange
+  }
+
+  const handleForgotPassword = async () => {
+    if (!resetEmail.trim()) { Alert.alert('Enter email', 'Please enter your email address'); return }
+    setResetSending(true)
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim())
+    setResetSending(false)
+    if (error) {
+      Alert.alert('Error', error.message)
+    } else {
+      setForgotModal(false)
+      setResetEmail('')
+      Alert.alert('Check your inbox', `A password reset link has been sent to ${resetEmail.trim()}.`)
+    }
   }
 
   const handleGoogleSignIn = async () => {
@@ -126,6 +152,10 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
+        <TouchableOpacity style={s.forgotLink} onPress={() => { setResetEmail(email); setForgotModal(true) }}>
+          <Text style={s.forgotText}>Forgot password?</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={s.btn} onPress={handleLogin} disabled={loading || googleLoading}>
           {loading
             ? <ActivityIndicator color="#fff" />
@@ -165,6 +195,41 @@ export default function LoginScreen() {
       </TouchableOpacity>
 
       <Text style={s.version}>v{VERSION} · Premium UK Student Placement</Text>
+
+      {/* Forgot password modal */}
+      <Modal visible={forgotModal} transparent animationType="slide" onRequestClose={() => setForgotModal(false)}>
+        <View style={s.modalBg}>
+          <View style={s.modal}>
+            <Text style={s.modalTitle}>Reset Password</Text>
+            <Text style={s.modalSub}>Enter your email and we'll send you a reset link</Text>
+            <View style={s.inputWrap}>
+              <Ionicons name="mail-outline" size={16} color={C.slate400} style={s.inputIcon} />
+              <TextInput
+                style={s.input}
+                value={resetEmail}
+                onChangeText={setResetEmail}
+                placeholder="you@example.com"
+                placeholderTextColor={C.slate400}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoFocus
+              />
+            </View>
+            <TouchableOpacity
+              style={[s.btn, (resetSending || !resetEmail.trim()) && { opacity: 0.5 }]}
+              onPress={handleForgotPassword}
+              disabled={resetSending || !resetEmail.trim()}
+            >
+              {resetSending
+                ? <ActivityIndicator color={C.white} />
+                : <Text style={s.btnText}>Send Reset Link</Text>}
+            </TouchableOpacity>
+            <TouchableOpacity style={s.switchRow} onPress={() => setForgotModal(false)}>
+              <Text style={s.registerLink}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   )
 }
@@ -192,8 +257,14 @@ const s = StyleSheet.create({
   googleG:      { width: 24, height: 24, borderRadius: 12, backgroundColor: '#4285F4', alignItems: 'center', justifyContent: 'center' },
   googleGText:  { fontSize: 13, fontWeight: '800', color: C.white },
   googleText:   { fontSize: 15, fontWeight: '700', color: C.navy },
+  forgotLink:   { alignSelf: 'flex-end', paddingVertical: 6, marginTop: 4 },
+  forgotText:   { fontSize: 13, color: C.blue, fontWeight: '600' },
   switchRow:    { paddingVertical: 8 },
   registerLink: { fontSize: 14, color: C.slate500, textAlign: 'center' },
   registerBold: { color: C.blue, fontWeight: '700' },
   version:      { fontSize: 10, color: C.slate400, textAlign: 'center', marginTop: 20, letterSpacing: 0.5 },
+  modalBg:      { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  modal:        { backgroundColor: C.white, borderRadius: 24, padding: 24, margin: 12 },
+  modalTitle:   { fontSize: 18, fontWeight: '800', color: C.navy, marginBottom: 4 },
+  modalSub:     { fontSize: 13, color: C.slate500, marginBottom: 20 },
 })

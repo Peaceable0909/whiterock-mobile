@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Animated } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
 import { C } from '@/constants/colors'
 
@@ -10,12 +11,14 @@ const STAGE_LABEL: Record<string,string> = { lead:'New Lead', application_submit
 
 export default function HomeScreen() {
   const router  = useRouter()
-  const [user, setUser]     = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
-  const [agent, setAgent]   = useState<any>(null)
-  const [convId, setConvId] = useState<string|null>(null)
-  const [loading, setLoading] = useState(true)
+  const insets  = useSafeAreaInsets()
+  const [user, setUser]           = useState<any>(null)
+  const [profile, setProfile]     = useState<any>(null)
+  const [agent, setAgent]         = useState<any>(null)
+  const [convId, setConvId]       = useState<string|null>(null)
+  const [loading, setLoading]     = useState(true)
   const [notifUnread, setNotifUnread] = useState(0)
+  const [recentUpdates, setRecentUpdates] = useState<any[]>([])
 
   useEffect(() => {
     const load = async () => {
@@ -28,6 +31,13 @@ export default function HomeScreen() {
         .select('id', { count: 'exact', head: true })
         .eq('user_id', authUser.id).eq('is_read', false)
       setNotifUnread(count ?? 0)
+
+      // Fetch 2 most recent updates for the home card
+      const { data: updatesData } = await supabase.from('updates')
+        .select('id, title, category, created_at')
+        .order('created_at', { ascending: false })
+        .limit(2)
+      setRecentUpdates(updatesData ?? [])
 
       if (dbUser?.role === 'student') {
         const { data: prof } = await supabase.from('student_profiles').select('*').eq('user_id', authUser.id).single()
@@ -60,18 +70,24 @@ export default function HomeScreen() {
   }, [])
 
   const BellButton = () => (
-    <TouchableOpacity style={s.bellBtn} accessibilityLabel="Notifications"
-      onPress={() => { setNotifUnread(0); router.push('/(main)/notifications' as any) }}>
-      <Ionicons name="notifications-outline" size={20} color={C.slate500} />
-      {notifUnread > 0 && (
-        <View style={s.bellBadge}>
-          <Text style={s.bellBadgeText}>{notifUnread > 9 ? '9+' : notifUnread}</Text>
-        </View>
-      )}
-    </TouchableOpacity>
+    <View style={{ flexDirection: 'row', gap: 8 }}>
+      <TouchableOpacity style={s.bellBtn} accessibilityLabel="Notifications"
+        onPress={() => { setNotifUnread(0); router.push('/(main)/notifications' as any) }}>
+        <Ionicons name="notifications-outline" size={20} color={C.slate500} />
+        {notifUnread > 0 && (
+          <View style={s.bellBadge}>
+            <Text style={s.bellBadgeText}>{notifUnread > 9 ? '9+' : notifUnread}</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+      <TouchableOpacity style={s.bellBtn} accessibilityLabel="Settings"
+        onPress={() => router.push('/(main)/settings' as any)}>
+        <Ionicons name="settings-outline" size={20} color={C.slate500} />
+      </TouchableOpacity>
+    </View>
   )
 
-  if (loading) return <View style={s.center}><ActivityIndicator color={C.blue} size="large" /></View>
+  if (loading) return <View style={[s.center, { paddingTop: insets.top }]}><ActivityIndicator color={C.blue} size="large" /></View>
 
   const isStudent = user?.role === 'student'
   const stageIdx  = profile ? Math.max(JOURNEY_STAGES.indexOf(profile.stage), 0) : 0
@@ -89,7 +105,7 @@ export default function HomeScreen() {
   }, [pct])
 
   if (isStudent) return (
-    <ScrollView style={s.bg} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+    <ScrollView style={s.bg} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]} showsVerticalScrollIndicator={false}>
       {/* Greeting */}
       <View style={[s.pt, { flexDirection: 'row', alignItems: 'flex-start' }]}>
         <View style={{ flex: 1 }}>
@@ -134,7 +150,12 @@ export default function HomeScreen() {
         <View style={[s.row, { marginBottom: 14 }]}>
           <View style={s.iconCircle}><Ionicons name="chatbubble-outline" size={18} color={C.blue} /></View>
           <Text style={[s.cardTitle, { marginLeft: 10, flex: 1 }]}>My Assigned Agent</Text>
-          <View style={s.onlineBadge}><View style={s.dot} /><Text style={s.onlineText}>ONLINE</Text></View>
+          {agent?.is_online
+            ? <View style={s.onlineBadge}><View style={s.dot} /><Text style={s.onlineText}>ONLINE</Text></View>
+            : <View style={[s.onlineBadge, { backgroundColor: C.slate100, borderColor: C.slate200 }]}>
+                <View style={[s.dot, { backgroundColor: C.slate400 }]} />
+                <Text style={[s.onlineText, { color: C.slate500 }]}>OFFLINE</Text>
+              </View>}
         </View>
         {agent ? (
           <>
@@ -185,23 +206,31 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Recent updates */}
+      {/* Recent updates from DB */}
       <View style={s.card}>
         <View style={[s.row, { marginBottom: 12 }]}>
           <Text style={s.overline}>Recent Updates</Text>
         </View>
-        {[
-          { title: 'Application Stage Updated', sub: `Stage: ${STAGE_LABEL[profile?.stage] ?? 'Lead'}` },
-          { title: 'New University Match', sub: 'Based on your AI preferences' },
-        ].map((item, i) => (
-          <View key={i} style={[s.updateRow, i > 0 && { marginTop: 12 }]}>
-            <View style={[s.updateBar, i === 0 ? { backgroundColor: C.blue } : { backgroundColor: C.slate200 }]} />
-            <View>
-              <Text style={s.updateTitle}>{item.title}</Text>
-              <Text style={s.updateSub}>{item.sub}</Text>
-            </View>
-          </View>
-        ))}
+        {recentUpdates.length > 0
+          ? recentUpdates.map((item, i) => (
+              <TouchableOpacity key={item.id} style={[s.updateRow, i > 0 && { marginTop: 12 }]}
+                onPress={() => router.push('/(main)/updates')}>
+                <View style={[s.updateBar, { backgroundColor: i === 0 ? C.blue : C.slate200 }]} />
+                <View style={{ flex: 1 }}>
+                  <Text style={s.updateTitle} numberOfLines={1}>{item.title}</Text>
+                  <Text style={s.updateSub}>{(item.category ?? 'update').replace('_', ' ')}</Text>
+                </View>
+              </TouchableOpacity>
+            ))
+          : (
+              <View style={[s.updateRow]}>
+                <View style={[s.updateBar, { backgroundColor: C.blue }]} />
+                <View>
+                  <Text style={s.updateTitle}>Application Stage Updated</Text>
+                  <Text style={s.updateSub}>Stage: {STAGE_LABEL[profile?.stage] ?? 'Lead'}</Text>
+                </View>
+              </View>
+            )}
         <TouchableOpacity style={s.viewAll} onPress={() => router.push('/(main)/updates')}>
           <Text style={s.viewAllText}>View all updates</Text>
           <Ionicons name="chevron-forward" size={14} color={C.blue} />
@@ -212,7 +241,7 @@ export default function HomeScreen() {
 
   // Staff home
   return (
-    <ScrollView style={s.bg} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+    <ScrollView style={s.bg} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]} showsVerticalScrollIndicator={false}>
       <View style={[s.pt, { flexDirection: 'row', alignItems: 'flex-start' }]}>
         <View style={{ flex: 1 }}>
           <Text style={s.overline}>Dashboard Overview</Text>

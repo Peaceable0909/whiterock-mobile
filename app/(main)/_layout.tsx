@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Tabs, router } from 'expo-router'
 import { View, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
@@ -23,13 +23,17 @@ const ti = StyleSheet.create({
 export default function MainLayout() {
   const [unread, setUnread] = useState(0)
   const [role, setRole]     = useState<string | null>(null)
+  const roleRef = useRef<string>('student')
 
   useEffect(() => {
+    let uid = ''
     const fetchUnread = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
+      uid = user.id
       const { data: dbUser } = await supabase.from('users').select('role').eq('id', user.id).single()
       const r = dbUser?.role ?? 'student'
+      roleRef.current = r
       setRole(r)
       const { data: convs } = await supabase.from('conversations').select('unread_student, unread_staff')
       if (convs) {
@@ -38,6 +42,19 @@ export default function MainLayout() {
       }
     }
     fetchUnread()
+
+    // Realtime: update badge when any conversation changes
+    const sub = supabase.channel('main-layout-convs')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, async () => {
+        const { data: convs } = await supabase.from('conversations').select('unread_student, unread_staff')
+        if (convs) {
+          const r = roleRef.current
+          const total = convs.reduce((s, c) => s + (r === 'student' ? (c.unread_student ?? 0) : (c.unread_staff ?? 0)), 0)
+          setUnread(total)
+        }
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(sub) }
   }, [])
 
   // Push notifications: register this device + open the app on tap
@@ -102,6 +119,7 @@ export default function MainLayout() {
       <Tabs.Screen name="update-compose" options={{ href: null }} />
       <Tabs.Screen name="appointments" options={{ href: null }} />
       <Tabs.Screen name="documents" options={{ href: null }} />
+      <Tabs.Screen name="settings" options={{ href: null }} />
     </Tabs>
   )
 }

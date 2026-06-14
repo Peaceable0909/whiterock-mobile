@@ -3,6 +3,7 @@ import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
   ActivityIndicator, Image, Linking, RefreshControl, Share, Vibration,
   Modal, TextInput, KeyboardAvoidingView, Platform, ScrollView as RNScrollView,
+  useWindowDimensions,
 } from 'react-native'
 import { VideoView, useVideoPlayer } from 'expo-video'
 import { useRouter } from 'expo-router'
@@ -60,6 +61,7 @@ function UpdateVideoPlayer({ uri }: { uri: string }) {
 
 export default function UpdatesScreen() {
   const router = useRouter()
+  const { width: screenW } = useWindowDimensions()
   const [updates, setUpdates]     = useState<any[]>([])
   const [likedIds, setLikedIds]   = useState<Set<string>>(new Set())
   const [savedIds, setSavedIds]   = useState<Set<string>>(new Set())
@@ -69,6 +71,7 @@ export default function UpdatesScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const [viewedIds, setViewedIds] = useState<Set<string>>(new Set())
   const [catFilter, setCatFilter] = useState('all')
+  const [imageModal, setImageModal] = useState<string | null>(null)
 
   // Comments
   const [commentsModal, setCommentsModal]   = useState<string | null>(null)
@@ -194,9 +197,9 @@ export default function UpdatesScreen() {
           </View>
         )}
 
-        {/* Image */}
+        {/* Image — opens in-app fullscreen modal */}
         {item.media_url && item.media_type === 'image' && (
-          <TouchableOpacity onPress={() => Linking.openURL(item.media_url)} activeOpacity={0.9}>
+          <TouchableOpacity onPress={() => setImageModal(item.media_url)} activeOpacity={0.9}>
             <Image source={{ uri: item.media_url }} style={c.media} resizeMode="cover" />
           </TouchableOpacity>
         )}
@@ -344,6 +347,22 @@ export default function UpdatesScreen() {
         </TouchableOpacity>
       )}
 
+      {/* Fullscreen image viewer */}
+      <Modal visible={!!imageModal} transparent animationType="fade" onRequestClose={() => setImageModal(null)}>
+        <View style={g.imgModalBg}>
+          <TouchableOpacity style={g.imgModalClose} onPress={() => setImageModal(null)}>
+            <Ionicons name="close" size={24} color={C.white} />
+          </TouchableOpacity>
+          {imageModal && (
+            <Image
+              source={{ uri: imageModal }}
+              style={{ width: screenW, height: screenW, maxHeight: '80%' }}
+              resizeMode="contain"
+            />
+          )}
+        </View>
+      </Modal>
+
       {/* Comments modal */}
       <Modal visible={!!commentsModal} transparent animationType="slide" onRequestClose={() => setCommentsModal(null)}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -453,6 +472,8 @@ const g = StyleSheet.create({
   emptyTitle:         { fontSize: 15, fontWeight: '700', color: C.slate500 },
   emptySub:           { fontSize: 13, color: C.slate400, textAlign: 'center' },
   fab:                { position: 'absolute', bottom: 20, right: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', elevation: 6, shadowColor: C.blue, shadowOpacity: 0.35, shadowRadius: 8 },
+  imgModalBg:         { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', alignItems: 'center', justifyContent: 'center' },
+  imgModalClose:      { position: 'absolute', top: 52, right: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', zIndex: 10 },
   // Category filter chips
   catChip:            { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: C.white, borderWidth: 1, borderColor: C.slate200 },
   catChipActive:      { backgroundColor: C.blue, borderColor: C.blue },

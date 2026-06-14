@@ -63,6 +63,8 @@ export default function ChatScreen() {
   const [hasMore, setHasMore]   = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [replyTo, setReplyTo]   = useState<any>(null)
+  const [aiAssist, setAiAssist] = useState(false)
+  const [aiDrafting, setAiDrafting] = useState(false)
   const oldestTs = useRef<string | null>(null)
 
   const msgsMap = useMemo(() => new Map(msgs.map(m => [m.id, m])), [msgs])
@@ -167,6 +169,39 @@ export default function ChatScreen() {
     setHasMore((data ?? []).length >= PAGE_SIZE)
     setLoadingMore(false)
   }, [loadingMore, id])
+
+  const draftWithAI = async () => {
+    if (aiDrafting) return
+    setAiDrafting(true)
+    try {
+      const { data: history } = await supabase
+        .from('messages').select('sender_id, content, is_ai')
+        .eq('conversation_id', id)
+        .order('created_at', { ascending: false })
+        .limit(10)
+      const reversed = (history ?? []).reverse()
+      const apiMessages = reversed.map(m => ({
+        role: m.sender_id === myId ? 'assistant' : 'user',
+        content: m.content,
+      }))
+      const res = await fetch('https://whiterock-connect.vercel.app/api/ai-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [
+            { role: 'system', content: 'You are a UK student placement counselor at WhiteRock Connect. Draft a professional, empathetic reply to the student. Keep it concise.' },
+            ...apiMessages,
+          ],
+        }),
+      })
+      const { reply } = await res.json()
+      if (reply) setInput(reply)
+    } catch {
+      Alert.alert('AI Draft', 'Could not generate a draft. Try again.')
+    } finally {
+      setAiDrafting(false)
+    }
+  }
 
   const sendMessage = async () => {
     const content = input.trim()
@@ -417,6 +452,33 @@ export default function ChatScreen() {
         </View>
       )}
 
+      {/* AI Assist toggle — staff only */}
+      {myRole !== 'student' && (
+        <View style={g.aiBar}>
+          <TouchableOpacity
+            style={[g.aiToggle, aiAssist && g.aiToggleOn]}
+            onPress={() => setAiAssist(v => !v)}
+          >
+            <Ionicons name="hardware-chip-outline" size={14} color={aiAssist ? C.white : C.blue} />
+            <Text style={[g.aiToggleText, aiAssist && { color: C.white }]}>AI Assist</Text>
+          </TouchableOpacity>
+          {aiAssist && (
+            <TouchableOpacity
+              style={[g.aiDraftBtn, aiDrafting && { opacity: 0.6 }]}
+              onPress={draftWithAI}
+              disabled={aiDrafting}
+            >
+              {aiDrafting
+                ? <ActivityIndicator size="small" color={C.blue} />
+                : <>
+                    <Ionicons name="create-outline" size={14} color={C.blue} />
+                    <Text style={g.aiDraftText}>Draft Reply</Text>
+                  </>}
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
       {/* Input */}
       <View style={g.bar}>
         <TouchableOpacity onPress={pickAndSendMedia} disabled={uploading} style={g.attach}>
@@ -499,9 +561,15 @@ const g = StyleSheet.create({
   progressTxt:    { fontSize: 10, color: C.slate400, marginLeft: 'auto' },
   replyPreviewBar:{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#EFF6FF', paddingHorizontal: 16, paddingVertical: 8, borderTopWidth: 1, borderColor: '#DBEAFE' },
   replyPreviewText:{ flex: 1, fontSize: 12, color: C.blue, fontStyle: 'italic' },
+  aiBar:          { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: C.white, borderTopWidth: 1, borderColor: C.slate100 },
+  aiToggle:       { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, borderWidth: 1, borderColor: C.blue, backgroundColor: C.white },
+  aiToggleOn:     { backgroundColor: C.blue },
+  aiToggleText:   { fontSize: 11, fontWeight: '700', color: C.blue },
+  aiDraftBtn:     { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 14, backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#DBEAFE' },
+  aiDraftText:    { fontSize: 11, fontWeight: '700', color: C.blue },
   bar:            { flexDirection: 'row', alignItems: 'flex-end', padding: 10, paddingBottom: Platform.OS === 'ios' ? 28 : 10, backgroundColor: C.white, borderTopWidth: 1, borderColor: C.slate100, gap: 8 },
   attach:         { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: C.slate100, borderRadius: 12 },
-  input:          { flex: 1, backgroundColor: '#F1F5F9', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: C.navy, maxHeight: 100 },
+  input:          { flex: 1, backgroundColor: C.bg, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: C.navy, maxHeight: 100 },
   sendBtn:        { width: 44, height: 44, borderRadius: 14, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
   sendBtnOff:     { opacity: 0.4 },
   dateSep:        { flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 10, paddingHorizontal: 4 },

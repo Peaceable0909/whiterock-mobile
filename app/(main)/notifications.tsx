@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
 import { C } from '@/constants/colors'
 
@@ -32,7 +33,8 @@ function timeAgo(iso: string) {
 }
 
 export default function NotificationsScreen() {
-  const router = useRouter()
+  const router  = useRouter()
+  const insets  = useSafeAreaInsets()
   const [items, setItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -69,10 +71,10 @@ export default function NotificationsScreen() {
     return () => { supabase.removeChannel(sub) }
   }, [])
 
-  if (loading) return <View style={s.center}><ActivityIndicator color={C.blue} /></View>
+  if (loading) return <View style={[s.center, { paddingTop: insets.top }]}><ActivityIndicator color={C.blue} /></View>
 
   return (
-    <View style={s.bg}>
+    <View style={[s.bg, { paddingTop: insets.top }]}>
       <FlatList
         data={items}
         keyExtractor={n => n.id}
@@ -96,8 +98,22 @@ export default function NotificationsScreen() {
         renderItem={({ item }) => {
           const iconName = ICON_NAMES[item.type] ?? 'information-circle-outline'
           const color = COLORS[item.type] ?? C.slate400
+          const handleTap = () => {
+            const d = item.data ?? {}
+            if (item.type === 'message' && d.convId) {
+              router.push(`/(main)/messages/${d.convId}` as any)
+            } else if ((item.type === 'document' || item.type === 'visa') && d.studentId) {
+              router.push(`/(main)/students/${d.studentId}` as any)
+            } else if (item.type === 'document') {
+              router.push('/(main)/documents' as any)
+            }
+          }
           return (
-            <View style={[s.card, !item.is_read && s.cardUnread]}>
+            <TouchableOpacity
+              style={[s.card, !item.is_read && s.cardUnread]}
+              onPress={handleTap}
+              activeOpacity={0.75}
+            >
               <View style={[s.iconWrap, { backgroundColor: color + '1A' }]}>
                 <Ionicons name={iconName as any} size={18} color={color} />
               </View>
@@ -107,7 +123,7 @@ export default function NotificationsScreen() {
                 <Text style={s.time}>{timeAgo(item.created_at)}</Text>
               </View>
               {!item.is_read && <View style={s.dot} />}
-            </View>
+            </TouchableOpacity>
           )
         }}
       />

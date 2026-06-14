@@ -5,11 +5,28 @@ import {
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
 import { C } from '@/constants/colors'
 
+const formatConvTime = (iso: string) => {
+  const d = new Date(iso)
+  const now = new Date()
+  const today     = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const yesterday = new Date(today.getTime() - 86400000)
+  const msgDay    = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  if (msgDay.getTime() === today.getTime()) {
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  }
+  if (msgDay.getTime() === yesterday.getTime()) return 'Yesterday'
+  const daysDiff = Math.floor((today.getTime() - msgDay.getTime()) / 86400000)
+  if (daysDiff < 7) return d.toLocaleDateString('en-GB', { weekday: 'short' })
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+}
+
 export default function MessagesScreen() {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const [search, setSearch]       = useState('')
   const [convs, setConvs]         = useState<any[]>([])
   const [role, setRole]           = useState<string>('student')
@@ -106,10 +123,10 @@ export default function MessagesScreen() {
 
   const filteredStudents = students.filter(s => !studentSearch || s.name.toLowerCase().includes(studentSearch.toLowerCase()))
 
-  if (loading) return <View style={s.center}><ActivityIndicator color={C.blue} /></View>
+  if (loading) return <View style={[s.center, { paddingTop: insets.top }]}><ActivityIndicator color={C.blue} /></View>
 
   return (
-    <View style={s.bg}>
+    <View style={[s.bg, { paddingTop: insets.top }]}>
       {/* Search */}
       <View style={s.searchWrap}>
         <Ionicons name="search-outline" size={16} color={C.slate400} />
@@ -155,9 +172,7 @@ export default function MessagesScreen() {
           const other = role === 'student' ? (item.agent || item.counselor) : item.student
           if (!other) return null
           const unread = getUnread(item)
-          const timeStr = item.last_message_at
-            ? new Date(item.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            : ''
+          const timeStr = item.last_message_at ? formatConvTime(item.last_message_at) : ''
           return (
             <TouchableOpacity style={s.convRow} onPress={() => router.push(`/(main)/messages/${item.id}`)}>
               <View style={s.avatarWrap}>
@@ -252,7 +267,7 @@ export default function MessagesScreen() {
 }
 
 const s = StyleSheet.create({
-  bg:             { flex: 1, backgroundColor: C.white },
+  bg:             { flex: 1, backgroundColor: C.bg },
   center:         { flex: 1, alignItems: 'center', justifyContent: 'center' },
   searchWrap:     { flexDirection: 'row', alignItems: 'center', margin: 12, backgroundColor: C.bg, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: C.slate100 },
   searchInput:    { flex: 1, fontSize: 14, color: C.navy, marginLeft: 8 },
