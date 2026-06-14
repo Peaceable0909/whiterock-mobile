@@ -30,13 +30,6 @@
       "expo-router",
       "expo-secure-store",
       [
-        "@sentry/react-native/expo",
-        {
-          "url": "https://sentry.io/",
-          "note": "Set EXPO_PUBLIC_SENTRY_DSN env var to enable crash reporting"
-        }
-      ],
-      [
         "expo-image-picker",
         {
           "photosPermission": "Allow WhiteRock Connect to access your photos and videos to send them in chat."

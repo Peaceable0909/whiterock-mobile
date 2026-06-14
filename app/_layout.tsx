@@ -1,18 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Slot, useRouter, useSegments } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
-import * as Sentry from '@sentry/react-native'
 import { supabase } from '@/lib/supabase'
 import type { Session } from '@supabase/supabase-js'
-
-const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN
-
-Sentry.init({
-  dsn: SENTRY_DSN,
-  enabled: !!SENTRY_DSN,
-  tracesSampleRate: 0.1,
-  attachScreenshot: true,
-})
 
 export default function RootLayout() {
   const [session, setSession]   = useState<Session | null>(null)
