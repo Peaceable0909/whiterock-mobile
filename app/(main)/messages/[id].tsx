@@ -6,7 +6,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { VideoView, useVideoPlayer } from 'expo-video'
 import * as ImagePicker from 'expo-image-picker'
-import { ArrowLeft, Send, Bot, Paperclip, Check, CheckCheck, Ban, Mic, FileText } from 'lucide-react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { uploadVideo } from '@/lib/cloudinary'
 import { C } from '@/constants/colors'
@@ -84,7 +84,6 @@ export default function ChatScreen() {
       setLoading(false)
       scrollToEnd()
 
-      // Mark all received messages as read
       await supabase.rpc('mark_conversation_read', { conv_id: id })
       await supabase.from('conversations')
         .update({ [role === 'student' ? 'unread_student' : 'unread_staff']: 0 })
@@ -92,7 +91,6 @@ export default function ChatScreen() {
     }
     load()
 
-    // Real-time: new messages + edits/deletes/read-receipts
     const subscribe = () => {
       if (channelRef.current) supabase.removeChannel(channelRef.current)
       const ch = supabase.channel(`chat-mob-${id}`)
@@ -121,7 +119,6 @@ export default function ChatScreen() {
 
     subscribe()
 
-    // Re-subscribe when app comes back to foreground (WebSocket may have dropped)
     const appStateSub = AppState.addEventListener('change', nextState => {
       if (appState.current.match(/inactive|background/) && nextState === 'active') {
         subscribe()
@@ -181,7 +178,7 @@ export default function ChatScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images', 'videos'],
       quality: 0.85,
-      videoMaxDuration: 300, // 5 min
+      videoMaxDuration: 300,
     })
     if (result.canceled || !result.assets?.[0]) return
     const asset = result.assets[0]
@@ -200,7 +197,6 @@ export default function ChatScreen() {
       if (isVideo) {
         publicUrl = await uploadVideo(asset.uri, mimeType, fileName, pct => setUploadPct(pct))
       } else {
-        // Images → Supabase Storage
         const path = `chat/${myId}/${Date.now()}.${ext}`
         const blob = await fetch(asset.uri).then(r => r.blob())
         const { error } = await supabase.storage.from('documents').upload(path, blob, { contentType: mimeType })
@@ -243,7 +239,6 @@ export default function ChatScreen() {
         )}
 
         <View style={[ms.bubbleWrap, isMe ? ms.bubbleWrapMe : ms.bubbleWrapThem]}>
-          {/* Reply preview */}
           {item.reply_to_id && !isDeleted && (
             <View style={[ms.replyBar, isMe ? ms.replyBarMe : ms.replyBarThem]}>
               <Text style={[ms.replyLabel, isMe && { color: 'rgba(255,255,255,0.7)' }]} numberOfLines={1}>
@@ -252,15 +247,13 @@ export default function ChatScreen() {
             </View>
           )}
 
-          {/* Forwarded label */}
           {item.forwarded && !isDeleted && (
             <Text style={[ms.forwardedLabel, !isMe && { color: C.slate400 }]}>↪ Forwarded</Text>
           )}
 
-          {/* Content */}
           {isDeleted ? (
             <View style={ms.deletedRow}>
-              <Ban size={12} color={isMe ? 'rgba(255,255,255,0.5)' : C.slate400} />
+              <Ionicons name="remove-circle-outline" size={12} color={isMe ? 'rgba(255,255,255,0.5)' : C.slate400} />
               <Text style={[ms.deletedText, isMe && ms.deletedTextMe]}>This message was deleted</Text>
             </View>
           ) : item.type === 'image' && item.file_url ? (
@@ -272,14 +265,14 @@ export default function ChatScreen() {
           ) : item.type === 'voice' && item.file_url ? (
             <TouchableOpacity onPress={() => Linking.openURL(item.file_url)}
               style={ms.audioRow} activeOpacity={0.8}>
-              <View style={ms.audioIcon}><Mic size={16} color={isMe ? C.white : C.blue} /></View>
+              <View style={ms.audioIcon}><Ionicons name="mic-outline" size={16} color={isMe ? C.white : C.blue} /></View>
               <Text style={[ms.audioLabel, isMe && ms.textMe]}>Voice note · tap to play</Text>
             </TouchableOpacity>
           ) : item.file_url ? (
             <TouchableOpacity onPress={() => Linking.openURL(item.file_url)}
               style={ms.fileRow} activeOpacity={0.8}>
               <View style={[ms.fileIcon, isMe && ms.fileIconMe]}>
-                <FileText size={16} color={isMe ? C.white : C.blue} />
+                <Ionicons name="document-text-outline" size={16} color={isMe ? C.white : C.blue} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[ms.fileName, isMe && ms.textMe]} numberOfLines={1}>{item.file_name ?? 'File'}</Text>
@@ -294,7 +287,6 @@ export default function ChatScreen() {
             <Text style={[ms.text, isMe && ms.textMe]}>{item.content ?? ''}</Text>
           )}
 
-          {/* Timestamp + read receipt */}
           <View style={[ms.meta, isMe ? ms.metaMe : ms.metaThem]}>
             <Text style={[ms.time, isMe && ms.timeMe]}>
               {formatTime(item.created_at)}
@@ -302,8 +294,8 @@ export default function ChatScreen() {
             </Text>
             {isMe && !isDeleted && (
               item.is_read
-                ? <CheckCheck size={13} color="#60A5FA" style={ms.tick} />
-                : <Check size={13} color="rgba(255,255,255,0.55)" style={ms.tick} />
+                ? <Ionicons name="checkmark-done" size={13} color="#60A5FA" style={ms.tick} />
+                : <Ionicons name="checkmark" size={13} color="rgba(255,255,255,0.55)" style={ms.tick} />
             )}
           </View>
         </View>
@@ -318,7 +310,7 @@ export default function ChatScreen() {
       {/* Header */}
       <View style={g.header}>
         <TouchableOpacity onPress={() => router.back()} style={g.backBtn}>
-          <ArrowLeft size={22} color={C.navy} />
+          <Ionicons name="arrow-back" size={22} color={C.navy} />
         </TouchableOpacity>
         <View style={g.headerAvatar}>
           {otherUser?.avatar_url
@@ -366,7 +358,7 @@ export default function ChatScreen() {
       {/* Input */}
       <View style={g.bar}>
         <TouchableOpacity onPress={pickAndSendMedia} disabled={uploading} style={g.attach}>
-          <Paperclip size={20} color={uploading ? C.slate300 : C.slate500} />
+          <Ionicons name="attach-outline" size={20} color={uploading ? C.slate300 : C.slate500} />
         </TouchableOpacity>
         <TextInput
           style={g.input} value={input} onChangeText={setInput}
@@ -379,7 +371,7 @@ export default function ChatScreen() {
           disabled={!input.trim() || sending}>
           {sending
             ? <ActivityIndicator color={C.white} size="small" />
-            : <Send size={18} color={C.white} />}
+            : <Ionicons name="send-outline" size={18} color={C.white} />}
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>

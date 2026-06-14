@@ -4,7 +4,7 @@ import {
   StyleSheet, ScrollView, ActivityIndicator, Alert
 } from 'react-native'
 import { useRouter } from 'expo-router'
-import { GraduationCap, Eye, EyeOff } from 'lucide-react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { C } from '@/constants/colors'
 
@@ -37,7 +37,7 @@ export default function LoginScreen() {
       {/* Brand */}
       <View style={s.hero}>
         <View style={s.iconBox}>
-          <GraduationCap color="#fff" size={32} />
+          <Ionicons name="school-outline" size={32} color="#fff" />
         </View>
         <Text style={s.title}>Welcome Back</Text>
         <Text style={s.subtitle}>Secure access to your global{'\n'}recruitment dashboard</Text>
@@ -62,8 +62,8 @@ export default function LoginScreen() {
           />
           <TouchableOpacity onPress={() => setShowPw(!showPw)} style={s.eyeBtn}>
             {showPw
-              ? <EyeOff color={C.slate400} size={18} />
-              : <Eye    color={C.slate400} size={18} />}
+              ? <Ionicons name="eye-off-outline" size={18} color={C.slate400} />
+              : <Ionicons name="eye-outline"     size={18} color={C.slate400} />}
           </TouchableOpacity>
         </View>
 

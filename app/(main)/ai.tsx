@@ -4,7 +4,7 @@ import {
   StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator,
   ScrollView
 } from 'react-native'
-import { Bot, Send, Zap } from 'lucide-react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { C } from '@/constants/colors'
 
@@ -57,7 +57,7 @@ export default function AIScreen() {
     <KeyboardAvoidingView style={s.bg} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={80}>
       {/* Header */}
       <View style={s.header}>
-        <View style={s.botAvatar}><Bot size={20} color={C.white} /></View>
+        <View style={s.botAvatar}><Ionicons name="hardware-chip-outline" size={20} color={C.white} /></View>
         <View>
           <Text style={s.headerTitle}>WhiteRock AI</Text>
           <View style={s.onlineRow}><View style={s.dot} /><Text style={s.onlineTxt}>Always online · Powered by Qwen</Text></View>
@@ -74,11 +74,11 @@ export default function AIScreen() {
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
         ListHeaderComponent={isEmpty ? (
           <View style={s.emptyState}>
-            <View style={s.sparkleBox}><Bot size={32} color={C.white} /></View>
+            <View style={s.sparkleBox}><Ionicons name="hardware-chip-outline" size={32} color={C.white} /></View>
             <Text style={s.emptyTitle}>Ask me anything</Text>
             <Text style={s.emptySub}>UK applications, visa docs, CAS, maintenance funds</Text>
             <View style={s.suggestedHeader}>
-              <Zap size={12} color={C.blue} />
+              <Ionicons name="flash-outline" size={12} color={C.blue} />
               <Text style={s.suggestedLabel}>SUGGESTED ACTIONS</Text>
             </View>
             <View style={s.chips}>
@@ -93,7 +93,7 @@ export default function AIScreen() {
         renderItem={({ item }) => (
           <View style={[s.msgRow, item.role === 'user' ? s.msgMe : s.msgThem]}>
             {item.role === 'assistant' && (
-              <View style={s.botMini}><Bot size={14} color={C.white} /></View>
+              <View style={s.botMini}><Ionicons name="hardware-chip-outline" size={14} color={C.white} /></View>
             )}
             <View style={[s.bubble, item.role === 'user' ? s.bubbleMe : s.bubbleThem]}>
               <Text style={[s.bubbleText, item.role === 'user' && s.bubbleTextMe]}>{item.content}</Text>
@@ -102,7 +102,7 @@ export default function AIScreen() {
         )}
         ListFooterComponent={loading ? (
           <View style={s.msgRow}>
-            <View style={s.botMini}><Bot size={14} color={C.white} /></View>
+            <View style={s.botMini}><Ionicons name="hardware-chip-outline" size={14} color={C.white} /></View>
             <View style={[s.bubble, s.bubbleThem, { paddingVertical: 14 }]}>
               <ActivityIndicator color={C.blue} size="small" />
             </View>
@@ -130,7 +130,7 @@ export default function AIScreen() {
         />
         <TouchableOpacity style={[s.sendBtn, (!input.trim() || loading) && { opacity: 0.4 }]}
           onPress={() => send(input)} disabled={!input.trim() || loading}>
-          {loading ? <ActivityIndicator color={C.white} size="small" /> : <Send size={16} color={C.white} />}
+          {loading ? <ActivityIndicator color={C.white} size="small" /> : <Ionicons name="send-outline" size={16} color={C.white} />}
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>

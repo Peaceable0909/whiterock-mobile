@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
 import { useRouter } from 'expo-router'
-import { Search, UserPlus, AlertTriangle } from 'lucide-react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { C } from '@/constants/colors'
 
@@ -55,7 +55,7 @@ export default function StudentsScreen() {
     <View style={s.bg}>
       {/* Search */}
       <View style={s.searchWrap}>
-        <Search size={16} color={C.slate400} />
+        <Ionicons name="search-outline" size={16} color={C.slate400} />
         <TextInput style={s.searchInput} value={search} onChangeText={setSearch} placeholder="Search students, universities..." placeholderTextColor={C.slate400} />
       </View>
 
@@ -71,7 +71,7 @@ export default function StudentsScreen() {
       {/* AI alert */}
       {(casAlerts > 0 || visaAlerts > 0) && (
         <View style={s.alertBanner}>
-          <AlertTriangle size={16} color="#FCD34D" />
+          <Ionicons name="warning-outline" size={16} color="#FCD34D" />
           <View style={{ flex: 1, marginLeft: 10 }}>
             <Text style={s.alertTitle}>{casAlerts > 0 ? `CAS Alert: ${casAlerts} Pending` : `Visa Alert: ${visaAlerts} Pending`}</Text>
             <Text style={s.alertSub}>AI suggests immediate follow-up.</Text>
@@ -113,7 +113,9 @@ export default function StudentsScreen() {
         }}
       />
 
-      <TouchableOpacity style={s.fab}><UserPlus size={20} color={C.white} /></TouchableOpacity>
+      <TouchableOpacity style={s.fab}>
+        <Ionicons name="person-add-outline" size={20} color={C.white} />
+      </TouchableOpacity>
     </View>
   )
 }

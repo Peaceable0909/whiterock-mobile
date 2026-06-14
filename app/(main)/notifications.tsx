@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react'
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
 import { useRouter } from 'expo-router'
-import {
-  ArrowLeft, Bell, MessageCircle, FileText, Video,
-  CheckCircle2, AlertTriangle, Info,
-} from 'lucide-react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { C } from '@/constants/colors'
 
-const ICONS: Record<string, any> = {
-  message: MessageCircle, document: FileText, interview: Video,
-  visa: CheckCircle2, success: CheckCircle2,
-  warning: AlertTriangle, error: AlertTriangle, info: Info,
+const ICON_NAMES: Record<string, string> = {
+  message:   'chatbubble-outline',
+  document:  'document-text-outline',
+  interview: 'videocam-outline',
+  visa:      'checkmark-circle-outline',
+  success:   'checkmark-circle-outline',
+  warning:   'warning-outline',
+  error:     'warning-outline',
+  info:      'information-circle-outline',
 }
 
 const COLORS: Record<string, string> = {
@@ -49,7 +51,6 @@ export default function NotificationsScreen() {
         .limit(50)
       setItems(data ?? [])
       setLoading(false)
-      // viewing the screen clears the unread state
       supabase.from('notifications')
         .update({ is_read: true })
         .eq('user_id', user.id)
@@ -80,25 +81,25 @@ export default function NotificationsScreen() {
         ListHeaderComponent={
           <View style={s.header}>
             <TouchableOpacity onPress={() => router.back()} style={s.back} accessibilityLabel="Go back">
-              <ArrowLeft size={20} color={C.slate500} />
+              <Ionicons name="arrow-back" size={20} color={C.slate500} />
             </TouchableOpacity>
             <Text style={s.headerTitle}>Notifications</Text>
           </View>
         }
         ListEmptyComponent={
           <View style={s.empty}>
-            <Bell size={40} color={C.slate200} />
+            <Ionicons name="notifications-outline" size={40} color={C.slate200} />
             <Text style={s.emptyTitle}>Nothing yet</Text>
             <Text style={s.emptySub}>Messages, documents and visa updates land here</Text>
           </View>
         }
         renderItem={({ item }) => {
-          const Icon = ICONS[item.type] ?? Info
+          const iconName = ICON_NAMES[item.type] ?? 'information-circle-outline'
           const color = COLORS[item.type] ?? C.slate400
           return (
             <View style={[s.card, !item.is_read && s.cardUnread]}>
               <View style={[s.iconWrap, { backgroundColor: color + '1A' }]}>
-                <Icon size={18} color={color} />
+                <Ionicons name={iconName as any} size={18} color={color} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.title}>{item.title}</Text>

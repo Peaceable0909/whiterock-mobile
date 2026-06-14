@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { ArrowLeft, MessageCircle, Phone, Bot, BookOpen, MapPin, Calendar } from 'lucide-react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { C } from '@/constants/colors'
 
@@ -42,14 +42,15 @@ export default function StudentProfileScreen() {
     <View style={s.bg}>
       {/* Header */}
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} style={s.back}><ArrowLeft size={22} color={C.navy} /></TouchableOpacity>
+        <TouchableOpacity onPress={() => router.back()} style={s.back}>
+          <Ionicons name="arrow-back" size={22} color={C.navy} />
+        </TouchableOpacity>
         <Text style={s.headerTitle}>Student Profile</Text>
       </View>
 
       {/* Profile card */}
       <View style={s.profileCard}>
         <View style={s.row}>
-          {/* SVG ring via View approximation */}
           <View style={s.ringWrap}>
             <View style={s.ringAvatar}><Text style={s.ringText}>{initials}</Text></View>
             <Text style={s.ringPct}>{pct}%</Text>
@@ -58,9 +59,9 @@ export default function StudentProfileScreen() {
             <Text style={s.studentName}>{student.name}</Text>
             {profile?.student_number && <Text style={s.studentNum}>{profile.student_number}</Text>}
             <View style={s.metaRow}>
-              {profile?.school && <View style={s.metaItem}><BookOpen size={12} color={C.slate400} /><Text style={s.metaText}>{profile.school}</Text></View>}
-              {profile?.country_of_interest && <View style={s.metaItem}><MapPin size={12} color={C.slate400} /><Text style={s.metaText}>{profile.country_of_interest}</Text></View>}
-              {profile?.intake && <View style={s.metaItem}><Calendar size={12} color={C.slate400} /><Text style={s.metaText}>{profile.intake}</Text></View>}
+              {profile?.school && <View style={s.metaItem}><Ionicons name="book-outline" size={12} color={C.slate400} /><Text style={s.metaText}>{profile.school}</Text></View>}
+              {profile?.country_of_interest && <View style={s.metaItem}><Ionicons name="location-outline" size={12} color={C.slate400} /><Text style={s.metaText}>{profile.country_of_interest}</Text></View>}
+              {profile?.intake && <View style={s.metaItem}><Ionicons name="calendar-outline" size={12} color={C.slate400} /><Text style={s.metaText}>{profile.intake}</Text></View>}
             </View>
             <View style={s.stageBadge}><Text style={s.stageText}>{STAGE_LABEL[stage]}</Text></View>
           </View>
@@ -68,9 +69,18 @@ export default function StudentProfileScreen() {
 
         {/* Action row */}
         <View style={[s.row, { gap: 8, marginTop: 14 }]}>
-          <TouchableOpacity style={s.actionBtn}><MessageCircle size={14} color={C.white} /><Text style={s.actionBtnText}>Message</Text></TouchableOpacity>
-          <TouchableOpacity style={s.actionBtnGhost}><Phone size={14} color={C.slate600} /><Text style={s.actionBtnGhostText}>Call</Text></TouchableOpacity>
-          <TouchableOpacity style={s.actionBtnPurple}><Bot size={14} color="#9333EA" /><Text style={s.actionBtnPurpleText}>AI Review</Text></TouchableOpacity>
+          <TouchableOpacity style={s.actionBtn}>
+            <Ionicons name="chatbubble-outline" size={14} color={C.white} />
+            <Text style={s.actionBtnText}>Message</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.actionBtnGhost}>
+            <Ionicons name="call-outline" size={14} color={C.slate600} />
+            <Text style={s.actionBtnGhostText}>Call</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.actionBtnPurple}>
+            <Ionicons name="hardware-chip-outline" size={14} color="#9333EA" />
+            <Text style={s.actionBtnPurpleText}>AI Review</Text>
+          </TouchableOpacity>
         </View>
       </View>
 

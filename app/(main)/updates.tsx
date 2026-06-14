@@ -4,10 +4,7 @@ import {
   ActivityIndicator, Image, Linking, RefreshControl,
 } from 'react-native'
 import { VideoView, useVideoPlayer } from 'expo-video'
-import {
-  Bell, Heart, Bookmark, Share2, Eye, Megaphone,
-  Award, GraduationCap, Globe, Tag, Calendar, Users, Mic, FileText,
-} from 'lucide-react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { C } from '@/constants/colors'
 
@@ -21,14 +18,14 @@ const CAT_COLORS: Record<string, { bg: string; text: string }> = {
   training:     { bg: '#FEF9C3', text: '#B45309' },
 }
 
-const CAT_ICONS: Record<string, React.ElementType> = {
-  announcement: Megaphone,
-  scholarship:  Award,
-  new_school:   GraduationCap,
-  visa_update:  Globe,
-  promotion:    Tag,
-  event:        Calendar,
-  training:     Users,
+const CAT_ICON_NAMES: Record<string, string> = {
+  announcement: 'megaphone-outline',
+  scholarship:  'trophy-outline',
+  new_school:   'school-outline',
+  visa_update:  'globe-outline',
+  promotion:    'pricetag-outline',
+  event:        'calendar-outline',
+  training:     'people-outline',
 }
 
 const formatRelativeTime = (iso: string) => {
@@ -86,7 +83,6 @@ export default function UpdatesScreen() {
 
   useEffect(() => { load() }, [load])
 
-  // Track views when update becomes visible
   const trackView = useCallback(async (updateId: string) => {
     if (viewedIds.has(updateId) || !myId) return
     setViewedIds(prev => new Set([...prev, updateId]))
@@ -136,7 +132,7 @@ export default function UpdatesScreen() {
   }
 
   const renderUpdate = ({ item }: { item: any }) => {
-    const CatIcon  = CAT_ICONS[item.category] ?? Megaphone
+    const catIconName = CAT_ICON_NAMES[item.category] ?? 'megaphone-outline'
     const catColor = CAT_COLORS[item.category] ?? { bg: '#DBEAFE', text: '#1D4ED8' }
     const author   = item.author
     const isLiked  = likedIds.has(item.id)
@@ -167,7 +163,7 @@ export default function UpdatesScreen() {
         {item.media_url && item.media_type === 'audio' && (
           <TouchableOpacity onPress={() => Linking.openURL(item.media_url)}
             style={c.audioRow} activeOpacity={0.85}>
-            <View style={c.audioIcon}><Mic size={18} color={C.white} /></View>
+            <View style={c.audioIcon}><Ionicons name="mic-outline" size={18} color={C.white} /></View>
             <Text style={c.audioLabel}>Audio · tap to play</Text>
           </TouchableOpacity>
         )}
@@ -185,7 +181,7 @@ export default function UpdatesScreen() {
               <Text style={c.authorTime}>{formatRelativeTime(item.created_at)}</Text>
             </View>
             <View style={[c.catBadge, { backgroundColor: catColor.bg }]}>
-              <CatIcon size={10} color={catColor.text} />
+              <Ionicons name={catIconName as any} size={10} color={catColor.text} />
               <Text style={[c.catText, { color: catColor.text }]}>
                 {(item.category ?? 'update').replace('_', ' ')}
               </Text>
@@ -200,7 +196,7 @@ export default function UpdatesScreen() {
           {item.media_url && item.media_type === 'document' && (
             <TouchableOpacity onPress={() => Linking.openURL(item.media_url)}
               style={c.docLink} activeOpacity={0.8}>
-              <FileText size={14} color={C.blue} />
+              <Ionicons name="document-text-outline" size={14} color={C.blue} />
               <Text style={c.docLinkText}>View attached document</Text>
             </TouchableOpacity>
           )}
@@ -208,10 +204,10 @@ export default function UpdatesScreen() {
           {/* Actions */}
           <View style={c.actions}>
             <TouchableOpacity onPress={() => toggleLike(item.id)} style={c.actionBtn}>
-              <Heart
+              <Ionicons
+                name={isLiked ? 'heart' : 'heart-outline'}
                 size={17}
                 color={isLiked ? '#EF4444' : C.slate400}
-                fill={isLiked ? '#EF4444' : 'none'}
               />
               <Text style={[c.actionCount, isLiked && { color: '#EF4444' }]}>
                 {item.likes_count ?? 0}
@@ -219,22 +215,22 @@ export default function UpdatesScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => toggleSave(item.id)} style={c.actionBtn}>
-              <Bookmark
+              <Ionicons
+                name={isSaved ? 'bookmark' : 'bookmark-outline'}
                 size={17}
                 color={isSaved ? C.blue : C.slate400}
-                fill={isSaved ? C.blue : 'none'}
               />
             </TouchableOpacity>
 
             {(item.views_count ?? 0) > 0 && (
               <View style={c.actionBtn}>
-                <Eye size={14} color={C.slate400} />
+                <Ionicons name="eye-outline" size={14} color={C.slate400} />
                 <Text style={c.actionCount}>{item.views_count}</Text>
               </View>
             )}
 
             <TouchableOpacity onPress={() => shareUpdate(item)} style={[c.actionBtn, { marginLeft: 'auto' }]}>
-              <Share2 size={16} color={C.slate400} />
+              <Ionicons name="share-social-outline" size={16} color={C.slate400} />
             </TouchableOpacity>
           </View>
         </View>
@@ -254,13 +250,13 @@ export default function UpdatesScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load() }} tintColor={C.blue} />}
         ListHeaderComponent={
           <View style={g.header}>
-            <Bell size={20} color={C.blue} />
+            <Ionicons name="notifications-outline" size={20} color={C.blue} />
             <Text style={g.headerTitle}>Updates</Text>
           </View>
         }
         ListEmptyComponent={
           <View style={g.empty}>
-            <Bell size={44} color={C.slate200} />
+            <Ionicons name="notifications-outline" size={44} color={C.slate200} />
             <Text style={g.emptyTitle}>No updates yet</Text>
             <Text style={g.emptySub}>Agency announcements will appear here</Text>
           </View>

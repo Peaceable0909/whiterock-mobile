@@ -4,7 +4,7 @@ import {
   StyleSheet, ScrollView, ActivityIndicator, Alert
 } from 'react-native'
 import { useRouter } from 'expo-router'
-import { GraduationCap, KeyRound, Eye, EyeOff, CheckCircle2 } from 'lucide-react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { C } from '@/constants/colors'
 
@@ -59,7 +59,7 @@ export default function RegisterScreen() {
     <ScrollView style={s.bg} contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
       <View style={s.hero}>
         <View style={s.iconBox}>
-          <GraduationCap color="#fff" size={32} />
+          <Ionicons name="school-outline" size={32} color="#fff" />
         </View>
         <Text style={s.title}>Create Account</Text>
         <Text style={s.subtitle}>WhiteRock Connect is invite-only</Text>
@@ -70,7 +70,7 @@ export default function RegisterScreen() {
         <Text style={s.label}>INVITE CODE</Text>
         <View style={s.codeRow}>
           <View style={s.codeInputWrap}>
-            <KeyRound size={16} color={C.slate400} />
+            <Ionicons name="key-outline" size={16} color={C.slate400} />
             <TextInput
               style={s.codeInput} value={code}
               onChangeText={t => { setCode(t.toUpperCase()); setCodeRole(null) }}
@@ -80,7 +80,7 @@ export default function RegisterScreen() {
           </View>
           <TouchableOpacity style={[s.verifyBtn, codeRole && s.verifyBtnOk]} onPress={verifyCode} disabled={checking || !!codeRole}>
             {checking ? <ActivityIndicator color="#fff" size="small" />
-              : codeRole ? <CheckCircle2 size={16} color="#16A34A" />
+              : codeRole ? <Ionicons name="checkmark-circle-outline" size={16} color="#16A34A" />
               : <Text style={s.verifyText}>Verify</Text>}
           </TouchableOpacity>
         </View>
@@ -103,7 +103,9 @@ export default function RegisterScreen() {
             secureTextEntry={!showPw}
           />
           <TouchableOpacity onPress={() => setShowPw(!showPw)} style={s.eyeBtn}>
-            {showPw ? <EyeOff color={C.slate400} size={18} /> : <Eye color={C.slate400} size={18} />}
+            {showPw
+              ? <Ionicons name="eye-off-outline" size={18} color={C.slate400} />
+              : <Ionicons name="eye-outline"     size={18} color={C.slate400} />}
           </TouchableOpacity>
         </View>
 

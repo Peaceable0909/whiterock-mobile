@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react'
 import { Tabs, router } from 'expo-router'
-import { View, Text, StyleSheet } from 'react-native'
-import { Home, MessageCircle, Users, Bell, Bot } from 'lucide-react-native'
+import { View, StyleSheet } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 import * as Notifications from 'expo-notifications'
 import { supabase } from '@/lib/supabase'
 import { registerForPush } from '@/lib/notifications'
 import { C } from '@/constants/colors'
 
-function TabIcon({ icon: Icon, focused, label }: { icon: any; focused: boolean; label: string }) {
+function TabIcon({ name, focused }: { name: string; focused: boolean }) {
   return (
     <View style={[ti.wrap, focused && ti.wrapActive]}>
-      <Icon size={20} color={focused ? C.white : C.slate500} strokeWidth={focused ? 2.5 : 1.8} />
+      <Ionicons name={name as any} size={20} color={focused ? C.white : C.slate500} />
     </View>
   )
 }
@@ -64,24 +64,24 @@ export default function MainLayout() {
     }}>
       <Tabs.Screen name="home" options={{
         title: 'Home',
-        tabBarIcon: ({ focused }) => <TabIcon icon={Home} focused={focused} label="Home" />,
+        tabBarIcon: ({ focused }) => <TabIcon name="home-outline" focused={focused} />,
       }} />
       <Tabs.Screen name="messages/index" options={{
         title: 'Messages',
-        tabBarIcon: ({ focused }) => <TabIcon icon={MessageCircle} focused={focused} label="Messages" />,
+        tabBarIcon: ({ focused }) => <TabIcon name="chatbubble-outline" focused={focused} />,
         tabBarBadge: unread > 0 ? unread : undefined,
       }} />
       <Tabs.Screen name="students/index" options={{
         title: 'Students',
-        tabBarIcon: ({ focused }) => <TabIcon icon={Users} focused={focused} label="Students" />,
+        tabBarIcon: ({ focused }) => <TabIcon name="people-outline" focused={focused} />,
       }} />
       <Tabs.Screen name="updates" options={{
         title: 'Updates',
-        tabBarIcon: ({ focused }) => <TabIcon icon={Bell} focused={focused} label="Updates" />,
+        tabBarIcon: ({ focused }) => <TabIcon name="notifications-outline" focused={focused} />,
       }} />
       <Tabs.Screen name="ai" options={{
         title: 'AI',
-        tabBarIcon: ({ focused }) => <TabIcon icon={Bot} focused={focused} label="AI" />,
+        tabBarIcon: ({ focused }) => <TabIcon name="hardware-chip-outline" focused={focused} />,
       }} />
       {/* Hide nested screens from tab bar */}
       <Tabs.Screen name="messages/[id]" options={{ href: null }} />

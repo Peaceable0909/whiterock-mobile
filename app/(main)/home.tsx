@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
 import { useRouter } from 'expo-router'
-import { FileText, MessageCircle, Bot, Calendar, ChevronRight, Bell } from 'lucide-react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { C } from '@/constants/colors'
 
@@ -24,7 +24,6 @@ export default function HomeScreen() {
       const { data: dbUser } = await supabase.from('users').select('*').eq('id', authUser.id).single()
       setUser(dbUser)
 
-      // live notification badge
       const { count } = await supabase.from('notifications')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', authUser.id).eq('is_read', false)
@@ -33,7 +32,6 @@ export default function HomeScreen() {
       if (dbUser?.role === 'student') {
         const { data: prof } = await supabase.from('student_profiles').select('*').eq('user_id', authUser.id).single()
         setProfile(prof)
-        // earliest thread = the agent thread (students may have extra staff threads now)
         const { data: conv } = await supabase.from('conversations')
           .select('id, agent_id, counselor_id')
           .eq('student_id', authUser.id)
@@ -52,7 +50,6 @@ export default function HomeScreen() {
     }
     load()
 
-    // bell badge updates live
     let uid: string | null = null
     supabase.auth.getUser().then(({ data: { user: u } }) => { uid = u?.id ?? null })
     const sub = supabase.channel('home-notifs')
@@ -65,7 +62,7 @@ export default function HomeScreen() {
   const BellButton = () => (
     <TouchableOpacity style={s.bellBtn} accessibilityLabel="Notifications"
       onPress={() => { setNotifUnread(0); router.push('/(main)/notifications' as any) }}>
-      <Bell size={20} color={C.slate500} />
+      <Ionicons name="notifications-outline" size={20} color={C.slate500} />
       {notifUnread > 0 && (
         <View style={s.bellBadge}>
           <Text style={s.bellBadgeText}>{notifUnread > 9 ? '9+' : notifUnread}</Text>
@@ -96,7 +93,7 @@ export default function HomeScreen() {
       {/* Progress card */}
       <View style={s.card}>
         <View style={s.row}>
-          <View style={s.iconCircle}><FileText size={20} color={C.blue} /></View>
+          <View style={s.iconCircle}><Ionicons name="document-text-outline" size={20} color={C.blue} /></View>
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={s.cardTitle}>My Application</Text>
             <Text style={s.cardSub}>Overall Progress</Text>
@@ -111,7 +108,7 @@ export default function HomeScreen() {
       {/* Assigned agent */}
       <View style={s.card}>
         <View style={[s.row, { marginBottom: 14 }]}>
-          <View style={s.iconCircle}><MessageCircle size={18} color={C.blue} /></View>
+          <View style={s.iconCircle}><Ionicons name="chatbubble-outline" size={18} color={C.blue} /></View>
           <Text style={[s.cardTitle, { marginLeft: 10, flex: 1 }]}>My Assigned Agent</Text>
           <View style={s.onlineBadge}><View style={s.dot} /><Text style={s.onlineText}>ONLINE</Text></View>
         </View>
@@ -126,7 +123,7 @@ export default function HomeScreen() {
             </View>
             {convId && (
               <TouchableOpacity style={s.btn} onPress={() => router.push(`/(main)/messages/${convId}`)}>
-                <MessageCircle size={16} color={C.white} />
+                <Ionicons name="chatbubble-outline" size={16} color={C.white} />
                 <Text style={[s.btnText, { marginLeft: 6 }]}>Message</Text>
               </TouchableOpacity>
             )}
@@ -137,13 +134,13 @@ export default function HomeScreen() {
       {/* 2-col grid */}
       <View style={s.grid}>
         <TouchableOpacity style={s.gridCard} onPress={() => router.push('/(main)/ai')}>
-          <Calendar size={20} color={C.blue} />
+          <Ionicons name="calendar-outline" size={20} color={C.blue} />
           <Text style={s.gridLabel}>Interview</Text>
           <Text style={s.gridTitle}>Practice Session</Text>
           <View style={s.gridBtn}><Text style={s.gridBtnText}>Start Practice</Text></View>
         </TouchableOpacity>
         <TouchableOpacity style={s.gridCard} onPress={() => router.push('/(main)/ai')}>
-          <Bot size={20} color={C.blue} />
+          <Ionicons name="hardware-chip-outline" size={20} color={C.blue} />
           <Text style={s.gridLabel}>AI Assistant</Text>
           <Text style={s.gridSub}>Ask anything about visa laws...</Text>
           <View style={s.gridBtn}><Text style={s.gridBtnText}>Open AI</Text></View>
@@ -169,7 +166,7 @@ export default function HomeScreen() {
         ))}
         <TouchableOpacity style={s.viewAll} onPress={() => router.push('/(main)/updates')}>
           <Text style={s.viewAllText}>View all updates</Text>
-          <ChevronRight size={14} color={C.blue} />
+          <Ionicons name="chevron-forward" size={14} color={C.blue} />
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -194,13 +191,13 @@ export default function HomeScreen() {
         ))}
       </View>
       <View style={s.grid}>
-        {[
-          { label: 'Messages', icon: MessageCircle, route: '/(main)/messages/index' as const },
-          { label: 'Students', icon: Users,         route: '/(main)/students/index' as const },
-          { label: 'AI Tools', icon: Bot,           route: '/(main)/ai' as const },
-        ].map(({ label, icon: Icon, route }) => (
+        {([
+          { label: 'Messages', iconName: 'chatbubble-outline', route: '/(main)/messages/index' as const },
+          { label: 'Students', iconName: 'people-outline',     route: '/(main)/students/index' as const },
+          { label: 'AI Tools', iconName: 'hardware-chip-outline', route: '/(main)/ai' as const },
+        ] as const).map(({ label, iconName, route }) => (
           <TouchableOpacity key={label} style={s.gridCard} onPress={() => router.push(route)}>
-            <Icon size={22} color={C.blue} />
+            <Ionicons name={iconName} size={22} color={C.blue} />
             <Text style={[s.gridLabel, { marginTop: 8 }]}>{label}</Text>
           </TouchableOpacity>
         ))}
@@ -208,9 +205,6 @@ export default function HomeScreen() {
     </ScrollView>
   )
 }
-
-// Need Users import for staff grid
-import { Users } from 'lucide-react-native'
 
 const s = StyleSheet.create({
   bg:          { flex: 1, backgroundColor: C.bg },

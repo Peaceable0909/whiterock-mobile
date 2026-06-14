@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
 import { useRouter } from 'expo-router'
-import { Search, Bot, Edit3 } from 'lucide-react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { C } from '@/constants/colors'
 
@@ -44,14 +44,17 @@ export default function MessagesScreen() {
     <View style={s.bg}>
       {/* Search */}
       <View style={s.searchWrap}>
-        <Search size={16} color={C.slate400} />
+        <Ionicons name="search-outline" size={16} color={C.slate400} />
         <TextInput style={s.searchInput} value={search} onChangeText={setSearch} placeholder="Search messages" placeholderTextColor={C.slate400} />
       </View>
 
       {/* AI pinned (students) */}
       {role === 'student' && (
         <TouchableOpacity style={s.aiRow} onPress={() => router.push('/(main)/ai')}>
-          <View style={s.aiAvatar}><Bot size={22} color={C.white} /><View style={s.onlineDot} /></View>
+          <View style={s.aiAvatar}>
+            <Ionicons name="hardware-chip-outline" size={22} color={C.white} />
+            <View style={s.onlineDot} />
+          </View>
           <View style={{ flex: 1 }}>
             <View style={s.row}>
               <Text style={s.aiName}>AI Assistant</Text>
@@ -99,7 +102,7 @@ export default function MessagesScreen() {
       />
 
       <TouchableOpacity style={s.fab}>
-        <Edit3 size={20} color={C.white} />
+        <Ionicons name="create-outline" size={20} color={C.white} />
       </TouchableOpacity>
     </View>
   )
