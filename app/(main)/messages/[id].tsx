@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import {
   View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator, Image, Linking, Alert,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Image, Linking, Alert, AppState,
 } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { VideoView, useVideoPlayer } from 'expo-video'
@@ -10,6 +10,8 @@ import { ArrowLeft, Send, Bot, Paperclip, Check, CheckCheck, Ban, Mic, FileText 
 import { supabase } from '@/lib/supabase'
 import { uploadVideo } from '@/lib/cloudinary'
 import { C } from '@/constants/colors'
+
+const PAGE_SIZE = 50
 
 const getInitials = (name: string) =>
   (name ?? '').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || '?'
@@ -44,6 +46,11 @@ export default function ChatScreen() {
   const [uploadPct, setUploadPct] = useState(0)
   const [otherUser, setOther]   = useState<any>(null)
   const [loading, setLoading]   = useState(true)
+  const [hasMore, setHasMore]   = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const oldestTs = useRef<string | null>(null)
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  const appState = useRef(AppState.currentState)
 
   const scrollToEnd = useCallback(() => {
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100)
@@ -60,7 +67,8 @@ export default function ChatScreen() {
           .select('*, student:student_id(id,name,avatar_url,is_online), agent:agent_id(id,name,avatar_url), counselor:counselor_id(id,name,avatar_url)')
           .eq('id', id).single(),
         supabase.from('users').select('role').eq('id', user.id).single(),
-        supabase.from('messages').select('*').eq('conversation_id', id).order('created_at', { ascending: true }),
+        supabase.from('messages').select('*').eq('conversation_id', id)
+          .order('created_at', { ascending: false }).limit(PAGE_SIZE),
       ])
 
       const role = dbUser?.role ?? 'student'
@@ -69,7 +77,10 @@ export default function ChatScreen() {
         const other = role === 'student' ? (conv.counselor || conv.agent) : conv.student
         setOther(other)
       }
-      setMsgs(history ?? [])
+      const ordered = (history ?? []).reverse()
+      setMsgs(ordered)
+      if (ordered.length > 0) oldestTs.current = ordered[0].created_at
+      setHasMore((history ?? []).length >= PAGE_SIZE)
       setLoading(false)
       scrollToEnd()
 
@@ -82,32 +93,66 @@ export default function ChatScreen() {
     load()
 
     // Real-time: new messages + edits/deletes/read-receipts
-    const sub = supabase.channel(`chat-mob-${id}`)
-      .on('postgres_changes', {
-        event: 'INSERT', schema: 'public', table: 'messages',
-        filter: `conversation_id=eq.${id}`,
-      }, async (payload) => {
-        const msg = payload.new as any
-        setMsgs(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg])
-        scrollToEnd()
-        // Auto-mark as read since user is viewing chat
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user && msg.sender_id !== user.id) {
-          await supabase.rpc('mark_conversation_read', { conv_id: id })
-        }
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE', schema: 'public', table: 'messages',
-        filter: `conversation_id=eq.${id}`,
-      }, (payload) => {
-        const updated = payload.new as any
-        setMsgs(prev => prev.map(m => m.id === updated.id ? { ...m, ...updated } : m))
-      })
-      .subscribe()
+    const subscribe = () => {
+      if (channelRef.current) supabase.removeChannel(channelRef.current)
+      const ch = supabase.channel(`chat-mob-${id}`)
+        .on('postgres_changes', {
+          event: 'INSERT', schema: 'public', table: 'messages',
+          filter: `conversation_id=eq.${id}`,
+        }, async (payload) => {
+          const msg = payload.new as any
+          setMsgs(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg])
+          scrollToEnd()
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user && msg.sender_id !== user.id) {
+            await supabase.rpc('mark_conversation_read', { conv_id: id })
+          }
+        })
+        .on('postgres_changes', {
+          event: 'UPDATE', schema: 'public', table: 'messages',
+          filter: `conversation_id=eq.${id}`,
+        }, (payload) => {
+          const updated = payload.new as any
+          setMsgs(prev => prev.map(m => m.id === updated.id ? { ...m, ...updated } : m))
+        })
+        .subscribe()
+      channelRef.current = ch
+    }
 
-    return () => { supabase.removeChannel(sub) }
+    subscribe()
+
+    // Re-subscribe when app comes back to foreground (WebSocket may have dropped)
+    const appStateSub = AppState.addEventListener('change', nextState => {
+      if (appState.current.match(/inactive|background/) && nextState === 'active') {
+        subscribe()
+      }
+      appState.current = nextState
+    })
+
+    return () => {
+      appStateSub.remove()
+      if (channelRef.current) supabase.removeChannel(channelRef.current)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
+
+  const loadOlderMessages = useCallback(async () => {
+    if (loadingMore || !oldestTs.current) return
+    setLoadingMore(true)
+    const { data } = await supabase
+      .from('messages').select('*')
+      .eq('conversation_id', id)
+      .lt('created_at', oldestTs.current)
+      .order('created_at', { ascending: false })
+      .limit(PAGE_SIZE)
+    const older = (data ?? []).reverse()
+    if (older.length > 0) {
+      oldestTs.current = older[0].created_at
+      setMsgs(prev => [...older, ...prev])
+    }
+    setHasMore((data ?? []).length >= PAGE_SIZE)
+    setLoadingMore(false)
+  }, [loadingMore, id])
 
   const sendMessage = async () => {
     const content = input.trim()
@@ -300,6 +345,14 @@ export default function ChatScreen() {
         contentContainerStyle={{ padding: 12, paddingBottom: 8 }}
         renderItem={renderMessage}
         onContentSizeChange={scrollToEnd}
+        ListHeaderComponent={hasMore ? (
+          <TouchableOpacity onPress={loadOlderMessages} disabled={loadingMore}
+            style={g.loadMoreBtn}>
+            {loadingMore
+              ? <ActivityIndicator size="small" color={C.blue} />
+              : <Text style={g.loadMoreTxt}>↑ Load older messages</Text>}
+          </TouchableOpacity>
+        ) : null}
       />
 
       {/* Upload progress */}
@@ -375,6 +428,8 @@ const ms = StyleSheet.create({
 // ─── Global / header styles ───────────────────────────────────────────────────
 const g = StyleSheet.create({
   flex:           { flex: 1, backgroundColor: '#F1F5F9' },
+  loadMoreBtn:    { alignSelf: 'center', marginBottom: 12, paddingHorizontal: 16, paddingVertical: 7, backgroundColor: C.white, borderRadius: 20, borderWidth: 1, borderColor: C.slate200, minWidth: 48, alignItems: 'center' },
+  loadMoreTxt:    { fontSize: 12, color: C.blue, fontWeight: '600' },
   center:         { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F5F9' },
   header:         { flexDirection: 'row', alignItems: 'center', backgroundColor: C.white, paddingTop: 52, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderColor: C.slate100 },
   backBtn:        { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', marginRight: 6 },
