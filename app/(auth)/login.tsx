@@ -86,15 +86,16 @@ export default function LoginScreen() {
           <View style={s.dividerLine} />
         </View>
 
-        <TouchableOpacity
-          style={s.googleBtn}
-          onPress={() => Alert.alert('Google Sign-In', 'Use the web app at whiterock-connect.vercel.app to sign in with Google.')}
-        >
+        <View style={s.googleBtn}>
           <View style={s.googleG}>
             <Text style={s.googleGText}>G</Text>
           </View>
-          <Text style={s.googleText}>Continue with Google</Text>
-        </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={s.googleText}>Continue with Google</Text>
+            <Text style={s.googleSub}>Available on the web app only</Text>
+          </View>
+          <Ionicons name="open-outline" size={14} color={C.slate400} />
+        </View>
       </View>
 
       <TouchableOpacity onPress={() => router.push('/(auth)/register')} style={s.switchRow}>
@@ -128,10 +129,11 @@ const s = StyleSheet.create({
   divider:      { flexDirection: 'row', alignItems: 'center', marginVertical: 20 },
   dividerLine:  { flex: 1, height: 1, backgroundColor: C.slate100 },
   dividerText:  { fontSize: 12, color: C.slate400, fontWeight: '600', marginHorizontal: 12 },
-  googleBtn:    { height: 52, backgroundColor: C.white, borderRadius: 14, borderWidth: 1.5, borderColor: C.slate200, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  googleBtn:    { backgroundColor: C.white, borderRadius: 14, borderWidth: 1.5, borderColor: C.slate200, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12 },
   googleG:      { width: 24, height: 24, borderRadius: 12, backgroundColor: '#4285F4', alignItems: 'center', justifyContent: 'center' },
   googleGText:  { fontSize: 13, fontWeight: '800', color: C.white },
   googleText:   { fontSize: 14, fontWeight: '600', color: C.navy },
+  googleSub:    { fontSize: 11, color: C.slate400, marginTop: 1 },
   switchRow:    { paddingVertical: 8 },
   registerLink: { fontSize: 14, color: C.slate500, textAlign: 'center' },
   registerBold: { color: C.blue, fontWeight: '700' },

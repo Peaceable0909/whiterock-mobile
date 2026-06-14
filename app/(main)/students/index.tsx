@@ -147,9 +147,11 @@ export default function StudentsScreen() {
         }}
       />
 
-      <TouchableOpacity style={s.fab} onPress={() => router.push('/(main)/students/index')}>
-        <Ionicons name="person-add-outline" size={20} color={C.white} />
-      </TouchableOpacity>
+      {role === 'admin' && (
+        <TouchableOpacity style={s.fab} onPress={() => router.push('/(admin)/invites' as any)}>
+          <Ionicons name="person-add-outline" size={20} color={C.white} />
+        </TouchableOpacity>
+      )}
     </View>
   )
 }

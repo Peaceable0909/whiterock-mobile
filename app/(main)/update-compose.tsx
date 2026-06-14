@@ -31,7 +31,7 @@ export default function UpdateComposeScreen() {
 
   const [title, setTitle]           = useState('')
   const [body, setBody]             = useState('')
-  const [category, setCategory]     = useState<typeof CATEGORIES[number]['key']>('general')
+  const [category, setCategory]     = useState<typeof CATEGORIES[number]['key']>('announcement')
   const [audience, setAudience]     = useState<'student' | 'all'>('all')
   const [isPinned, setIsPinned]     = useState(false)
   const [saving, setSaving]         = useState(false)

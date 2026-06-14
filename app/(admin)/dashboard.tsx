@@ -16,8 +16,8 @@ const STAGE_LABEL: Record<string,string> = {
 }
 
 const ACTIONS = [
-  { label: 'Users',     icon: 'people-outline',    route: '/(admin)/users/index',   color: C.blue },
-  { label: 'Invites',   icon: 'ticket-outline',    route: '/(admin)/invites/index', color: '#7C3AED' },
+  { label: 'Users',     icon: 'people-outline',    route: '/(admin)/users',   color: C.blue },
+  { label: 'Invites',   icon: 'ticket-outline',    route: '/(admin)/invites', color: '#7C3AED' },
   { label: 'Assign',    icon: 'git-merge-outline', route: '/(admin)/assign',        color: '#0891B2' },
   { label: 'Broadcast', icon: 'megaphone-outline', route: '/(admin)/broadcast',     color: '#059669' },
   { label: 'Analytics', icon: 'bar-chart-outline', route: '/(admin)/analytics',     color: '#D97706' },

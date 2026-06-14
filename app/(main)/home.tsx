@@ -124,7 +124,9 @@ export default function HomeScreen() {
           <Animated.View style={[s.barFg, { width: progressAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }]} />
         </View>
         <Text style={s.nextStep}>Next: <Text style={s.nextStepBold}>{STAGE_LABEL[nextStage] ?? 'Visa Decision'}</Text></Text>
-        <TouchableOpacity style={s.btn}><Text style={s.btnText}>View Progress</Text></TouchableOpacity>
+        <TouchableOpacity style={s.btn} onPress={() => router.push('/(main)/documents' as any)}>
+          <Text style={s.btnText}>View Documents</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Assigned agent */}
@@ -224,8 +226,8 @@ export default function HomeScreen() {
 
       <View style={s.grid}>
         {([
-          { label: 'Messages', iconName: 'chatbubble-outline',    route: '/(main)/messages/index' as const },
-          { label: 'Students', iconName: 'people-outline',        route: '/(main)/students/index' as const },
+          { label: 'Messages', iconName: 'chatbubble-outline',    route: '/(main)/messages' as const },
+          { label: 'Students', iconName: 'people-outline',        route: '/(main)/students' as const },
           { label: 'AI Tools', iconName: 'hardware-chip-outline', route: '/(main)/ai' as const },
           { label: 'Updates',  iconName: 'newspaper-outline',     route: '/(main)/updates' as const },
         ] as const).map(({ label, iconName, route }) => (

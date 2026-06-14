@@ -195,7 +195,7 @@ export default function MessagesScreen() {
       </TouchableOpacity>
 
       {/* New conversation modal (staff) */}
-      <Modal visible={newConvModal} transparent animationType="slide">
+      <Modal visible={newConvModal} transparent animationType="slide" onRequestClose={() => setNewConvModal(false)}>
         <View style={s.modalBg}>
           <View style={s.modal}>
             <View style={s.modalHeader}>

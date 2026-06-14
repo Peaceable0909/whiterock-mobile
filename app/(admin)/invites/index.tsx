@@ -154,7 +154,7 @@ export default function AdminInvitesScreen() {
       />
 
       {/* Generate modal */}
-      <Modal visible={showModal} transparent animationType="slide">
+      <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)}>
         <View style={s.modalBg}>
           <View style={s.modal}>
             <Text style={s.modalTitle}>Generate Invite Code</Text>

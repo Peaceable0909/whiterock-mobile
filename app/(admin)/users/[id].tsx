@@ -133,7 +133,7 @@ export default function AdminUserDetailScreen() {
       </ScrollView>
 
       {/* Role modal */}
-      <Modal visible={roleModal} transparent animationType="slide">
+      <Modal visible={roleModal} transparent animationType="slide" onRequestClose={() => setRoleModal(false)}>
         <View style={s.modalBg}>
           <View style={s.modal}>
             <Text style={s.modalTitle}>Change Role</Text>

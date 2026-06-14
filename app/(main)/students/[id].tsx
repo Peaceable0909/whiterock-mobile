@@ -401,7 +401,7 @@ Summarize the application status and suggest 2-3 next steps.`
       </ScrollView>
 
       {/* Stage picker modal */}
-      <Modal visible={stageModal} transparent animationType="slide">
+      <Modal visible={stageModal} transparent animationType="slide" onRequestClose={() => setStageModal(false)}>
         <View style={s.modalBg}>
           <View style={s.modal}>
             <Text style={s.modalTitle}>Update Stage</Text>

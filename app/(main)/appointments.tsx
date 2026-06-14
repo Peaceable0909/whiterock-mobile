@@ -5,6 +5,7 @@ import {
   Platform, ScrollView, RefreshControl, Alert,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import { AppHeader } from '@/components/AppHeader'
 import { supabase } from '@/lib/supabase'
 import { C } from '@/constants/colors'
 
@@ -134,11 +135,7 @@ export default function AppointmentsScreen() {
 
   return (
     <View style={s.bg}>
-      {/* Header */}
-      <View style={s.header}>
-        <Ionicons name="calendar-outline" size={22} color={C.blue} />
-        <Text style={s.headerTitle}>Appointments</Text>
-      </View>
+      <AppHeader title="Appointments" />
 
       {/* Tabs */}
       <View style={s.tabRow}>
@@ -331,8 +328,6 @@ export default function AppointmentsScreen() {
 const s = StyleSheet.create({
   bg:             { flex: 1, backgroundColor: C.bg },
   center:         { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header:         { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingTop: 56, paddingBottom: 14 },
-  headerTitle:    { fontSize: 20, fontWeight: '800', color: C.navy },
   tabRow:         { flexDirection: 'row', marginHorizontal: 14, marginBottom: 12, backgroundColor: C.white, borderRadius: 14, padding: 4, gap: 4 },
   tabBtn:         { flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center' },
   tabBtnActive:   { backgroundColor: C.blue },
