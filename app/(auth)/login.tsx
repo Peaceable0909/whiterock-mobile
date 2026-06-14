@@ -6,17 +6,30 @@ import {
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import Constants from 'expo-constants'
+import { GoogleSignin, statusCodes, isErrorWithCode } from '@react-native-google-signin/google-signin'
 import { supabase } from '@/lib/supabase'
 import { C } from '@/constants/colors'
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Fill this in: Supabase Dashboard → Authentication → Providers → Google → "Client ID"
+// It looks like: 1234567890-xxxxxxxxxxxxxxxx.apps.googleusercontent.com
+const GOOGLE_WEB_CLIENT_ID = 'YOUR_GOOGLE_WEB_CLIENT_ID_HERE'
+// ─────────────────────────────────────────────────────────────────────────────
+
+GoogleSignin.configure({
+  webClientId: GOOGLE_WEB_CLIENT_ID,
+  scopes: ['email', 'profile'],
+})
 
 const VERSION = Constants.expoConfig?.version ?? '1.0.0'
 
 export default function LoginScreen() {
   const router = useRouter()
-  const [email, setEmail]       = useState('')
-  const [password, setPassword] = useState('')
-  const [showPw, setShowPw]     = useState(false)
-  const [loading, setLoading]   = useState(false)
+  const [email, setEmail]           = useState('')
+  const [password, setPassword]     = useState('')
+  const [showPw, setShowPw]         = useState(false)
+  const [loading, setLoading]       = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
 
   const handleLogin = async () => {
     if (!email || !password) { Alert.alert('Error', 'Please fill in all fields'); return }
@@ -24,15 +37,65 @@ export default function LoginScreen() {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) { Alert.alert('Login Failed', error.message); setLoading(false); return }
 
+    // Sync display name / email — deliberately NOT touching 'role',
+    // which was set during invite registration and must not be overwritten.
     if (data.user) {
       const meta = data.user.user_metadata
-      await supabase.from('users').upsert({
-        id: data.user.id, email: data.user.email ?? '',
-        name: meta?.name ?? data.user.email?.split('@')[0] ?? 'User',
-        role: meta?.role ?? 'student',
-      }, { onConflict: 'id' })
+      const name = meta?.name ?? meta?.full_name ?? data.user.email?.split('@')[0] ?? 'User'
+      await supabase.from('users').upsert(
+        { id: data.user.id, email: data.user.email ?? '', name },
+        { onConflict: 'id', ignoreDuplicates: true }
+      )
     }
     setLoading(false)
+    // Routing is handled by _layout.tsx onAuthStateChange
+  }
+
+  const handleGoogleSignIn = async () => {
+    if (GOOGLE_WEB_CLIENT_ID === 'YOUR_GOOGLE_WEB_CLIENT_ID_HERE') {
+      Alert.alert(
+        'Setup needed',
+        'A Google Web Client ID is required.\n\nGo to: Supabase Dashboard → Authentication → Providers → Google → copy the Client ID, then paste it into login.tsx.',
+      )
+      return
+    }
+    try {
+      setGoogleLoading(true)
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true })
+      const response = await GoogleSignin.signIn()
+      const idToken  = (response as any).data?.idToken ?? (response as any).idToken
+      if (!idToken) throw new Error('No ID token returned from Google')
+
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: idToken,
+      })
+      if (error) throw error
+
+      // For brand-new Google accounts: insert the user row if it doesn't exist yet.
+      // Never update role — that is set by the invite flow.
+      if (data.user) {
+        const meta = data.user.user_metadata
+        const name = meta?.full_name ?? meta?.name ?? data.user.email?.split('@')[0] ?? 'User'
+        await supabase.from('users').upsert(
+          { id: data.user.id, email: data.user.email ?? '', name },
+          { onConflict: 'id', ignoreDuplicates: true }
+        )
+      }
+      // _layout.tsx detects the session change and routes automatically
+    } catch (err: any) {
+      if (isErrorWithCode(err)) {
+        if (err.code === statusCodes.SIGN_IN_CANCELLED) return
+        if (err.code === statusCodes.IN_PROGRESS) return
+        if (err.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+          Alert.alert('Error', 'Google Play Services not available on this device.')
+          return
+        }
+      }
+      Alert.alert('Sign In Failed', err.message ?? 'Could not sign in with Google')
+    } finally {
+      setGoogleLoading(false)
+    }
   }
 
   return (
@@ -73,7 +136,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={s.btn} onPress={handleLogin} disabled={loading}>
+        <TouchableOpacity style={s.btn} onPress={handleLogin} disabled={loading || googleLoading}>
           {loading
             ? <ActivityIndicator color="#fff" />
             : <Text style={s.btnText}>Sign In</Text>}
@@ -86,16 +149,22 @@ export default function LoginScreen() {
           <View style={s.dividerLine} />
         </View>
 
-        <View style={s.googleBtn}>
-          <View style={s.googleG}>
-            <Text style={s.googleGText}>G</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={s.googleText}>Continue with Google</Text>
-            <Text style={s.googleSub}>Available on the web app only</Text>
-          </View>
-          <Ionicons name="open-outline" size={14} color={C.slate400} />
-        </View>
+        {/* Native Google Sign-In */}
+        <TouchableOpacity
+          style={[s.googleBtn, (loading || googleLoading) && { opacity: 0.6 }]}
+          onPress={handleGoogleSignIn}
+          disabled={loading || googleLoading}
+          activeOpacity={0.75}
+        >
+          {googleLoading ? (
+            <ActivityIndicator color={C.navy} size="small" style={{ marginRight: 4 }} />
+          ) : (
+            <View style={s.googleG}>
+              <Text style={s.googleGText}>G</Text>
+            </View>
+          )}
+          <Text style={s.googleText}>Sign In With Google</Text>
+        </TouchableOpacity>
       </View>
 
       <TouchableOpacity onPress={() => router.push('/(auth)/register')} style={s.switchRow}>
@@ -129,11 +198,10 @@ const s = StyleSheet.create({
   divider:      { flexDirection: 'row', alignItems: 'center', marginVertical: 20 },
   dividerLine:  { flex: 1, height: 1, backgroundColor: C.slate100 },
   dividerText:  { fontSize: 12, color: C.slate400, fontWeight: '600', marginHorizontal: 12 },
-  googleBtn:    { backgroundColor: C.white, borderRadius: 14, borderWidth: 1.5, borderColor: C.slate200, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12 },
+  googleBtn:    { backgroundColor: C.white, borderRadius: 14, borderWidth: 1.5, borderColor: C.slate200, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 14 },
   googleG:      { width: 24, height: 24, borderRadius: 12, backgroundColor: '#4285F4', alignItems: 'center', justifyContent: 'center' },
   googleGText:  { fontSize: 13, fontWeight: '800', color: C.white },
-  googleText:   { fontSize: 14, fontWeight: '600', color: C.navy },
-  googleSub:    { fontSize: 11, color: C.slate400, marginTop: 1 },
+  googleText:   { fontSize: 15, fontWeight: '700', color: C.navy },
   switchRow:    { paddingVertical: 8 },
   registerLink: { fontSize: 14, color: C.slate500, textAlign: 'center' },
   registerBold: { color: C.blue, fontWeight: '700' },
