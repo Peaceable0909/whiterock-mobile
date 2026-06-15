@@ -264,9 +264,13 @@ export default function ChatScreen() {
       setIsTyping(true)
       scrollToEnd()
       try {
+        const { data: { session } } = await supabase.auth.getSession()
         const res = await fetch(`${API_BASE}/api/ai-respond`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          },
           body: JSON.stringify({ conversationId: id, studentId: myId, message: content }),
         })
         if (res.ok) {
@@ -364,7 +368,7 @@ export default function ChatScreen() {
         </View>
       )
     }
-    const isMe      = item.sender_id === myId
+    const isMe      = item.sender_id === myId && !item.is_ai
     const isDeleted = !!item.deleted_at
     const repliedMsg = item.reply_to_id ? msgsMap.get(item.reply_to_id) : null
 
