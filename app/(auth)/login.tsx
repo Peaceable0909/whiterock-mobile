@@ -9,7 +9,8 @@ import Constants from 'expo-constants'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { GoogleSignin, statusCodes, isErrorWithCode } from '@react-native-google-signin/google-signin'
 import { supabase } from '@/lib/supabase'
-import { C } from '@/constants/colors'
+import { useColors } from '@/lib/theme'
+import { ColorPalette } from '@/constants/colors'
 
 // Supabase Google OAuth Web Client ID (configured in Supabase Auth → Providers → Google)
 const GOOGLE_WEB_CLIENT_ID = '247168518231-tf489dbnvcnv2951brfarre3bbqtdsal.apps.googleusercontent.com'
@@ -22,6 +23,8 @@ GoogleSignin.configure({
 const VERSION = Constants.expoConfig?.version ?? '1.0.0'
 
 export default function LoginScreen() {
+  const C = useColors()
+  const s = mkS(C)
   const router = useRouter()
   const [email, setEmail]           = useState('')
   const [password, setPassword]     = useState('')
@@ -234,7 +237,7 @@ export default function LoginScreen() {
   )
 }
 
-const s = StyleSheet.create({
+const mkS = (C: ColorPalette) => StyleSheet.create({
   bg:           { flex: 1, backgroundColor: C.bg },
   container:    { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   hero:         { alignItems: 'center', marginBottom: 28 },

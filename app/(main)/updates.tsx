@@ -9,7 +9,8 @@ import { VideoView, useVideoPlayer } from 'expo-video'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
-import { C } from '@/constants/colors'
+import { useColors } from '@/lib/theme'
+import { ColorPalette } from '@/constants/colors'
 
 const CATEGORY_FILTERS = [
   { key: 'all',          label: 'All'         },
@@ -54,12 +55,15 @@ const formatRelativeTime = (iso: string) => {
 const getInitials = (name: string) =>
   (name ?? '').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'WR'
 
-function UpdateVideoPlayer({ uri }: { uri: string }) {
+function UpdateVideoPlayer({ uri, styles }: { uri: string; styles: any }) {
   const player = useVideoPlayer(uri)
-  return <VideoView player={player} style={c.mediaVideo} nativeControls allowsFullscreen />
+  return <VideoView player={player} style={styles.mediaVideo} nativeControls allowsFullscreen />
 }
 
 export default function UpdatesScreen() {
+  const C = useColors()
+  const c = mkC(C)
+  const g = mkG(C)
   const router = useRouter()
   const { width: screenW } = useWindowDimensions()
   const [updates, setUpdates]     = useState<any[]>([])
@@ -206,7 +210,7 @@ export default function UpdatesScreen() {
 
         {/* Video */}
         {item.media_url && item.media_type === 'video' && (
-          <UpdateVideoPlayer uri={item.media_url} />
+          <UpdateVideoPlayer uri={item.media_url} styles={c} />
         )}
 
         {/* Audio */}
@@ -380,7 +384,7 @@ export default function UpdatesScreen() {
                 : (
                   <FlatList
                     data={comments}
-                    keyExtractor={c => c.id}
+                    keyExtractor={cm => cm.id}
                     style={{ maxHeight: 280 }}
                     ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
                     contentContainerStyle={{ padding: 4, paddingBottom: 8 }}
@@ -435,7 +439,7 @@ export default function UpdatesScreen() {
   )
 }
 
-const c = StyleSheet.create({
+const mkC = (C: ColorPalette) => StyleSheet.create({
   card:          { backgroundColor: C.white, borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2, marginHorizontal: 14 },
   pinned:        { borderWidth: 2, borderColor: C.blue },
   pinnedBanner:  { backgroundColor: C.blue, paddingHorizontal: 12, paddingVertical: 5 },
@@ -463,7 +467,7 @@ const c = StyleSheet.create({
   actionCount:   { fontSize: 12, color: C.slate400, fontWeight: '600' },
 })
 
-const g = StyleSheet.create({
+const mkG = (C: ColorPalette) => StyleSheet.create({
   flex:               { flex: 1, backgroundColor: C.bg },
   center:             { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg },
   header:             { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingTop: 56, paddingBottom: 14 },
@@ -474,12 +478,10 @@ const g = StyleSheet.create({
   fab:                { position: 'absolute', bottom: 20, right: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', elevation: 6, shadowColor: C.blue, shadowOpacity: 0.35, shadowRadius: 8 },
   imgModalBg:         { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', alignItems: 'center', justifyContent: 'center' },
   imgModalClose:      { position: 'absolute', top: 52, right: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', zIndex: 10 },
-  // Category filter chips
   catChip:            { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: C.white, borderWidth: 1, borderColor: C.slate200 },
   catChipActive:      { backgroundColor: C.blue, borderColor: C.blue },
   catChipText:        { fontSize: 12, fontWeight: '600', color: C.slate500 },
   catChipTextActive:  { color: C.white },
-  // Comments modal
   commentsModalBg:    { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
   commentsModal:      { backgroundColor: C.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 12, paddingBottom: 24, maxHeight: '75%' },
   commentsHeader:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderColor: C.slate100 },

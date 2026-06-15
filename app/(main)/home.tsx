@@ -4,12 +4,15 @@ import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
-import { C } from '@/constants/colors'
+import { useColors } from '@/lib/theme'
+import { ColorPalette } from '@/constants/colors'
 
 const JOURNEY_STAGES = ['lead','application_submitted','offer_received','deposit_paid','cas_requested','cas_issued','visa_submitted','visa_decision']
 const STAGE_LABEL: Record<string,string> = { lead:'New Lead', application_submitted:'Applied', offer_received:'Offer', deposit_paid:'Deposit', cas_requested:'CAS Pending', cas_issued:'CAS Issued', visa_submitted:'Visa Submitted', visa_decision:'Visa Decision' }
 
 export default function HomeScreen() {
+  const C = useColors()
+  const s = mkS(C)
   const router  = useRouter()
   const insets  = useSafeAreaInsets()
   const [user, setUser]           = useState<any>(null)
@@ -273,6 +276,8 @@ export default function HomeScreen() {
 }
 
 function StaffStats({ userId }: { userId?: string }) {
+  const C = useColors()
+  const ss = mkSS(C)
   const [stats, setStats] = useState({ students: 0, active: 0, pendingDocs: 0 })
   useEffect(() => {
     if (!userId) return
@@ -310,7 +315,7 @@ function StaffStats({ userId }: { userId?: string }) {
   )
 }
 
-const ss = StyleSheet.create({
+const mkSS = (C: ColorPalette) => StyleSheet.create({
   statsCard:  { flexDirection: 'row', backgroundColor: C.white, borderRadius: 20, paddingVertical: 16, marginBottom: 14, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   statItem:   { flex: 1, alignItems: 'center' },
   statBorder: { borderRightWidth: 1, borderColor: C.slate100 },
@@ -318,7 +323,7 @@ const ss = StyleSheet.create({
   statLabel:  { fontSize: 11, color: C.slate400, fontWeight: '600', marginTop: 2 },
 })
 
-const s = StyleSheet.create({
+const mkS = (C: ColorPalette) => StyleSheet.create({
   bg:          { flex: 1, backgroundColor: C.bg },
   bellBtn:     { width: 44, height: 44, borderRadius: 14, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
   bellBadge:   { position: 'absolute', top: 6, right: 6, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },

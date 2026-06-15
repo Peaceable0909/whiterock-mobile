@@ -6,7 +6,8 @@ import {
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
-import { C } from '@/constants/colors'
+import { useColors } from '@/lib/theme'
+import { ColorPalette } from '@/constants/colors'
 
 interface Msg { id?: string; role: 'user' | 'assistant'; content: string; created_at?: string }
 
@@ -22,6 +23,8 @@ const SUGGESTED = [
 const API_BASE = 'https://whiterock-connect.vercel.app'
 
 export default function AIScreen() {
+  const C = useColors()
+  const s = mkS(C)
   const [msgs, setMsgs]         = useState<Msg[]>([])
   const [input, setInput]       = useState('')
   const [loading, setLoading]   = useState(false)
@@ -258,7 +261,7 @@ export default function AIScreen() {
   )
 }
 
-const s = StyleSheet.create({
+const mkS = (C: ColorPalette) => StyleSheet.create({
   bg:             { flex: 1, backgroundColor: C.bg },
   header:         { flexDirection: 'row', alignItems: 'center', backgroundColor: C.white, paddingTop: 8, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderColor: C.slate100, gap: 12 },
   botAvatar:      { width: 40, height: 40, borderRadius: 20, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },

@@ -2,7 +2,18 @@ import { useEffect, useState, useRef } from 'react'
 import { Slot, useRouter, useSegments } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { supabase } from '@/lib/supabase'
+import { ThemeProvider, useTheme } from '@/lib/theme'
 import type { Session } from '@supabase/supabase-js'
+
+function ThemedRoot() {
+  const { isDark } = useTheme()
+  return (
+    <>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <Slot />
+    </>
+  )
+}
 
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null)
@@ -54,9 +65,8 @@ export default function RootLayout() {
   }, [session, loading, segments])
 
   return (
-    <>
-      <StatusBar style="dark" />
-      <Slot />
-    </>
+    <ThemeProvider>
+      <ThemedRoot />
+    </ThemeProvider>
   )
 }

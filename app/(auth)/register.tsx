@@ -8,11 +8,14 @@ import { Ionicons } from '@expo/vector-icons'
 import Constants from 'expo-constants'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { supabase } from '@/lib/supabase'
-import { C } from '@/constants/colors'
+import { useColors } from '@/lib/theme'
+import { ColorPalette } from '@/constants/colors'
 
 const VERSION = Constants.expoConfig?.version ?? '1.0.0'
 
 export default function RegisterScreen() {
+  const C = useColors()
+  const s = mkS(C)
   const router = useRouter()
   const [code, setCode]         = useState('')
   const [codeRole, setCodeRole] = useState<string | null>(null)
@@ -151,7 +154,7 @@ export default function RegisterScreen() {
   )
 }
 
-const s = StyleSheet.create({
+const mkS = (C: ColorPalette) => StyleSheet.create({
   bg:            { flex: 1, backgroundColor: C.bg },
   container:     { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   hero:          { alignItems: 'center', marginBottom: 24 },

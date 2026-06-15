@@ -4,7 +4,8 @@ import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
-import { C } from '@/constants/colors'
+import { useColors } from '@/lib/theme'
+import { ColorPalette } from '@/constants/colors'
 
 const ICON_NAMES: Record<string, string> = {
   message:   'chatbubble-outline',
@@ -17,12 +18,6 @@ const ICON_NAMES: Record<string, string> = {
   info:      'information-circle-outline',
 }
 
-const COLORS: Record<string, string> = {
-  message: C.blue, document: '#D97706', interview: '#9333EA',
-  visa: '#16A34A', success: '#16A34A',
-  warning: '#EA580C', error: '#DC2626', info: '#64748B',
-}
-
 function timeAgo(iso: string) {
   const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
   if (m < 1) return 'now'
@@ -33,10 +28,18 @@ function timeAgo(iso: string) {
 }
 
 export default function NotificationsScreen() {
+  const C = useColors()
+  const s = mkS(C)
   const router  = useRouter()
   const insets  = useSafeAreaInsets()
   const [items, setItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+
+  const COLORS: Record<string, string> = {
+    message: C.blue, document: '#D97706', interview: '#9333EA',
+    visa: '#16A34A', success: '#16A34A',
+    warning: '#EA580C', error: '#DC2626', info: '#64748B',
+  }
 
   useEffect(() => {
     let uid: string | null = null
@@ -131,7 +134,7 @@ export default function NotificationsScreen() {
   )
 }
 
-const s = StyleSheet.create({
+const mkS = (C: ColorPalette) => StyleSheet.create({
   bg:         { flex: 1, backgroundColor: C.bg },
   center:     { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header:     { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },

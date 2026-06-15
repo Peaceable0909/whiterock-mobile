@@ -3,11 +3,12 @@ import {
   View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet,
   ActivityIndicator, Modal, RefreshControl,
 } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useRouter, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
-import { C } from '@/constants/colors'
+import { useColors } from '@/lib/theme'
+import { ColorPalette } from '@/constants/colors'
 
 const formatConvTime = (iso: string) => {
   const d = new Date(iso)
@@ -25,6 +26,8 @@ const formatConvTime = (iso: string) => {
 }
 
 export default function MessagesScreen() {
+  const C = useColors()
+  const s = mkS(C)
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const [search, setSearch]       = useState('')
@@ -52,6 +55,7 @@ export default function MessagesScreen() {
       ? await supabase.from('conversations')
           .select('*, agent:agent_id(id,name,avatar_url,is_online), counselor:counselor_id(id,name,avatar_url,is_online)')
           .eq('student_id', user.id)
+          .order('last_message_at', { ascending: false, nullsFirst: false })
       : await supabase.from('conversations')
           .select('*, student:student_id(id,name,avatar_url,is_online)')
           .or(`agent_id.eq.${user.id},counselor_id.eq.${user.id}`)
@@ -65,8 +69,6 @@ export default function MessagesScreen() {
 
   // Realtime: re-fetch when conversations change
   useEffect(() => {
-    let uid = ''
-    supabase.auth.getUser().then(({ data: { user } }) => { uid = user?.id ?? '' })
     const sub = supabase.channel('conv-list-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => {
         load()
@@ -74,6 +76,9 @@ export default function MessagesScreen() {
       .subscribe()
     return () => { supabase.removeChannel(sub) }
   }, [load])
+
+  // Refresh list whenever this screen comes into focus (e.g. returning from a chat)
+  useFocusEffect(useCallback(() => { load() }, [load]))
 
   // Load students for staff new-conversation modal
   const openNewConvModal = async () => {
@@ -266,7 +271,7 @@ export default function MessagesScreen() {
   )
 }
 
-const s = StyleSheet.create({
+const mkS = (C: ColorPalette) => StyleSheet.create({
   bg:             { flex: 1, backgroundColor: C.bg },
   center:         { flex: 1, alignItems: 'center', justifyContent: 'center' },
   searchWrap:     { flexDirection: 'row', alignItems: 'center', margin: 12, backgroundColor: C.bg, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: C.slate100 },

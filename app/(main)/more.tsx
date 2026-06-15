@@ -9,11 +9,16 @@ import * as ImagePicker from 'expo-image-picker'
 import Constants from 'expo-constants'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
-import { C } from '@/constants/colors'
+import { useColors, useTheme } from '@/lib/theme'
+import { ColorPalette } from '@/constants/colors'
+import type { ThemeMode } from '@/lib/theme'
 
 const SUPABASE_URL = 'https://bpranhebhhtvcgcmuegd.supabase.co'
 
 export default function MoreScreen() {
+  const C = useColors()
+  const s = mkS(C)
+  const { mode, setMode } = useTheme()
   const router  = useRouter()
   const insets  = useSafeAreaInsets()
   const [user, setUser]               = useState<any>(null)
@@ -151,6 +156,12 @@ export default function MoreScreen() {
   const roleCap = ((user?.role ?? 'student') as string).charAt(0).toUpperCase() + ((user?.role ?? 'student') as string).slice(1)
 
   if (loading) return <View style={s.center}><ActivityIndicator color={C.blue} size="large" /></View>
+
+  const APPEARANCE_OPTIONS: { key: ThemeMode; label: string; icon: string }[] = [
+    { key: 'light',  label: 'Light',  icon: 'sunny-outline'       },
+    { key: 'dark',   label: 'Dark',   icon: 'moon-outline'        },
+    { key: 'system', label: 'System', icon: 'phone-portrait-outline' },
+  ]
 
   return (
     <ScrollView style={s.bg} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]} showsVerticalScrollIndicator={false}>
@@ -291,6 +302,24 @@ export default function MoreScreen() {
         </View>
       </View>
 
+      {/* ── Appearance ── */}
+      <Text style={s.sectionLabel}>APPEARANCE</Text>
+      <View style={s.card}>
+        {APPEARANCE_OPTIONS.map((opt, i) => (
+          <TouchableOpacity
+            key={opt.key}
+            style={[s.row, i < APPEARANCE_OPTIONS.length - 1 && s.border]}
+            onPress={() => setMode(opt.key)}
+          >
+            <View style={[s.iconBox, { backgroundColor: C.blue + '18' }]}>
+              <Ionicons name={opt.icon as any} size={18} color={C.blue} />
+            </View>
+            <Text style={s.rowLabel}>{opt.label}</Text>
+            {mode === opt.key && <Ionicons name="checkmark" size={18} color={C.blue} />}
+          </TouchableOpacity>
+        ))}
+      </View>
+
       {/* ── Notifications ── */}
       <Text style={s.sectionLabel}>NOTIFICATIONS</Text>
       <View style={s.card}>
@@ -380,7 +409,7 @@ export default function MoreScreen() {
   )
 }
 
-const s = StyleSheet.create({
+const mkS = (C: ColorPalette) => StyleSheet.create({
   bg:             { flex: 1, backgroundColor: C.bg },
   center:         { flex: 1, alignItems: 'center', justifyContent: 'center' },
   content:        { padding: 16, paddingBottom: 40 },

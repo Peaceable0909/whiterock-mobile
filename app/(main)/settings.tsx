@@ -8,12 +8,15 @@ import { Ionicons } from '@expo/vector-icons'
 import Constants from 'expo-constants'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
-import { C } from '@/constants/colors'
+import { useColors } from '@/lib/theme'
+import { ColorPalette } from '@/constants/colors'
 
 const VERSION = Constants.expoConfig?.version ?? '1.0.0'
 const SUPABASE_URL = 'https://bpranhebhhtvcgcmuegd.supabase.co'
 
 export default function SettingsScreen() {
+  const C = useColors()
+  const s = mkS(C)
   const router  = useRouter()
   const insets  = useSafeAreaInsets()
   const [user, setUser]           = useState<any>(null)
@@ -157,7 +160,7 @@ export default function SettingsScreen() {
   )
 }
 
-const s = StyleSheet.create({
+const mkS = (C: ColorPalette) => StyleSheet.create({
   bg:           { flex: 1, backgroundColor: C.bg },
   center:       { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header:       { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 16, backgroundColor: C.white, borderBottomWidth: 1, borderColor: C.slate100 },

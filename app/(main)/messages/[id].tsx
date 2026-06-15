@@ -4,13 +4,14 @@ import {
   KeyboardAvoidingView, Platform, ActivityIndicator, Image, Linking, Alert, AppState,
   useWindowDimensions, Vibration,
 } from 'react-native'
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router'
 import { VideoView, useVideoPlayer } from 'expo-video'
 import * as ImagePicker from 'expo-image-picker'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { uploadVideo } from '@/lib/cloudinary'
-import { C } from '@/constants/colors'
+import { useColors } from '@/lib/theme'
+import { ColorPalette } from '@/constants/colors'
 
 const PAGE_SIZE = 50
 
@@ -41,10 +42,13 @@ const formatFileSize = (bytes: number) => {
 
 function VideoMsg({ uri }: { uri: string }) {
   const player = useVideoPlayer(uri)
-  return <VideoView player={player} style={ms.mediaVideo} nativeControls allowsFullscreen />
+  return <VideoView player={player} style={{ width: 240, height: 160, borderRadius: 12, backgroundColor: '#000' }} nativeControls allowsFullscreen />
 }
 
 export default function ChatScreen() {
+  const C = useColors()
+  const ms = mkMS(C)
+  const g = mkG(C)
   const { id }   = useLocalSearchParams<{ id: string }>()
   const router   = useRouter()
   const listRef  = useRef<FlatList>(null)
@@ -65,7 +69,8 @@ export default function ChatScreen() {
   const [replyTo, setReplyTo]   = useState<any>(null)
   const [aiAssist, setAiAssist] = useState(false)
   const [aiDrafting, setAiDrafting] = useState(false)
-  const oldestTs = useRef<string | null>(null)
+  const oldestTs   = useRef<string | null>(null)
+  const latestMsgTs = useRef<string | null>(null)
 
   const msgsMap = useMemo(() => new Map(msgs.map(m => [m.id, m])), [msgs])
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
@@ -74,6 +79,26 @@ export default function ChatScreen() {
   const scrollToEnd = useCallback(() => {
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100)
   }, [])
+
+  const fetchMissed = useCallback(async () => {
+    if (!latestMsgTs.current) return
+    const { data } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('conversation_id', id)
+      .gt('created_at', latestMsgTs.current)
+      .order('created_at', { ascending: true })
+    if (data && data.length > 0) {
+      setMsgs(prev => {
+        const ids = new Set(prev.map(m => m.id))
+        const fresh = data.filter((m: any) => !ids.has(m.id))
+        if (fresh.length === 0) return prev
+        latestMsgTs.current = fresh[fresh.length - 1].created_at
+        return [...prev, ...fresh]
+      })
+      scrollToEnd()
+    }
+  }, [id, scrollToEnd])
 
   useEffect(() => {
     const load = async () => {
@@ -98,7 +123,10 @@ export default function ChatScreen() {
       }
       const ordered = (history ?? []).reverse()
       setMsgs(ordered)
-      if (ordered.length > 0) oldestTs.current = ordered[0].created_at
+      if (ordered.length > 0) {
+        oldestTs.current   = ordered[0].created_at
+        latestMsgTs.current = ordered[ordered.length - 1].created_at
+      }
       setHasMore((history ?? []).length >= PAGE_SIZE)
       setLoading(false)
       scrollToEnd()
@@ -118,7 +146,11 @@ export default function ChatScreen() {
           filter: `conversation_id=eq.${id}`,
         }, async (payload) => {
           const msg = payload.new as any
-          setMsgs(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg])
+          setMsgs(prev => {
+            if (prev.some(m => m.id === msg.id)) return prev
+            latestMsgTs.current = msg.created_at
+            return [...prev, msg]
+          })
           scrollToEnd()
           const { data: { user } } = await supabase.auth.getUser()
           if (user && msg.sender_id !== user.id) {
@@ -141,6 +173,7 @@ export default function ChatScreen() {
     const appStateSub = AppState.addEventListener('change', nextState => {
       if (appState.current.match(/inactive|background/) && nextState === 'active') {
         subscribe()
+        fetchMissed()
       }
       appState.current = nextState
     })
@@ -389,6 +422,8 @@ export default function ChatScreen() {
     )
   }
 
+  useFocusEffect(useCallback(() => { fetchMissed() }, [fetchMissed]))
+
   if (loading) return <View style={g.center}><ActivityIndicator color={C.blue} size="large" /></View>
 
   return (
@@ -503,7 +538,7 @@ export default function ChatScreen() {
 }
 
 // ─── Message bubble styles ────────────────────────────────────────────────────
-const ms = StyleSheet.create({
+const mkMS = (C: ColorPalette) => StyleSheet.create({
   row:           { flexDirection: 'row', marginBottom: 10, alignItems: 'flex-end' },
   rowMe:         { justifyContent: 'flex-end' },
   rowThem:       { justifyContent: 'flex-start' },
@@ -524,7 +559,6 @@ const ms = StyleSheet.create({
   deletedText:   { fontSize: 13, color: C.slate400, fontStyle: 'italic' },
   deletedTextMe: { color: 'rgba(255,255,255,0.55)' },
   mediaImg:      { width: 220, height: 180, borderRadius: 14 },
-  mediaVideo:    { width: 240, height: 160, borderRadius: 12, backgroundColor: '#000' },
   audioRow:      { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 10 },
   audioIcon:     { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
   audioLabel:    { fontSize: 13, color: C.navy },
@@ -542,7 +576,7 @@ const ms = StyleSheet.create({
 })
 
 // ─── Global / header styles ───────────────────────────────────────────────────
-const g = StyleSheet.create({
+const mkG = (C: ColorPalette) => StyleSheet.create({
   flex:           { flex: 1, backgroundColor: C.bg },
   loadMoreBtn:    { alignSelf: 'center', marginBottom: 12, paddingHorizontal: 16, paddingVertical: 7, backgroundColor: C.white, borderRadius: 20, borderWidth: 1, borderColor: C.slate200, minWidth: 48, alignItems: 'center' },
   loadMoreTxt:    { fontSize: 12, color: C.blue, fontWeight: '600' },

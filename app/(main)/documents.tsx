@@ -7,7 +7,8 @@ import * as ImagePicker from 'expo-image-picker'
 import { Ionicons } from '@expo/vector-icons'
 import { AppHeader } from '@/components/AppHeader'
 import { supabase } from '@/lib/supabase'
-import { C } from '@/constants/colors'
+import { useColors } from '@/lib/theme'
+import { ColorPalette } from '@/constants/colors'
 
 const DOC_CATEGORIES = [
   { key: 'all',          label: 'All',            icon: 'folder-outline'         },
@@ -27,6 +28,8 @@ const STATUS_CONFIG = {
 } as const
 
 export default function DocumentsScreen() {
+  const C = useColors()
+  const s = mkS(C)
   const [docs, setDocs]           = useState<any[]>([])
   const [myId, setMyId]           = useState('')
   const [loading, setLoading]     = useState(true)
@@ -254,7 +257,7 @@ export default function DocumentsScreen() {
   )
 }
 
-const s = StyleSheet.create({
+const mkS = (C: ColorPalette) => StyleSheet.create({
   bg:            { flex: 1, backgroundColor: C.bg },
   center:        { flex: 1, alignItems: 'center', justifyContent: 'center' },
   statsRow:      { flexDirection: 'row', backgroundColor: C.white, borderRadius: 18, marginBottom: 4, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 },
