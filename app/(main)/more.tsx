@@ -164,7 +164,16 @@ export default function MoreScreen() {
   ]
 
   return (
-    <ScrollView style={s.bg} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]} showsVerticalScrollIndicator={false}>
+    <ScrollView style={s.bg} contentContainerStyle={[s.content, { paddingTop: insets.top }]} showsVerticalScrollIndicator={false}>
+
+      {/* ── Header ── */}
+      <View style={s.pageHeader}>
+        <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={22} color={C.navy} />
+        </TouchableOpacity>
+        <Text style={s.pageTitle}>Profile & Settings</Text>
+        <View style={{ width: 40 }} />
+      </View>
 
       {/* ── Profile hero ── */}
       <View style={s.profileCard}>
@@ -413,6 +422,9 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   bg:             { flex: 1, backgroundColor: C.bg },
   center:         { flex: 1, alignItems: 'center', justifyContent: 'center' },
   content:        { padding: 16, paddingBottom: 40 },
+  pageHeader:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, marginBottom: 8 },
+  backBtn:        { width: 40, height: 40, borderRadius: 12, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
+  pageTitle:      { fontSize: 17, fontWeight: '800', color: C.navy },
 
   profileCard:    { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: C.white, borderRadius: 22, padding: 18, marginBottom: 24, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 },
   avatarWrap:     { position: 'relative', width: 64, height: 64 },

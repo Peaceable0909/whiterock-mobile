@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Animated } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Animated, Image } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -35,7 +35,6 @@ export default function HomeScreen() {
         .eq('user_id', authUser.id).eq('is_read', false)
       setNotifUnread(count ?? 0)
 
-      // Fetch 2 most recent updates for the home card
       const { data: updatesData } = await supabase.from('updates')
         .select('id, title, category, created_at')
         .order('created_at', { ascending: false })
@@ -84,11 +83,22 @@ export default function HomeScreen() {
     </TouchableOpacity>
   )
 
-  const isStudent = user?.role === 'student'
-  const stageIdx  = profile ? Math.max(JOURNEY_STAGES.indexOf(profile.stage), 0) : 0
-  const pct       = Math.round((stageIdx / (JOURNEY_STAGES.length - 1)) * 100)
-  const firstName = (user?.name ?? 'User').split(' ')[0]
-  const nextStage = JOURNEY_STAGES[stageIdx + 1]
+  const AvatarButton = () => (
+    <TouchableOpacity style={s.avatarBtn} onPress={() => router.push('/(main)/more' as any)} accessibilityLabel="Profile">
+      {user?.avatar_url
+        ? <Image source={{ uri: user.avatar_url }} style={s.headerAvatar} />
+        : <View style={s.headerAvatarFallback}>
+            <Text style={s.headerAvatarText}>{(user?.name ?? 'U')[0].toUpperCase()}</Text>
+          </View>
+      }
+    </TouchableOpacity>
+  )
+
+  const isStudent  = user?.role === 'student'
+  const stageIdx   = profile ? Math.max(JOURNEY_STAGES.indexOf(profile.stage), 0) : 0
+  const pct        = Math.round((stageIdx / (JOURNEY_STAGES.length - 1)) * 100)
+  const firstName  = (user?.name ?? 'User').split(' ')[0]
+  const nextStage  = JOURNEY_STAGES[stageIdx + 1]
 
   const progressAnim = useRef(new Animated.Value(0)).current
   useEffect(() => {
@@ -101,18 +111,21 @@ export default function HomeScreen() {
 
   if (loading) return <View style={[s.center, { paddingTop: insets.top }]}><ActivityIndicator color={C.blue} size="large" /></View>
 
+  /* ─────────────── STUDENT DASHBOARD ─────────────── */
   if (isStudent) return (
     <ScrollView style={s.bg} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]} showsVerticalScrollIndicator={false}>
-      {/* Greeting */}
-      <View style={[s.pt, { flexDirection: 'row', alignItems: 'flex-start' }]}>
+
+      {/* ── Header ── */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingTop: 8, marginBottom: 20 }}>
         <View style={{ flex: 1 }}>
           <Text style={s.overline}>Dashboard Overview</Text>
           <Text style={s.heading}>Welcome back, {firstName}.</Text>
         </View>
         <BellButton />
+        <AvatarButton />
       </View>
 
-      {/* Visa outcome celebration banner */}
+      {/* ── Visa celebration banner ── */}
       {(profile?.visa_outcome === 'approved' || profile?.visa_outcome === 'granted') && (
         <View style={s.visaBanner}>
           <Text style={s.visaEmoji}>🎉</Text>
@@ -123,7 +136,7 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* Progress card */}
+      {/* ── My Application ── */}
       <View style={s.card}>
         <View style={s.row}>
           <View style={s.iconCircle}><Ionicons name="document-text-outline" size={20} color={C.blue} /></View>
@@ -142,22 +155,25 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Assigned agent */}
+      {/* ── My Assigned Agent ── */}
       <View style={s.card}>
         <View style={[s.row, { marginBottom: 14 }]}>
-          <View style={s.iconCircle}><Ionicons name="chatbubble-outline" size={18} color={C.blue} /></View>
+          <View style={s.iconCircle}><Ionicons name="person-outline" size={18} color={C.blue} /></View>
           <Text style={[s.cardTitle, { marginLeft: 10, flex: 1 }]}>My Assigned Agent</Text>
           {agent?.is_online
             ? <View style={s.onlineBadge}><View style={s.dot} /><Text style={s.onlineText}>ONLINE</Text></View>
             : <View style={[s.onlineBadge, { backgroundColor: C.slate100, borderColor: C.slate200 }]}>
                 <View style={[s.dot, { backgroundColor: C.slate400 }]} />
                 <Text style={[s.onlineText, { color: C.slate500 }]}>OFFLINE</Text>
-              </View>}
+              </View>
+          }
         </View>
         {agent ? (
           <>
             <View style={s.agentRow}>
-              <View style={s.avatar}><Text style={s.avatarText}>{agent.name.split(' ').map((n:string)=>n[0]).join('').slice(0,2)}</Text></View>
+              <View style={s.agentAvatar}>
+                <Text style={s.agentAvatarText}>{agent.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}</Text>
+              </View>
               <View>
                 <Text style={s.agentName}>{agent.name}</Text>
                 <Text style={s.agentRole}>{agent.role === 'counselor' ? 'Senior Counselor' : agent.role === 'admin' ? 'Administrator' : 'Visa Agent'}</Text>
@@ -173,7 +189,7 @@ export default function HomeScreen() {
         ) : <Text style={s.cardSub}>An agent will be assigned to you shortly.</Text>}
       </View>
 
-      {/* 2-col grid */}
+      {/* ── Appointments + Digital Vault ── */}
       <View style={s.grid}>
         <TouchableOpacity style={s.gridCard} onPress={() => router.push('/(main)/appointments' as any)}>
           <Ionicons name="calendar-outline" size={20} color={C.blue} />
@@ -188,22 +204,32 @@ export default function HomeScreen() {
           <View style={s.gridBtn}><Text style={s.gridBtnText}>Open Vault</Text></View>
         </TouchableOpacity>
       </View>
-      <View style={[s.grid, { marginTop: 0 }]}>
-        <TouchableOpacity style={s.gridCard} onPress={() => router.push('/(main)/ai')}>
-          <Ionicons name="hardware-chip-outline" size={20} color={C.blue} />
-          <Text style={s.gridLabel}>AI Assistant</Text>
-          <Text style={s.gridSub}>Ask anything about visa laws...</Text>
-          <View style={s.gridBtn}><Text style={s.gridBtnText}>Open AI</Text></View>
-        </TouchableOpacity>
-        <TouchableOpacity style={s.gridCard} onPress={() => router.push('/(main)/updates')}>
-          <Ionicons name="newspaper-outline" size={20} color={C.blue} />
-          <Text style={s.gridLabel}>Updates</Text>
-          <Text style={s.gridSub}>Latest news & announcements</Text>
-          <View style={s.gridBtn}><Text style={s.gridBtnText}>Read News</Text></View>
-        </TouchableOpacity>
-      </View>
 
-      {/* Recent updates from DB */}
+      {/* ── AI Assistant — full-width featured card ── */}
+      <TouchableOpacity style={s.aiCard} onPress={() => router.push('/(main)/ai')}>
+        <View style={[s.row, { marginBottom: 12 }]}>
+          <View style={s.aiIconBox}>
+            <Ionicons name="hardware-chip-outline" size={22} color={C.white} />
+          </View>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={s.cardTitle}>AI Assistant</Text>
+            <Text style={s.cardSub}>Powered by Qwen · Always available</Text>
+          </View>
+          <View style={s.onlineBadge}>
+            <View style={s.dot} />
+            <Text style={s.onlineText}>ONLINE</Text>
+          </View>
+        </View>
+        <Text style={s.aiDesc}>
+          Get instant answers about UK student visas, CAS letters, maintenance funds, university requirements, and your full application journey.
+        </Text>
+        <View style={[s.btn, { marginTop: 14 }]}>
+          <Ionicons name="hardware-chip-outline" size={14} color={C.white} />
+          <Text style={[s.btnText, { marginLeft: 6 }]}>Open AI Assistant</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* ── Recent Updates ── */}
       <View style={s.card}>
         <View style={[s.row, { marginBottom: 12 }]}>
           <Text style={s.overline}>Recent Updates</Text>
@@ -220,34 +246,69 @@ export default function HomeScreen() {
               </TouchableOpacity>
             ))
           : (
-              <View style={[s.updateRow]}>
+              <View style={s.updateRow}>
                 <View style={[s.updateBar, { backgroundColor: C.blue }]} />
                 <View>
                   <Text style={s.updateTitle}>Application Stage Updated</Text>
                   <Text style={s.updateSub}>Stage: {STAGE_LABEL[profile?.stage] ?? 'Lead'}</Text>
                 </View>
               </View>
-            )}
+            )
+        }
         <TouchableOpacity style={s.viewAll} onPress={() => router.push('/(main)/updates')}>
           <Text style={s.viewAllText}>View all updates</Text>
           <Ionicons name="chevron-forward" size={14} color={C.blue} />
         </TouchableOpacity>
       </View>
+
+      {/* ── More Features ── */}
+      <Text style={s.sectionLabel}>More Features</Text>
+      <View style={s.grid}>
+        <TouchableOpacity style={s.gridCard} onPress={() => router.push('/(main)/payments' as any)}>
+          <Ionicons name="card-outline" size={20} color="#6366F1" />
+          <Text style={s.gridLabel}>Payments</Text>
+          <Text style={s.gridTitle}>Billing & Fees</Text>
+          <View style={[s.gridBtn, { backgroundColor: '#6366F1' }]}>
+            <Text style={s.gridBtnText}>View</Text>
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity style={s.gridCard} onPress={() => router.push('/(main)/university-offers' as any)}>
+          <Ionicons name="school-outline" size={20} color="#059669" />
+          <Text style={s.gridLabel}>Uni Offers</Text>
+          <Text style={s.gridTitle}>Offers & Decisions</Text>
+          <View style={[s.gridBtn, { backgroundColor: '#059669' }]}>
+            <Text style={s.gridBtnText}>View</Text>
+          </View>
+        </TouchableOpacity>
+      </View>
+      <TouchableOpacity style={s.card} onPress={() => router.push('/(main)/resources' as any)}>
+        <View style={s.row}>
+          <View style={[s.iconCircle, { backgroundColor: '#FEF3C7' }]}>
+            <Ionicons name="library-outline" size={20} color="#D97706" />
+          </View>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={s.cardTitle}>Resources & Guides</Text>
+            <Text style={s.cardSub}>Visa checklists, templates & study materials</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={C.slate300} />
+        </View>
+      </TouchableOpacity>
+
     </ScrollView>
   )
 
-  // Staff home
+  /* ─────────────── STAFF DASHBOARD ─────────────── */
   return (
     <ScrollView style={s.bg} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]} showsVerticalScrollIndicator={false}>
-      <View style={[s.pt, { flexDirection: 'row', alignItems: 'flex-start' }]}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingTop: 8, marginBottom: 20 }}>
         <View style={{ flex: 1 }}>
           <Text style={s.overline}>Dashboard Overview</Text>
           <Text style={s.heading}>Good morning, {firstName}.</Text>
         </View>
         <BellButton />
+        <AvatarButton />
       </View>
 
-      {/* Real stats */}
       <StaffStats userId={user?.id} />
 
       <View style={s.grid}>
@@ -263,14 +324,6 @@ export default function HomeScreen() {
           </TouchableOpacity>
         ))}
       </View>
-
-      {/* Logout */}
-      <TouchableOpacity style={s.logoutRow} onPress={async () => {
-        await supabase.auth.signOut()
-      }}>
-        <Ionicons name="log-out-outline" size={18} color={C.slate400} />
-        <Text style={s.logoutText}>Sign Out</Text>
-      </TouchableOpacity>
     </ScrollView>
   )
 }
@@ -298,9 +351,9 @@ function StaffStats({ userId }: { userId?: string }) {
   }, [userId])
 
   const items = [
-    { label: 'Students', val: stats.students, color: C.blue },
-    { label: 'Active',   val: stats.active,   color: '#059669' },
-    { label: 'Pending Docs', val: stats.pendingDocs, color: stats.pendingDocs > 0 ? '#F59E0B' : C.slate400 },
+    { label: 'Students',    val: stats.students,    color: C.blue },
+    { label: 'Active',      val: stats.active,      color: '#059669' },
+    { label: 'Pending Docs',val: stats.pendingDocs, color: stats.pendingDocs > 0 ? '#F59E0B' : C.slate400 },
   ]
 
   return (
@@ -324,52 +377,56 @@ const mkSS = (C: ColorPalette) => StyleSheet.create({
 })
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
-  bg:          { flex: 1, backgroundColor: C.bg },
-  bellBtn:     { width: 44, height: 44, borderRadius: 14, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
-  bellBadge:   { position: 'absolute', top: 6, right: 6, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
-  bellBadgeText:{ fontSize: 9, fontWeight: '800', color: C.white },
-  content:     { padding: 16, paddingBottom: 32 },
-  center:      { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg },
-  pt:          { paddingTop: 8, marginBottom: 16 },
-  overline:    { fontSize: 11, fontWeight: '700', color: C.slate400, textTransform: 'uppercase', letterSpacing: 1.5 },
-  heading:     { fontSize: 22, fontWeight: '800', color: C.navy, marginTop: 2 },
-  card:        { backgroundColor: C.white, borderRadius: 20, padding: 18, marginBottom: 14, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
-  row:         { flexDirection: 'row', alignItems: 'center' },
-  iconCircle:  { width: 40, height: 40, borderRadius: 12, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center' },
-  cardTitle:   { fontSize: 15, fontWeight: '700', color: C.navy },
-  cardSub:     { fontSize: 12, color: C.slate400, marginTop: 2 },
-  bigPct:      { fontSize: 28, fontWeight: '900', color: C.blue },
-  barBg:       { height: 8, backgroundColor: C.slate100, borderRadius: 4, marginTop: 12, overflow: 'hidden' },
-  barFg:       { height: 8, backgroundColor: C.blue, borderRadius: 4 },
-  nextStep:    { fontSize: 12, color: C.slate400, marginTop: 6, marginBottom: 14 },
-  nextStepBold:{ fontWeight: '600', color: C.slate600 },
-  btn:         { height: 44, backgroundColor: C.blue, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', elevation: 2 },
-  btnText:     { color: C.white, fontWeight: '700', fontSize: 14 },
-  onlineBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0FDF4', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1, borderColor: '#BBF7D0' },
-  dot:         { width: 6, height: 6, borderRadius: 3, backgroundColor: '#22C55E', marginRight: 4 },
-  onlineText:  { fontSize: 9, fontWeight: '700', color: '#15803D' },
-  agentRow:    { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
-  avatar:      { width: 48, height: 48, borderRadius: 24, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
-  avatarText:  { color: C.white, fontWeight: '700', fontSize: 16 },
-  agentName:   { fontSize: 15, fontWeight: '700', color: C.navy },
-  agentRole:   { fontSize: 12, color: C.slate500 },
-  grid:        { flexDirection: 'row', gap: 12, marginBottom: 14 },
-  gridCard:    { flex: 1, backgroundColor: C.white, borderRadius: 18, padding: 14, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
-  gridLabel:   { fontSize: 10, fontWeight: '700', color: C.slate400, textTransform: 'uppercase', letterSpacing: 1, marginTop: 10 },
-  gridTitle:   { fontSize: 13, fontWeight: '700', color: C.navy, marginTop: 2 },
-  gridSub:     { fontSize: 11, color: C.slate400, marginTop: 2, lineHeight: 16 },
-  gridBtn:     { marginTop: 10, height: 32, backgroundColor: C.blue, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  gridBtnText: { fontSize: 11, fontWeight: '700', color: C.white },
-  updateRow:   { flexDirection: 'row', alignItems: 'flex-start' },
-  updateBar:   { width: 3, height: '100%', borderRadius: 2, marginRight: 10, minHeight: 36 },
-  updateTitle: { fontSize: 13, fontWeight: '700', color: C.navy },
-  updateSub:   { fontSize: 12, color: C.slate400, marginTop: 2 },
-  viewAll:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 14 },
-  viewAllText: { fontSize: 12, fontWeight: '700', color: C.blue, marginRight: 2 },
-  logoutRow:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, marginTop: 4 },
-  logoutText:    { fontSize: 14, fontWeight: '600', color: C.slate400 },
-  visaBanner:    { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#ECFDF5', borderWidth: 1.5, borderColor: '#6EE7B7', borderRadius: 20, padding: 16, marginBottom: 14 },
-  visaEmoji:     { fontSize: 28 },
-  visaBannerTitle: { fontSize: 15, fontWeight: '800', color: '#065F46', marginBottom: 3 },
-  visaBannerSub:   { fontSize: 12, color: '#059669', lineHeight: 17 },
+  bg:               { flex: 1, backgroundColor: C.bg },
+  content:          { padding: 16, paddingBottom: 40 },
+  center:           { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg },
+  overline:         { fontSize: 11, fontWeight: '700', color: C.slate400, textTransform: 'uppercase', letterSpacing: 1.5 },
+  heading:          { fontSize: 22, fontWeight: '800', color: C.navy, marginTop: 2 },
+  bellBtn:          { width: 44, height: 44, borderRadius: 14, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
+  bellBadge:        { position: 'absolute', top: 6, right: 6, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
+  bellBadgeText:    { fontSize: 9, fontWeight: '800', color: C.white },
+  avatarBtn:        { marginLeft: 10, width: 40, height: 40, borderRadius: 20, overflow: 'hidden' },
+  headerAvatar:     { width: 40, height: 40, borderRadius: 20 },
+  headerAvatarFallback: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
+  headerAvatarText: { fontSize: 15, fontWeight: '800', color: C.white },
+  card:             { backgroundColor: C.white, borderRadius: 20, padding: 18, marginBottom: 14, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  row:              { flexDirection: 'row', alignItems: 'center' },
+  iconCircle:       { width: 40, height: 40, borderRadius: 12, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center' },
+  cardTitle:        { fontSize: 15, fontWeight: '700', color: C.navy },
+  cardSub:          { fontSize: 12, color: C.slate400, marginTop: 2 },
+  bigPct:           { fontSize: 28, fontWeight: '900', color: C.blue },
+  barBg:            { height: 8, backgroundColor: C.slate100, borderRadius: 4, marginTop: 12, overflow: 'hidden' },
+  barFg:            { height: 8, backgroundColor: C.blue, borderRadius: 4 },
+  nextStep:         { fontSize: 12, color: C.slate400, marginTop: 6, marginBottom: 14 },
+  nextStepBold:     { fontWeight: '600', color: C.slate500 },
+  btn:              { height: 44, backgroundColor: C.blue, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', elevation: 2 },
+  btnText:          { color: C.white, fontWeight: '700', fontSize: 14 },
+  onlineBadge:      { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0FDF4', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1, borderColor: '#BBF7D0' },
+  dot:              { width: 6, height: 6, borderRadius: 3, backgroundColor: '#22C55E', marginRight: 4 },
+  onlineText:       { fontSize: 9, fontWeight: '700', color: '#15803D' },
+  agentRow:         { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
+  agentAvatar:      { width: 48, height: 48, borderRadius: 24, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  agentAvatarText:  { color: C.white, fontWeight: '700', fontSize: 16 },
+  agentName:        { fontSize: 15, fontWeight: '700', color: C.navy },
+  agentRole:        { fontSize: 12, color: C.slate500 },
+  aiCard:           { backgroundColor: '#EFF6FF', borderRadius: 20, padding: 18, marginBottom: 14, borderWidth: 1.5, borderColor: '#BFDBFE', shadowColor: '#1D4ED8', shadowOpacity: 0.1, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  aiIconBox:        { width: 44, height: 44, borderRadius: 14, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
+  aiDesc:           { fontSize: 13, color: C.slate500, lineHeight: 20 },
+  grid:             { flexDirection: 'row', gap: 12, marginBottom: 14 },
+  gridCard:         { flex: 1, backgroundColor: C.white, borderRadius: 18, padding: 14, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  gridLabel:        { fontSize: 10, fontWeight: '700', color: C.slate400, textTransform: 'uppercase', letterSpacing: 1, marginTop: 10 },
+  gridTitle:        { fontSize: 13, fontWeight: '700', color: C.navy, marginTop: 2 },
+  gridBtn:          { marginTop: 10, height: 32, backgroundColor: C.blue, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  gridBtnText:      { fontSize: 11, fontWeight: '700', color: C.white },
+  updateRow:        { flexDirection: 'row', alignItems: 'flex-start' },
+  updateBar:        { width: 3, height: '100%', borderRadius: 2, marginRight: 10, minHeight: 36 },
+  updateTitle:      { fontSize: 13, fontWeight: '700', color: C.navy },
+  updateSub:        { fontSize: 12, color: C.slate400, marginTop: 2 },
+  viewAll:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 14 },
+  viewAllText:      { fontSize: 12, fontWeight: '700', color: C.blue, marginRight: 2 },
+  sectionLabel:     { fontSize: 10, fontWeight: '800', color: C.slate400, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 10, marginTop: 6, paddingHorizontal: 2 },
+  visaBanner:       { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#ECFDF5', borderWidth: 1.5, borderColor: '#6EE7B7', borderRadius: 20, padding: 16, marginBottom: 14 },
+  visaEmoji:        { fontSize: 28 },
+  visaBannerTitle:  { fontSize: 15, fontWeight: '800', color: '#065F46', marginBottom: 3 },
+  visaBannerSub:    { fontSize: 12, color: '#059669', lineHeight: 17 },
 })
