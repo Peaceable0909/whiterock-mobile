@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import {
   View, Text, TextInput, FlatList, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator,
-  ScrollView, Alert, Vibration, Image,
+  Alert, Vibration, Image,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
@@ -11,14 +11,6 @@ import { ColorPalette } from '@/constants/colors'
 
 interface Msg { id?: string; role: 'user' | 'assistant'; content: string; created_at?: string }
 
-const SUGGESTED = [
-  { icon: '📄', label: 'Documents needed',    prompt: 'Which documents do I need for a UK student visa?' },
-  { icon: '💷', label: 'Maintenance funds',   prompt: 'How much maintenance funds do I need for a UK student visa?' },
-  { icon: '🛂', label: 'CAS process',         prompt: 'Can you explain the CAS letter process step by step?' },
-  { icon: '📅', label: 'Visa timeline',       prompt: 'What is the typical visa decision timeline?' },
-  { icon: '🎓', label: 'University match',    prompt: 'Which UK universities should I consider for a Business degree?' },
-  { icon: '🩺', label: 'TB test',             prompt: 'Do I need a tuberculosis (TB) test for a UK student visa?' },
-]
 
 const API_BASE = 'https://whiterock-connect.vercel.app'
 
@@ -199,17 +191,6 @@ export default function AIScreen() {
                 <Text style={s.memoryText} numberOfLines={2}>{memory.summary}</Text>
               </View>
             )}
-            <View style={s.suggestedHeader}>
-              <Ionicons name="flash-outline" size={12} color={C.blue} />
-              <Text style={s.suggestedLabel}>SUGGESTED ACTIONS</Text>
-            </View>
-            <View style={s.chips}>
-              {SUGGESTED.map(a => (
-                <TouchableOpacity key={a.label} style={s.chip} onPress={() => send(a.prompt)}>
-                  <Text style={s.chipText}>{a.icon} {a.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
           </View>
         ) : null}
         renderItem={({ item }) => (
@@ -233,20 +214,6 @@ export default function AIScreen() {
           </View>
         ) : null}
       />
-
-      {/* Quick chips — always rendered; invisible when chat is empty to avoid layout shift */}
-      <ScrollView
-        horizontal showsHorizontalScrollIndicator={false}
-        style={[s.quickBar, isEmpty && { opacity: 0 }]}
-        contentContainerStyle={{ paddingHorizontal: 12, gap: 8, alignItems: 'center' }}
-        pointerEvents={isEmpty ? 'none' : 'auto'}
-      >
-        {SUGGESTED.slice(0, 4).map(a => (
-          <TouchableOpacity key={a.label} style={s.quickChip} onPress={() => send(a.prompt)}>
-            <Text style={s.quickChipText}>{a.icon} {a.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
 
       {/* Input */}
       <View style={s.inputBar}>
@@ -286,11 +253,6 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   emptySub:       { fontSize: 13, color: C.slate500, textAlign: 'center', marginTop: 6, paddingHorizontal: 20 },
   memoryChip:     { flexDirection: 'row', alignItems: 'flex-start', gap: 6, backgroundColor: '#EFF6FF', borderRadius: 12, padding: 10, marginTop: 12, marginHorizontal: 8, borderWidth: 1, borderColor: '#DBEAFE' },
   memoryText:     { fontSize: 11, color: C.blue, flex: 1, lineHeight: 16 },
-  suggestedHeader:{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 20, marginBottom: 10 },
-  suggestedLabel: { fontSize: 10, fontWeight: '800', color: C.slate400, letterSpacing: 1.5 },
-  chips:          { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', paddingHorizontal: 4 },
-  chip:           { backgroundColor: C.white, borderWidth: 1, borderColor: C.slate200, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 },
-  chipText:       { fontSize: 12, fontWeight: '600', color: C.slate600 },
   msgRow:         { flexDirection: 'row', marginBottom: 10, gap: 8 },
   msgMe:          { justifyContent: 'flex-end' },
   msgThem:        { justifyContent: 'flex-start', alignItems: 'flex-start' },
@@ -300,9 +262,6 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   bubbleThem:     { backgroundColor: C.white, borderBottomLeftRadius: 4, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
   bubbleText:     { fontSize: 14, color: C.navy, lineHeight: 20 },
   bubbleTextMe:   { color: C.white },
-  quickBar:       { backgroundColor: C.white, borderTopWidth: 1, borderColor: C.slate100, height: 52 },
-  quickChip:      { backgroundColor: C.bg, borderWidth: 1, borderColor: C.slate200, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6 },
-  quickChipText:  { fontSize: 11, fontWeight: '600', color: C.slate600 },
   inputBar:       { flexDirection: 'row', alignItems: 'flex-end', padding: 12, backgroundColor: C.white, borderTopWidth: 1, borderColor: C.slate100 },
   input:          { flex: 1, backgroundColor: C.bg, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, fontSize: 14, color: C.navy, maxHeight: 100, marginRight: 8 },
   sendBtn:        { width: 40, height: 40, borderRadius: 20, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
