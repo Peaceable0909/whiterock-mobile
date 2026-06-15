@@ -1,45 +1,111 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
-  ActivityIndicator, Alert,
+  ActivityIndicator, Alert, Image, Platform,
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import Constants from 'expo-constants'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import * as ImagePicker from 'expo-image-picker'
 import { supabase } from '@/lib/supabase'
-import { useColors } from '@/lib/theme'
+import { useColors, useTheme, WALLPAPER_OPTIONS, type ThemeMode } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 
-const VERSION = Constants.expoConfig?.version ?? '1.0.0'
+const VERSION    = Constants.expoConfig?.version ?? '1.0.0'
 const SUPABASE_URL = 'https://bpranhebhhtvcgcmuegd.supabase.co'
 
+const THEME_OPTIONS: { id: ThemeMode; label: string; icon: string }[] = [
+  { id: 'light',  label: 'Light',   icon: 'sunny-outline' },
+  { id: 'dark',   label: 'Dark',    icon: 'moon-outline' },
+  { id: 'system', label: 'System',  icon: 'phone-portrait-outline' },
+]
+
 export default function SettingsScreen() {
-  const C = useColors()
-  const s = mkS(C)
-  const router  = useRouter()
-  const insets  = useSafeAreaInsets()
-  const [user, setUser]           = useState<any>(null)
-  const [loading, setLoading]     = useState(true)
-  const [signingOut, setSigningOut] = useState(false)
+  const C          = useColors()
+  const s          = mkS(C)
+  const router     = useRouter()
+  const insets     = useSafeAreaInsets()
+  const { mode, setMode, wallpaper, setWallpaper } = useTheme()
+
+  const [user, setUser]               = useState<any>(null)
+  const [loading, setLoading]         = useState(true)
+  const [signingOut, setSigningOut]   = useState(false)
+  const [uploadingWp, setUploadingWp] = useState(false)
+  const [previewWp, setPreviewWp]     = useState<string>(wallpaper)
+
+  // Keep preview in sync when wallpaper changes externally
+  useEffect(() => { setPreviewWp(wallpaper) }, [wallpaper])
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user: authUser } }) => {
-      if (!authUser) return
-      supabase.from('users').select('*').eq('id', authUser.id).single()
+    supabase.auth.getUser().then(({ data: { user: au } }) => {
+      if (!au) return
+      supabase.from('users').select('*').eq('id', au.id).single()
         .then(({ data }) => { setUser(data); setLoading(false) })
     })
   }, [])
+
+  const applyWallpaper = useCallback((id: string) => {
+    setPreviewWp(id)
+    setWallpaper(id)
+  }, [setWallpaper])
+
+  const pickCustomWallpaper = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Allow photo access to pick a wallpaper.')
+      return
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      allowsEditing: true,
+      aspect: [9, 16],
+    })
+    if (result.canceled || !result.assets?.[0]) return
+
+    setUploadingWp(true)
+    try {
+      const { data: { user: au } } = await supabase.auth.getUser()
+      if (!au) throw new Error('Not authenticated')
+
+      const uri  = result.assets[0].uri
+      const ext  = uri.split('.').pop() ?? 'jpg'
+      const path = `${au.id}/wallpaper.${ext}`
+      const res  = await fetch(uri)
+      const blob = await res.blob()
+      const arr  = await new Response(blob).arrayBuffer()
+
+      const { error: upErr } = await supabase.storage.from('avatars')
+        .upload(path, arr, { upsert: true, contentType: `image/${ext}` })
+      if (upErr) throw upErr
+
+      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
+      const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`
+      applyWallpaper(publicUrl)
+    } catch (e: any) {
+      Alert.alert('Upload failed', e.message ?? 'Could not upload the image.')
+    } finally {
+      setUploadingWp(false)
+    }
+  }
+
+  const resetAppearance = () => {
+    Alert.alert('Reset appearance', 'Restore theme to Light and remove wallpaper?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Reset', style: 'destructive',
+        onPress: () => { setMode('light'); applyWallpaper('') },
+      },
+    ])
+  }
 
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Sign Out', style: 'destructive',
-        onPress: async () => {
-          setSigningOut(true)
-          await supabase.auth.signOut()
-        },
+        onPress: async () => { setSigningOut(true); await supabase.auth.signOut() },
       },
     ])
   }
@@ -63,9 +129,8 @@ export default function SettingsScreen() {
                   'Content-Type': 'application/json',
                 },
               })
-              if (res.ok) {
-                await supabase.auth.signOut()
-              } else {
+              if (res.ok) { await supabase.auth.signOut() }
+              else {
                 const body = await res.json().catch(() => ({}))
                 Alert.alert('Error', body.error ?? 'Deletion failed. Contact support.')
               }
@@ -78,6 +143,14 @@ export default function SettingsScreen() {
     )
   }
 
+  // Live wallpaper preview behind the settings header
+  const bgStyle = (() => {
+    if (!previewWp) return {}
+    if (previewWp.startsWith('http')) return { backgroundColor: 'transparent' }
+    const color = WALLPAPER_OPTIONS.find(w => w.id === previewWp)?.color
+    return color ? { backgroundColor: color } : {}
+  })()
+
   if (loading) return <View style={s.center}><ActivityIndicator color={C.blue} /></View>
 
   const initials = (user?.name ?? 'U').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
@@ -86,6 +159,11 @@ export default function SettingsScreen() {
 
   return (
     <View style={[s.bg, { paddingTop: insets.top }]}>
+      {/* Custom wallpaper image layer */}
+      {previewWp.startsWith('http') && (
+        <Image source={{ uri: previewWp }} style={s.wallpaperBg} blurRadius={Platform.OS === 'ios' ? 20 : 10} />
+      )}
+
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.back}>
           <Ionicons name="arrow-back" size={20} color={C.navy} />
@@ -95,7 +173,7 @@ export default function SettingsScreen() {
 
       <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
         {/* Profile card */}
-        <View style={s.profileCard}>
+        <View style={[s.profileCard, bgStyle]}>
           <View style={s.avatar}>
             <Text style={s.avatarText}>{initials}</Text>
           </View>
@@ -108,7 +186,123 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Account section */}
+        {/* ── APPEARANCE ─────────────────────────────────────────── */}
+        <Text style={s.sectionLabel}>APPEARANCE</Text>
+
+        {/* Theme mode */}
+        <View style={s.section}>
+          <View style={[s.row, s.borderBottom, { paddingBottom: 12 }]}>
+            <View style={[s.iconBox, { backgroundColor: '#EFF6FF' }]}>
+              <Ionicons name="color-palette-outline" size={18} color={C.blue} />
+            </View>
+            <Text style={s.rowLabel}>Theme</Text>
+          </View>
+          <View style={s.themeRow}>
+            {THEME_OPTIONS.map(opt => {
+              const active = mode === opt.id
+              return (
+                <TouchableOpacity
+                  key={opt.id}
+                  style={[s.themeBtn, active && s.themeBtnActive]}
+                  onPress={() => setMode(opt.id)}
+                >
+                  <Ionicons
+                    name={opt.icon as any}
+                    size={20}
+                    color={active ? C.white : C.slate500}
+                  />
+                  <Text style={[s.themeBtnText, active && { color: C.white }]}>
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              )
+            })}
+          </View>
+        </View>
+
+        {/* Wallpaper */}
+        <View style={s.section}>
+          <View style={[s.row, s.borderBottom, { paddingBottom: 12 }]}>
+            <View style={[s.iconBox, { backgroundColor: '#F5F3FF' }]}>
+              <Ionicons name="image-outline" size={18} color="#7C3AED" />
+            </View>
+            <Text style={s.rowLabel}>Chat Background</Text>
+          </View>
+
+          {/* Built-in swatches */}
+          <View style={s.swatchGrid}>
+            {WALLPAPER_OPTIONS.map(wp => {
+              const active = previewWp === wp.id
+              return (
+                <TouchableOpacity
+                  key={wp.id}
+                  style={[
+                    s.swatch,
+                    wp.color ? { backgroundColor: wp.color } : s.swatchDefault,
+                    active && s.swatchActive,
+                  ]}
+                  onPress={() => applyWallpaper(wp.id)}
+                >
+                  {!wp.color && (
+                    <Ionicons name="ban-outline" size={14} color={C.slate400} />
+                  )}
+                  {active && (
+                    <View style={s.swatchCheck}>
+                      <Ionicons name="checkmark" size={12} color={C.white} />
+                    </View>
+                  )}
+                  <Text style={s.swatchLabel}>{wp.name}</Text>
+                </TouchableOpacity>
+              )
+            })}
+
+            {/* Custom upload tile */}
+            <TouchableOpacity
+              style={[s.swatch, s.swatchUpload, previewWp.startsWith('http') && s.swatchActive]}
+              onPress={pickCustomWallpaper}
+              disabled={uploadingWp}
+            >
+              {uploadingWp
+                ? <ActivityIndicator size="small" color={C.blue} />
+                : <>
+                    <Ionicons name="add-circle-outline" size={20} color={C.blue} />
+                    {previewWp.startsWith('http') && (
+                      <View style={s.swatchCheck}>
+                        <Ionicons name="checkmark" size={12} color={C.white} />
+                      </View>
+                    )}
+                  </>}
+              <Text style={[s.swatchLabel, { color: C.blue }]}>Custom</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Wallpaper preview strip */}
+          {previewWp && (
+            <View style={s.previewStrip}>
+              <View style={[
+                s.previewBubble,
+                previewWp.startsWith('http')
+                  ? {}
+                  : { backgroundColor: WALLPAPER_OPTIONS.find(w => w.id === previewWp)?.color ?? C.bg },
+              ]}>
+                {previewWp.startsWith('http') && (
+                  <Image source={{ uri: previewWp }} style={StyleSheet.absoluteFill} blurRadius={4} />
+                )}
+                <View style={s.previewMsg}>
+                  <Text style={s.previewMsgText}>Preview message</Text>
+                </View>
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* Reset */}
+        <TouchableOpacity style={[s.section, s.resetRow]} onPress={resetAppearance}>
+          <Ionicons name="refresh-outline" size={16} color={C.slate500} />
+          <Text style={s.resetText}>Reset appearance to default</Text>
+        </TouchableOpacity>
+
+        {/* ── ACCOUNT ────────────────────────────────────────────── */}
         <Text style={s.sectionLabel}>ACCOUNT</Text>
         <View style={s.section}>
           <TouchableOpacity style={s.row} onPress={handleSignOut} disabled={signingOut}>
@@ -122,7 +316,7 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* App info */}
+        {/* ── APP INFO ───────────────────────────────────────────── */}
         <Text style={s.sectionLabel}>APP</Text>
         <View style={s.section}>
           <View style={[s.row, s.borderBottom]}>
@@ -141,7 +335,7 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Danger zone */}
+        {/* ── DANGER ZONE ────────────────────────────────────────── */}
         <Text style={s.sectionLabel}>DANGER ZONE</Text>
         <View style={s.section}>
           <TouchableOpacity style={s.row} onPress={handleDeleteAccount}>
@@ -161,26 +355,54 @@ export default function SettingsScreen() {
 }
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
-  bg:           { flex: 1, backgroundColor: C.bg },
-  center:       { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header:       { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 16, backgroundColor: C.white, borderBottomWidth: 1, borderColor: C.slate100 },
-  back:         { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  headerTitle:  { fontSize: 18, fontWeight: '800', color: C.navy },
-  content:      { padding: 16, paddingBottom: 48 },
-  profileCard:  { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: C.white, borderRadius: 20, padding: 16, marginBottom: 24, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
-  avatar:       { width: 56, height: 56, borderRadius: 28, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
-  avatarText:   { fontSize: 18, fontWeight: '800', color: C.white },
-  profileInfo:  { flex: 1 },
-  profileName:  { fontSize: 16, fontWeight: '800', color: C.navy },
-  profileEmail: { fontSize: 12, color: C.slate500, marginTop: 2 },
-  roleBadge:    { marginTop: 6, backgroundColor: '#EFF6FF', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, alignSelf: 'flex-start' },
-  roleText:     { fontSize: 10, fontWeight: '700', color: C.blue, textTransform: 'uppercase', letterSpacing: 0.5 },
-  sectionLabel: { fontSize: 10, fontWeight: '800', color: C.slate400, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8, marginTop: 4, paddingHorizontal: 4 },
-  section:      { backgroundColor: C.white, borderRadius: 16, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 2, overflow: 'hidden' },
-  row:          { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
-  borderBottom: { borderBottomWidth: 1, borderColor: C.slate100 },
-  iconBox:      { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  rowLabel:     { flex: 1, fontSize: 14, fontWeight: '600', color: C.navy },
-  rowValue:     { fontSize: 12, color: C.slate400 },
-  rowSub:       { fontSize: 11, color: C.slate400, marginTop: 1 },
+  bg:             { flex: 1, backgroundColor: C.bg },
+  wallpaperBg:    { ...StyleSheet.absoluteFillObject, opacity: 0.18 },
+  center:         { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  header:         { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 16, backgroundColor: C.white, borderBottomWidth: 1, borderColor: C.slate100 },
+  back:           { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  headerTitle:    { fontSize: 18, fontWeight: '800', color: C.navy },
+  content:        { padding: 16, paddingBottom: 48 },
+
+  profileCard:    { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: C.white, borderRadius: 20, padding: 16, marginBottom: 24, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  avatar:         { width: 56, height: 56, borderRadius: 28, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
+  avatarText:     { fontSize: 18, fontWeight: '800', color: C.white },
+  profileInfo:    { flex: 1 },
+  profileName:    { fontSize: 16, fontWeight: '800', color: C.navy },
+  profileEmail:   { fontSize: 12, color: C.slate500, marginTop: 2 },
+  roleBadge:      { marginTop: 6, backgroundColor: '#EFF6FF', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, alignSelf: 'flex-start' },
+  roleText:       { fontSize: 10, fontWeight: '700', color: C.blue, textTransform: 'uppercase', letterSpacing: 0.5 },
+
+  sectionLabel:   { fontSize: 10, fontWeight: '800', color: C.slate400, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8, marginTop: 4, paddingHorizontal: 4 },
+  section:        { backgroundColor: C.white, borderRadius: 16, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 2, overflow: 'hidden' },
+  row:            { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
+  borderBottom:   { borderBottomWidth: 1, borderColor: C.slate100 },
+  iconBox:        { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  rowLabel:       { flex: 1, fontSize: 14, fontWeight: '600', color: C.navy },
+  rowValue:       { fontSize: 12, color: C.slate400 },
+  rowSub:         { fontSize: 11, color: C.slate400, marginTop: 1 },
+
+  // Theme selector
+  themeRow:       { flexDirection: 'row', gap: 8, paddingHorizontal: 14, paddingBottom: 14 },
+  themeBtn:       { flex: 1, alignItems: 'center', gap: 6, paddingVertical: 10, borderRadius: 12, borderWidth: 1.5, borderColor: C.slate200, backgroundColor: C.bg },
+  themeBtnActive: { backgroundColor: C.blue, borderColor: C.blue },
+  themeBtnText:   { fontSize: 11, fontWeight: '700', color: C.slate500 },
+
+  // Wallpaper swatches
+  swatchGrid:     { flexDirection: 'row', flexWrap: 'wrap', gap: 10, padding: 14 },
+  swatch:         { width: 68, height: 68, borderRadius: 14, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' },
+  swatchDefault:  { backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.slate200 },
+  swatchUpload:   { backgroundColor: '#EFF6FF', borderWidth: 1.5, borderColor: '#BFDBFE', borderStyle: 'dashed' },
+  swatchActive:   { borderWidth: 2.5, borderColor: C.blue },
+  swatchCheck:    { position: 'absolute', top: 4, right: 4, width: 18, height: 18, borderRadius: 9, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
+  swatchLabel:    { position: 'absolute', bottom: 4, fontSize: 9, fontWeight: '700', color: C.slate600, textAlign: 'center' },
+
+  // Preview strip
+  previewStrip:   { marginHorizontal: 14, marginBottom: 14, borderRadius: 14, overflow: 'hidden' },
+  previewBubble:  { height: 80, justifyContent: 'center', alignItems: 'flex-end', paddingRight: 12 },
+  previewMsg:     { backgroundColor: C.blue, borderRadius: 16, borderBottomRightRadius: 4, paddingHorizontal: 12, paddingVertical: 8 },
+  previewMsgText: { fontSize: 12, color: C.white, fontWeight: '600' },
+
+  // Reset
+  resetRow:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, marginBottom: 16 },
+  resetText:      { fontSize: 13, color: C.slate500, fontWeight: '600' },
 })

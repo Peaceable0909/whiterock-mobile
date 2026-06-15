@@ -10,7 +10,7 @@ import * as ImagePicker from 'expo-image-picker'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { uploadVideo } from '@/lib/cloudinary'
-import { useColors } from '@/lib/theme'
+import { useColors, useTheme } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 
 const PAGE_SIZE = 50
@@ -47,7 +47,7 @@ function VideoMsg({ uri }: { uri: string }) {
 }
 
 export default function ChatScreen() {
-  const C = useColors()
+  const { C, resolvedWallpaper } = useTheme()
   const ms = mkMS(C)
   const g = mkG(C)
   const { id }   = useLocalSearchParams<{ id: string }>()
@@ -476,24 +476,34 @@ export default function ChatScreen() {
         </View>
       </View>
 
-      {/* Messages */}
-      <FlatList
-        ref={listRef}
-        data={withSeparators}
-        keyExtractor={m => m._id ?? m.id}
-        style={{ flex: 1, backgroundColor: C.bg }}
-        contentContainerStyle={{ padding: 12, paddingBottom: 8 }}
-        renderItem={renderMessage}
-        onContentSizeChange={scrollToEnd}
-        ListHeaderComponent={hasMore ? (
-          <TouchableOpacity onPress={loadOlderMessages} disabled={loadingMore}
-            style={g.loadMoreBtn}>
-            {loadingMore
-              ? <ActivityIndicator size="small" color={C.blue} />
-              : <Text style={g.loadMoreTxt}>↑ Load older messages</Text>}
-          </TouchableOpacity>
-        ) : null}
-      />
+      {/* Messages — wallpaper-aware */}
+      <View style={{ flex: 1 }}>
+        {resolvedWallpaper && 'uri' in resolvedWallpaper && (
+          <Image source={{ uri: resolvedWallpaper.uri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        )}
+        <FlatList
+          ref={listRef}
+          data={withSeparators}
+          keyExtractor={m => m._id ?? m.id}
+          style={{
+            flex: 1,
+            backgroundColor: resolvedWallpaper
+              ? ('color' in resolvedWallpaper ? resolvedWallpaper.color : 'transparent')
+              : C.bg,
+          }}
+          contentContainerStyle={{ padding: 12, paddingBottom: 8 }}
+          renderItem={renderMessage}
+          onContentSizeChange={scrollToEnd}
+          ListHeaderComponent={hasMore ? (
+            <TouchableOpacity onPress={loadOlderMessages} disabled={loadingMore}
+              style={g.loadMoreBtn}>
+              {loadingMore
+                ? <ActivityIndicator size="small" color={C.blue} />
+                : <Text style={g.loadMoreTxt}>↑ Load older messages</Text>}
+            </TouchableOpacity>
+          ) : null}
+        />
+      </View>
 
       {/* AI typing indicator — shown while AI is composing a reply for students */}
       {isTyping && (

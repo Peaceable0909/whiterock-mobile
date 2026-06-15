@@ -2,11 +2,11 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import {
   View, Text, TextInput, FlatList, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator,
-  ScrollView, Alert, Vibration,
+  ScrollView, Alert, Vibration, Image,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
-import { useColors } from '@/lib/theme'
+import { useColors, useTheme } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 
 interface Msg { id?: string; role: 'user' | 'assistant'; content: string; created_at?: string }
@@ -23,7 +23,7 @@ const SUGGESTED = [
 const API_BASE = 'https://whiterock-connect.vercel.app'
 
 export default function AIScreen() {
-  const C = useColors()
+  const { C, resolvedWallpaper } = useTheme()
   const s = mkS(C)
   const [msgs, setMsgs]         = useState<Msg[]>([])
   const [input, setInput]       = useState('')
@@ -166,12 +166,20 @@ export default function AIScreen() {
         )}
       </View>
 
-      {/* Messages */}
+      {/* Messages — wallpaper-aware */}
+      {resolvedWallpaper && 'uri' in resolvedWallpaper && (
+        <Image source={{ uri: resolvedWallpaper.uri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      )}
       <FlatList
         ref={listRef}
         data={msgs}
         keyExtractor={(_, i) => String(i)}
-        style={s.list}
+        style={[
+          s.list,
+          resolvedWallpaper
+            ? { backgroundColor: 'color' in resolvedWallpaper ? resolvedWallpaper.color : 'transparent' }
+            : undefined,
+        ]}
         contentContainerStyle={s.listContent}
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
         ListHeaderComponent={isEmpty ? (
