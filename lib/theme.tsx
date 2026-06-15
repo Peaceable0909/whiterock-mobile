@@ -50,8 +50,13 @@ function resolveWp(wp: string): ResolvedWallpaper | null {
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [mode, setModeState]           = useState<ThemeMode>('system')
   const [wallpaper, setWallpaperState] = useState('')
-  const system = Appearance.getColorScheme() === 'dark'
-  const isDark  = mode === 'dark' || (mode === 'system' && system)
+  const [systemDark, setSystemDark]    = useState(Appearance.getColorScheme() === 'dark')
+  const isDark  = mode === 'dark' || (mode === 'system' && systemDark)
+
+  useEffect(() => {
+    const sub = Appearance.addChangeListener(({ colorScheme }) => setSystemDark(colorScheme === 'dark'))
+    return () => sub.remove()
+  }, [])
 
   useEffect(() => {
     // Fast path: local cache
@@ -79,13 +84,23 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }).catch(() => {})
   }, [])
 
+  const pendingPrefs = useRef<Record<string, string>>({})
+  const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const persistPrefs = (key: string, val: string) => {
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return
-      const { data } = await supabase.from('users').select('preferences').eq('id', user.id).maybeSingle()
-      const p = ((data as any)?.preferences ?? {}) as Record<string, string>
-      await supabase.from('users').update({ preferences: { ...p, [key]: val } }).eq('id', user.id)
-    }).catch(() => {})
+    pendingPrefs.current[key] = val
+    if (persistTimer.current) clearTimeout(persistTimer.current)
+    persistTimer.current = setTimeout(async () => {
+      const patch = { ...pendingPrefs.current }
+      pendingPrefs.current = {}
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        const { data } = await supabase.from('users').select('preferences').eq('id', user.id).maybeSingle()
+        const p = ((data as any)?.preferences ?? {}) as Record<string, string>
+        await supabase.from('users').update({ preferences: { ...p, ...patch } }).eq('id', user.id)
+      } catch { /* best-effort */ }
+    }, 300)
   }
 
   const setMode = (m: ThemeMode) => {

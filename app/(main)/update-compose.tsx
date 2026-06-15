@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ActivityIndicator, Alert, ScrollView, KeyboardAvoidingView,
@@ -35,6 +35,22 @@ export default function UpdateComposeScreen() {
   const [audience, setAudience]     = useState<'student' | 'all'>('all')
   const [isPinned, setIsPinned]     = useState(false)
   const [saving, setSaving]         = useState(false)
+  const [loadingEdit, setLoadingEdit] = useState(isEdit)
+
+  useEffect(() => {
+    if (!isEdit || !params.editId) return
+    supabase.from('updates').select('title,content,category,is_pinned,target_roles').eq('id', params.editId).single()
+      .then(({ data }) => {
+        if (!data) return
+        setTitle(data.title ?? '')
+        setBody(data.content ?? '')
+        if (CATEGORIES.some(c => c.key === data.category)) setCategory(data.category as typeof CATEGORIES[number]['key'])
+        const roles: string[] = data.target_roles ?? []
+        setAudience(roles.includes('counselor') || roles.includes('admin') ? 'all' : 'student')
+        setIsPinned(!!data.is_pinned)
+      })
+      .finally(() => setLoadingEdit(false))
+  }, [params.editId, isEdit])
 
   const publish = async () => {
     if (!title.trim()) { Alert.alert('Title required'); return }
@@ -72,6 +88,14 @@ export default function UpdateComposeScreen() {
   }
 
   const cat = CATEGORIES.find(c => c.key === category)!
+
+  if (loadingEdit) {
+    return (
+      <View style={{ flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator color={C.blue} size="large" />
+      </View>
+    )
+  }
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>

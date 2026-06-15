@@ -76,8 +76,9 @@ export default function SettingsScreen() {
       const blob = await res.blob()
       const arr  = await new Response(blob).arrayBuffer()
 
+      const mime = ext.toLowerCase() === 'jpg' ? 'image/jpeg' : `image/${ext.toLowerCase()}`
       const { error: upErr } = await supabase.storage.from('avatars')
-        .upload(path, arr, { upsert: true, contentType: `image/${ext}` })
+        .upload(path, arr, { upsert: true, contentType: mime })
       if (upErr) throw upErr
 
       const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)

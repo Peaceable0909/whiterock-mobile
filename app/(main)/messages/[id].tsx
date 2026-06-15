@@ -5,6 +5,7 @@ import {
   useWindowDimensions, Vibration,
 } from 'react-native'
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { VideoView, useVideoPlayer } from 'expo-video'
 import * as ImagePicker from 'expo-image-picker'
 import { Ionicons } from '@expo/vector-icons'
@@ -50,6 +51,7 @@ export default function ChatScreen() {
   const { C, resolvedWallpaper } = useTheme()
   const ms = mkMS(C)
   const g = mkG(C)
+  const { top: safeTop } = useSafeAreaInsets()
   const { id }   = useLocalSearchParams<{ id: string }>()
   const router   = useRouter()
   const listRef  = useRef<FlatList>(null)
@@ -71,6 +73,7 @@ export default function ChatScreen() {
   const [isTyping, setIsTyping]   = useState(false)
   const [aiAssist, setAiAssist] = useState(false)
   const [aiDrafting, setAiDrafting] = useState(false)
+  const aiReplyingRef = useRef(false)
   const oldestTs   = useRef<string | null>(null)
   const latestMsgTs = useRef<string | null>(null)
 
@@ -172,6 +175,24 @@ export default function ChatScreen() {
 
     subscribe()
 
+    // Keep is_online fresh so AI auto-reply doesn't fire when counselor is actually online
+    let otherUserId: string | null = null
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return
+      const { data: dbUser } = await supabase.from('users').select('role').eq('id', user.id).single()
+      if (dbUser?.role === 'student') {
+        const { data: conv } = await supabase.from('conversations').select('agent_id, counselor_id').eq('id', id).single()
+        otherUserId = conv?.counselor_id ?? conv?.agent_id ?? null
+      }
+    })
+    const onlineChannel = supabase.channel(`online-${id}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users' },
+        payload => {
+          const updated = payload.new as any
+          if (updated.id === otherUserId) setOther((prev: any) => prev ? { ...prev, is_online: updated.is_online } : prev)
+        })
+      .subscribe()
+
     const appStateSub = AppState.addEventListener('change', nextState => {
       if (appState.current.match(/inactive|background/) && nextState === 'active') {
         subscribe()
@@ -183,6 +204,7 @@ export default function ChatScreen() {
     return () => {
       appStateSub.remove()
       if (channelRef.current) supabase.removeChannel(channelRef.current)
+      supabase.removeChannel(onlineChannel)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
@@ -251,16 +273,19 @@ export default function ChatScreen() {
       reply_to_id: replyId,
     }).select().single()
     if (saved) setMsgs(prev => [...prev, saved])
+    // Fetch current counts first so we increment rather than reset to 1
+    const { data: convData } = await supabase.from('conversations').select('unread_staff, unread_student').eq('id', id).maybeSingle()
     await supabase.from('conversations').update({
       last_message: content, last_message_at: new Date().toISOString(),
-      unread_staff: myRole === 'student' ? 1 : 0,
-      unread_student: myRole !== 'student' ? 1 : 0,
+      unread_staff: myRole === 'student' ? (convData?.unread_staff ?? 0) + 1 : 0,
+      unread_student: myRole !== 'student' ? (convData?.unread_student ?? 0) + 1 : 0,
     }).eq('id', id)
     scrollToEnd()
     setSending(false)
 
-    // AI auto-reply: only for students when their counselor is offline
-    if (myRole === 'student' && saved && !otherUser?.is_online) {
+    // AI auto-reply: only for students when their counselor is offline; guard prevents concurrent replies
+    if (myRole === 'student' && saved && !otherUser?.is_online && !aiReplyingRef.current) {
+      aiReplyingRef.current = true
       setIsTyping(true)
       scrollToEnd()
       try {
@@ -285,7 +310,7 @@ export default function ChatScreen() {
           }
         }
       } catch { /* silent — AI reply is best-effort */ }
-      finally { setIsTyping(false) }
+      finally { setIsTyping(false); aiReplyingRef.current = false }
     }
   }
 
@@ -458,7 +483,7 @@ export default function ChatScreen() {
   if (loading) return <View style={g.center}><ActivityIndicator color={C.blue} size="large" /></View>
 
   return (
-    <KeyboardAvoidingView style={g.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
+    <KeyboardAvoidingView style={g.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? safeTop : 0}>
       {/* Header */}
       <View style={g.header}>
         <TouchableOpacity onPress={() => router.back()} style={g.backBtn}>
