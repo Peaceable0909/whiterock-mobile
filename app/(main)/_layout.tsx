@@ -104,22 +104,20 @@ export default function MainLayout() {
         href: isStudent ? null : undefined,
         tabBarIcon: ({ focused }) => <TabIcon name="people-outline" focused={focused} />,
       }} />
-      <Tabs.Screen name="updates" options={{
-        title: 'Updates',
-        tabBarIcon: ({ focused }) => <TabIcon name="newspaper-outline" focused={focused} />,
+      <Tabs.Screen name="more" options={{
+        title: 'More',
+        tabBarIcon: ({ focused }) => <TabIcon name="grid-outline" focused={focused} />,
       }} />
-      <Tabs.Screen name="ai" options={{
-        title: 'AI',
-        tabBarIcon: ({ focused }) => <TabIcon name="hardware-chip-outline" focused={focused} />,
-      }} />
-      {/* Hide nested screens from tab bar */}
-      <Tabs.Screen name="messages/[id]" options={{ href: null }} />
-      <Tabs.Screen name="students/[id]" options={{ href: null }} />
-      <Tabs.Screen name="notifications" options={{ href: null }} />
-      <Tabs.Screen name="update-compose" options={{ href: null }} />
-      <Tabs.Screen name="appointments" options={{ href: null }} />
-      <Tabs.Screen name="documents" options={{ href: null }} />
-      <Tabs.Screen name="settings" options={{ href: null }} />
+      {/* Screens accessible as routes but hidden from tab bar */}
+      <Tabs.Screen name="updates"          options={{ href: null }} />
+      <Tabs.Screen name="ai"               options={{ href: null }} />
+      <Tabs.Screen name="messages/[id]"    options={{ href: null }} />
+      <Tabs.Screen name="students/[id]"    options={{ href: null }} />
+      <Tabs.Screen name="notifications"    options={{ href: null }} />
+      <Tabs.Screen name="update-compose"   options={{ href: null }} />
+      <Tabs.Screen name="appointments"     options={{ href: null }} />
+      <Tabs.Screen name="documents"        options={{ href: null }} />
+      <Tabs.Screen name="settings"         options={{ href: null }} />
     </Tabs>
   )
 }

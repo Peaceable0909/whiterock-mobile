@@ -70,21 +70,15 @@ export default function HomeScreen() {
   }, [])
 
   const BellButton = () => (
-    <View style={{ flexDirection: 'row', gap: 8 }}>
-      <TouchableOpacity style={s.bellBtn} accessibilityLabel="Notifications"
-        onPress={() => { setNotifUnread(0); router.push('/(main)/notifications' as any) }}>
-        <Ionicons name="notifications-outline" size={20} color={C.slate500} />
-        {notifUnread > 0 && (
-          <View style={s.bellBadge}>
-            <Text style={s.bellBadgeText}>{notifUnread > 9 ? '9+' : notifUnread}</Text>
-          </View>
-        )}
-      </TouchableOpacity>
-      <TouchableOpacity style={s.bellBtn} accessibilityLabel="Settings"
-        onPress={() => router.push('/(main)/settings' as any)}>
-        <Ionicons name="settings-outline" size={20} color={C.slate500} />
-      </TouchableOpacity>
-    </View>
+    <TouchableOpacity style={s.bellBtn} accessibilityLabel="Notifications"
+      onPress={() => { setNotifUnread(0); router.push('/(main)/notifications' as any) }}>
+      <Ionicons name="notifications-outline" size={20} color={C.slate500} />
+      {notifUnread > 0 && (
+        <View style={s.bellBadge}>
+          <Text style={s.bellBadgeText}>{notifUnread > 9 ? '9+' : notifUnread}</Text>
+        </View>
+      )}
+    </TouchableOpacity>
   )
 
   const isStudent = user?.role === 'student'
