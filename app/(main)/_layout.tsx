@@ -99,15 +99,16 @@ export default function MainLayout() {
         tabBarIcon: ({ focused }) => <TabIcon name="chatbubble-outline" focused={focused} />,
         tabBarBadge: unread > 0 ? unread : undefined,
       }} />
-      <Tabs.Screen name="students/index" options={{
-        title: 'Students',
-        href: isStudent ? null : undefined,
-        tabBarIcon: ({ focused }) => <TabIcon name="people-outline" focused={focused} />,
-      }} />
+      {/* Slot 3: AI for students, Students for staff — whichever is visible lands at position 3 */}
       <Tabs.Screen name="ai" options={{
         title: 'AI',
         href: isStudent ? undefined : null,
         tabBarIcon: ({ focused }) => <TabIcon name="hardware-chip-outline" focused={focused} />,
+      }} />
+      <Tabs.Screen name="students/index" options={{
+        title: 'Students',
+        href: isStudent ? null : undefined,
+        tabBarIcon: ({ focused }) => <TabIcon name="people-outline" focused={focused} />,
       }} />
       <Tabs.Screen name="more" options={{
         title: 'More',

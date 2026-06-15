@@ -146,7 +146,7 @@ export default function AIScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={s.bg} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={80}>
+    <KeyboardAvoidingView style={s.bg} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
       {/* Header */}
       <View style={s.header}>
         <View style={s.botAvatar}><Ionicons name="hardware-chip-outline" size={20} color={C.white} /></View>
@@ -230,7 +230,7 @@ export default function AIScreen() {
       <ScrollView
         horizontal showsHorizontalScrollIndicator={false}
         style={[s.quickBar, isEmpty && { opacity: 0 }]}
-        contentContainerStyle={{ paddingHorizontal: 12, gap: 8 }}
+        contentContainerStyle={{ paddingHorizontal: 12, gap: 8, alignItems: 'center' }}
         pointerEvents={isEmpty ? 'none' : 'auto'}
       >
         {SUGGESTED.slice(0, 4).map(a => (
@@ -292,7 +292,7 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   bubbleThem:     { backgroundColor: C.white, borderBottomLeftRadius: 4, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
   bubbleText:     { fontSize: 14, color: C.navy, lineHeight: 20 },
   bubbleTextMe:   { color: C.white },
-  quickBar:       { backgroundColor: C.white, borderTopWidth: 1, borderColor: C.slate100, paddingVertical: 8 },
+  quickBar:       { backgroundColor: C.white, borderTopWidth: 1, borderColor: C.slate100, height: 52 },
   quickChip:      { backgroundColor: C.bg, borderWidth: 1, borderColor: C.slate200, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6 },
   quickChipText:  { fontSize: 11, fontWeight: '600', color: C.slate600 },
   inputBar:       { flexDirection: 'row', alignItems: 'flex-end', padding: 12, backgroundColor: C.white, borderTopWidth: 1, borderColor: C.slate100 },
