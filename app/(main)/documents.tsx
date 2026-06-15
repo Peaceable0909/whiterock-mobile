@@ -10,6 +10,8 @@ import { supabase } from '@/lib/supabase'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 
+const API_BASE = 'https://whiterock-connect.vercel.app'
+
 const DOC_CATEGORIES = [
   { key: 'all',          label: 'All',            icon: 'folder-outline'         },
   { key: 'passport',     label: 'Passport',       icon: 'card-outline'           },
@@ -35,6 +37,7 @@ export default function DocumentsScreen() {
   const [loading, setLoading]     = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [analyzing, setAnalyzing] = useState<string | null>(null)
   const [catFilter, setCatFilter] = useState('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
@@ -55,6 +58,19 @@ export default function DocumentsScreen() {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  const analyzeDocument = async (docId: string, url: string, category: string) => {
+    setAnalyzing(docId)
+    try {
+      await fetch(`${API_BASE}/api/analyze-doc-image`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documentId: docId, studentId: myId, category, imageUrl: url }),
+      })
+      await load()
+    } catch { /* best-effort — analysis is non-critical */ }
+    setAnalyzing(null)
+  }
 
   const uploadDocument = async (category: string) => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -81,19 +97,59 @@ export default function DocumentsScreen() {
 
       const url = supabase.storage.from('documents').getPublicUrl(path).data.publicUrl
 
-      const { error: dbErr } = await supabase.from('documents').insert({
+      const { data: doc, error: dbErr } = await supabase.from('documents').insert({
         student_id: myId,
         category,
         url,
         file_type: ext,
         status: 'pending',
-      })
+      }).select('id').single()
       if (dbErr) throw dbErr
       await load()
+      // Run AI analysis in background after upload
+      if (doc?.id) analyzeDocument(doc.id, url, category)
     } catch (e: any) {
       Alert.alert('Upload failed', e.message)
     } finally {
       setUploading(false)
+    }
+  }
+
+  const deleteDocument = (doc: any) => {
+    Alert.alert(
+      'Delete Document',
+      'This will permanently remove the document. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete', style: 'destructive',
+          onPress: async () => {
+            try {
+              const match = doc.url?.match(/\/documents\/(.+?)(\?|$)/)
+              if (match?.[1]) {
+                await supabase.storage.from('documents').remove([decodeURIComponent(match[1])])
+              }
+              await supabase.from('documents').delete().eq('id', doc.id)
+              setDocs(prev => prev.filter(d => d.id !== doc.id))
+            } catch (e: any) {
+              Alert.alert('Delete failed', e.message)
+            }
+          },
+        },
+      ]
+    )
+  }
+
+  const openDocument = async (url: string) => {
+    try {
+      const supported = await Linking.canOpenURL(url)
+      if (supported) {
+        await Linking.openURL(url)
+      } else {
+        Alert.alert('Cannot preview', 'Unable to open this document type on your device.')
+      }
+    } catch {
+      Alert.alert('Preview error', 'Could not open the document. Try again.')
     }
   }
 
@@ -224,18 +280,29 @@ export default function DocumentsScreen() {
                       <Text style={s.rejectionText}>{item.rejection_reason}</Text>
                     </View>
                   )}
-                  {item.ai_analysis && (
+                  {analyzing === item.id ? (
+                    <View style={s.aiBox}>
+                      <ActivityIndicator size="small" color={C.blue} />
+                      <Text style={s.aiText}>AI is analysing this document…</Text>
+                    </View>
+                  ) : item.ai_analysis ? (
                     <View style={s.aiBox}>
                       <Ionicons name="hardware-chip-outline" size={14} color={C.blue} />
                       <Text style={s.aiText}>{item.ai_analysis}</Text>
                     </View>
-                  )}
-                  {item.url && (
-                    <TouchableOpacity style={s.viewBtn} onPress={() => Linking.openURL(item.url)}>
-                      <Ionicons name="eye-outline" size={14} color={C.blue} />
-                      <Text style={s.viewBtnText}>View Document</Text>
+                  ) : null}
+                  <View style={s.docActions}>
+                    {item.url && (
+                      <TouchableOpacity style={s.viewBtn} onPress={() => openDocument(item.url)}>
+                        <Ionicons name="eye-outline" size={14} color={C.blue} />
+                        <Text style={s.viewBtnText}>View</Text>
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity style={s.deleteBtn} onPress={() => deleteDocument(item)}>
+                      <Ionicons name="trash-outline" size={14} color="#DC2626" />
+                      <Text style={s.deleteBtnText}>Delete</Text>
                     </TouchableOpacity>
-                  )}
+                  </View>
                 </View>
               )}
             </TouchableOpacity>
@@ -289,7 +356,10 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   rejectionText: { flex: 1, fontSize: 12, color: '#DC2626', lineHeight: 17 },
   aiBox:         { flexDirection: 'row', alignItems: 'flex-start', gap: 6, backgroundColor: '#EFF6FF', borderRadius: 10, padding: 10 },
   aiText:        { flex: 1, fontSize: 12, color: C.blue, lineHeight: 17 },
-  viewBtn:       { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 9, backgroundColor: '#EFF6FF', borderRadius: 10 },
+  docActions:    { flexDirection: 'row', gap: 8 },
+  viewBtn:       { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 9, backgroundColor: '#EFF6FF', borderRadius: 10 },
   viewBtnText:   { fontSize: 13, fontWeight: '600', color: C.blue },
+  deleteBtn:     { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 9, backgroundColor: '#FEF2F2', borderRadius: 10 },
+  deleteBtnText: { fontSize: 13, fontWeight: '600', color: '#DC2626' },
   fab:           { position: 'absolute', bottom: 20, right: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', elevation: 6, shadowColor: C.blue, shadowOpacity: 0.35, shadowRadius: 8 },
 })
