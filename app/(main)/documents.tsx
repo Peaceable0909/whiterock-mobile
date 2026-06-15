@@ -3,7 +3,7 @@ import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
   ActivityIndicator, RefreshControl, Alert, Linking,
 } from 'react-native'
-import * as ImagePicker from 'expo-image-picker'
+import * as DocumentPicker from 'expo-document-picker'
 import { Ionicons } from '@expo/vector-icons'
 import { AppHeader } from '@/components/AppHeader'
 import { supabase } from '@/lib/supabase'
@@ -73,26 +73,30 @@ export default function DocumentsScreen() {
   }
 
   const uploadDocument = async (category: string) => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (!perm.granted) {
-      Alert.alert('Permission needed', 'Allow access to your files in Settings.')
+    let picked: DocumentPicker.DocumentPickerResult
+    try {
+      picked = await DocumentPicker.getDocumentAsync({
+        type: ['image/*', 'application/pdf'],
+        copyToCacheDirectory: true,
+      })
+    } catch {
+      Alert.alert('Picker error', 'Could not open file picker. Try again.')
       return
     }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.9,
-    })
-    if (result.canceled || !result.assets?.[0]) return
-    const asset = result.assets[0]
-    const ext = asset.uri.split('.').pop() ?? 'jpg'
+    if (picked.canceled || !picked.assets?.[0]) return
+    const asset = picked.assets[0]
+    const mimeType = asset.mimeType ?? 'application/octet-stream'
+    const rawName = asset.name ?? `doc_${Date.now()}`
+    const ext = rawName.includes('.') ? rawName.split('.').pop()!.toLowerCase() : 'bin'
     const path = `docs/${myId}/${category}-${Date.now()}.${ext}`
+    const isImage = mimeType.startsWith('image/')
 
     setUploading(true)
     try {
       const blob = await fetch(asset.uri).then(r => r.blob())
       const { error: uploadErr } = await supabase.storage
         .from('documents')
-        .upload(path, blob, { contentType: asset.mimeType ?? 'image/jpeg' })
+        .upload(path, blob, { contentType: mimeType })
       if (uploadErr) throw uploadErr
 
       const url = supabase.storage.from('documents').getPublicUrl(path).data.publicUrl
@@ -106,8 +110,7 @@ export default function DocumentsScreen() {
       }).select('id').single()
       if (dbErr) throw dbErr
       await load()
-      // Run AI analysis in background after upload
-      if (doc?.id) analyzeDocument(doc.id, url, category)
+      if (doc?.id && isImage) analyzeDocument(doc.id, url, category)
     } catch (e: any) {
       Alert.alert('Upload failed', e.message)
     } finally {
@@ -221,7 +224,7 @@ export default function DocumentsScreen() {
             {/* Upload tip */}
             <View style={s.tipBox}>
               <Ionicons name="information-circle-outline" size={14} color={C.blue} />
-              <Text style={s.tipText}>Tap <Text style={{ fontWeight: '700' }}>+</Text> to upload a document. Staff review within 24–48 hours.</Text>
+              <Text style={s.tipText}>Tap <Text style={{ fontWeight: '700' }}>+</Text> to upload an image or PDF. Staff review within 24–48 hours.</Text>
             </View>
           </>
         }

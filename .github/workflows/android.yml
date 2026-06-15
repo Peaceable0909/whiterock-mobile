@@ -45,6 +45,36 @@ jobs:
       - name: Generate native Android project
         run: npx expo prebuild --platform android --no-install
 
+      - name: Configure signing & print SHA-1 for Google Sign-In
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+          K_ALIAS: ${{ secrets.KEY_ALIAS }}
+          K_PASS: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > android/app/release.keystore
+            printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=release.keystore\n' \
+              "$KS_PASS" "$K_PASS" "$K_ALIAS" > android/key.properties
+            KS_FILE="android/app/release.keystore"
+            KS_PASS_VAL="$KS_PASS"
+            K_ALIAS_VAL="$K_ALIAS"
+          else
+            KS_FILE="android/app/debug.keystore"
+            [ -f "$KS_FILE" ] || KS_FILE="$HOME/.android/debug.keystore"
+            KS_PASS_VAL="android"
+            K_ALIAS_VAL="androiddebugkey"
+          fi
+          echo "======================================================================"
+          echo "GOOGLE SIGN-IN: Register this SHA-1 in Firebase Console"
+          echo "  Firebase Console > Project Settings > Android App > Add fingerprint"
+          echo "  Then download the new google-services.json and commit it."
+          echo "======================================================================"
+          keytool -list -v -keystore "$KS_FILE" -alias "$K_ALIAS_VAL" \
+            -storepass "$KS_PASS_VAL" 2>/dev/null | grep -E "SHA1:|SHA256:" \
+            || echo "(keystore not found at $KS_FILE — check build output)"
+          echo "======================================================================"
+
       - name: Build APK
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon

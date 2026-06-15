@@ -30,6 +30,7 @@
       "expo-router",
       "expo-secure-store",
       "@react-native-google-signin/google-signin",
+      "expo-document-picker",
       [
         "expo-image-picker",
         {
