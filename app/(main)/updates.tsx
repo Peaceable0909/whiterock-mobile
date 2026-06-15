@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Image, Linking, RefreshControl, Share, Vibration,
+  ActivityIndicator, Image, RefreshControl, Share, Vibration,
   Modal, TextInput, KeyboardAvoidingView, Platform, ScrollView as RNScrollView,
   useWindowDimensions,
 } from 'react-native'
 import { VideoView, useVideoPlayer } from 'expo-video'
+import * as WebBrowser from 'expo-web-browser'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
@@ -215,7 +216,7 @@ export default function UpdatesScreen() {
 
         {/* Audio */}
         {item.media_url && item.media_type === 'audio' && (
-          <TouchableOpacity onPress={() => Linking.openURL(item.media_url)}
+          <TouchableOpacity onPress={() => WebBrowser.openBrowserAsync(item.media_url)}
             style={c.audioRow} activeOpacity={0.85}>
             <View style={c.audioIcon}><Ionicons name="mic-outline" size={18} color={C.white} /></View>
             <Text style={c.audioLabel}>Audio · tap to play</Text>
@@ -248,7 +249,7 @@ export default function UpdatesScreen() {
 
           {/* Document link */}
           {item.media_url && item.media_type === 'document' && (
-            <TouchableOpacity onPress={() => Linking.openURL(item.media_url)}
+            <TouchableOpacity onPress={() => WebBrowser.openBrowserAsync(item.media_url)}
               style={c.docLink} activeOpacity={0.8}>
               <Ionicons name="document-text-outline" size={14} color={C.blue} />
               <Text style={c.docLinkText}>View attached document</Text>

@@ -1,13 +1,15 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import {
   View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator, Image, Linking, Alert, AppState,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Image, Alert, AppState,
   useWindowDimensions, Vibration,
 } from 'react-native'
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { VideoView, useVideoPlayer } from 'expo-video'
 import * as ImagePicker from 'expo-image-picker'
+import * as WebBrowser from 'expo-web-browser'
+import { ImageModal } from '@/components/ImageModal'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { uploadVideo } from '@/lib/cloudinary'
@@ -70,6 +72,7 @@ export default function ChatScreen() {
   const [hasMore, setHasMore]   = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [replyTo, setReplyTo]   = useState<any>(null)
+  const [previewImg, setPreviewImg] = useState<string | null>(null)
   const [isTyping, setIsTyping]   = useState(false)
   const [aiAssist, setAiAssist] = useState(false)
   const [aiDrafting, setAiDrafting] = useState(false)
@@ -431,19 +434,19 @@ export default function ChatScreen() {
               <Text style={[ms.deletedText, isMe && ms.deletedTextMe]}>This message was deleted</Text>
             </View>
           ) : item.type === 'image' && item.file_url ? (
-            <TouchableOpacity onPress={() => Linking.openURL(item.file_url)} activeOpacity={0.85}>
+            <TouchableOpacity onPress={() => setPreviewImg(item.file_url)} activeOpacity={0.85}>
               <Image source={{ uri: item.file_url }} style={[ms.mediaImg, { width: mediaW, height: Math.round(mediaW * 0.75) }]} resizeMode="cover" />
             </TouchableOpacity>
           ) : item.type === 'video' && item.file_url ? (
             <VideoMsg uri={item.file_url} />
           ) : item.type === 'voice' && item.file_url ? (
-            <TouchableOpacity onPress={() => Linking.openURL(item.file_url)}
+            <TouchableOpacity onPress={() => WebBrowser.openBrowserAsync(item.file_url)}
               style={ms.audioRow} activeOpacity={0.8}>
               <View style={ms.audioIcon}><Ionicons name="mic-outline" size={16} color={isMe ? C.white : C.blue} /></View>
               <Text style={[ms.audioLabel, isMe && ms.textMe]}>Voice note · tap to play</Text>
             </TouchableOpacity>
           ) : item.file_url ? (
-            <TouchableOpacity onPress={() => Linking.openURL(item.file_url)}
+            <TouchableOpacity onPress={() => WebBrowser.openBrowserAsync(item.file_url)}
               style={ms.fileRow} activeOpacity={0.8}>
               <View style={[ms.fileIcon, isMe && ms.fileIconMe]}>
                 <Ionicons name="document-text-outline" size={16} color={isMe ? C.white : C.blue} />
@@ -483,6 +486,8 @@ export default function ChatScreen() {
   if (loading) return <View style={g.center}><ActivityIndicator color={C.blue} size="large" /></View>
 
   return (
+    <>
+    <ImageModal uri={previewImg} onClose={() => setPreviewImg(null)} />
     <KeyboardAvoidingView style={g.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? safeTop : 0}>
       {/* Header */}
       <View style={g.header}>
@@ -616,6 +621,7 @@ export default function ChatScreen() {
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
+    </>
   )
 }
 

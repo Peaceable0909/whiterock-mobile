@@ -1,14 +1,18 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
-  ActivityIndicator, RefreshControl, Alert, Linking,
+  ActivityIndicator, RefreshControl, Alert,
 } from 'react-native'
 import * as DocumentPicker from 'expo-document-picker'
+import * as WebBrowser from 'expo-web-browser'
 import { Ionicons } from '@expo/vector-icons'
 import { AppHeader } from '@/components/AppHeader'
+import { ImageModal } from '@/components/ImageModal'
 import { supabase } from '@/lib/supabase'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
+
+const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif', 'avif'])
 
 const API_BASE = 'https://whiterock-connect.vercel.app'
 
@@ -40,6 +44,7 @@ export default function DocumentsScreen() {
   const [analyzing, setAnalyzing] = useState<string | null>(null)
   const [catFilter, setCatFilter] = useState('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [previewImg, setPreviewImg] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -143,16 +148,11 @@ export default function DocumentsScreen() {
     )
   }
 
-  const openDocument = async (url: string) => {
-    try {
-      const supported = await Linking.canOpenURL(url)
-      if (supported) {
-        await Linking.openURL(url)
-      } else {
-        Alert.alert('Cannot preview', 'Unable to open this document type on your device.')
-      }
-    } catch {
-      Alert.alert('Preview error', 'Could not open the document. Try again.')
+  const openDocument = async (url: string, fileType?: string) => {
+    if (IMAGE_EXTS.has((fileType ?? '').toLowerCase())) {
+      setPreviewImg(url)
+    } else {
+      await WebBrowser.openBrowserAsync(url)
     }
   }
 
@@ -296,7 +296,7 @@ export default function DocumentsScreen() {
                   ) : null}
                   <View style={s.docActions}>
                     {item.url && (
-                      <TouchableOpacity style={s.viewBtn} onPress={() => openDocument(item.url)}>
+                      <TouchableOpacity style={s.viewBtn} onPress={() => openDocument(item.url, item.file_type)}>
                         <Ionicons name="eye-outline" size={14} color={C.blue} />
                         <Text style={s.viewBtnText}>View</Text>
                       </TouchableOpacity>
@@ -312,6 +312,8 @@ export default function DocumentsScreen() {
           )
         }}
       />
+
+      <ImageModal uri={previewImg} onClose={() => setPreviewImg(null)} />
 
       <TouchableOpacity
         style={[s.fab, uploading && { opacity: 0.6 }]}
