@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "149816206182-vnoso1qdb5d8h3n923ifm4nnleprk607.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.whiterock.connect",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
           "client_id": "149816206182-anl9ku2qei82mbgu1kih5s54nh09k59p.apps.googleusercontent.com",
           "client_type": 3
         }
