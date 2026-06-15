@@ -14,6 +14,7 @@ import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 
 const PAGE_SIZE = 50
+const API_BASE  = 'https://whiterock-connect.vercel.app'
 
 const getInitials = (name: string) =>
   (name ?? '').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || '?'
@@ -67,6 +68,7 @@ export default function ChatScreen() {
   const [hasMore, setHasMore]   = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [replyTo, setReplyTo]   = useState<any>(null)
+  const [isTyping, setIsTyping]   = useState(false)
   const [aiAssist, setAiAssist] = useState(false)
   const [aiDrafting, setAiDrafting] = useState(false)
   const oldestTs   = useRef<string | null>(null)
@@ -256,6 +258,31 @@ export default function ChatScreen() {
     }).eq('id', id)
     scrollToEnd()
     setSending(false)
+
+    // AI auto-reply: only for students when their counselor is offline
+    if (myRole === 'student' && saved && !otherUser?.is_online) {
+      setIsTyping(true)
+      scrollToEnd()
+      try {
+        const res = await fetch(`${API_BASE}/api/ai-respond`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ conversationId: id, studentId: myId, message: content }),
+        })
+        if (res.ok) {
+          const { aiMessages } = await res.json()
+          if (aiMessages?.length) {
+            setMsgs(prev => {
+              const ids = new Set(prev.map((m: any) => m.id))
+              const fresh = (aiMessages as any[]).filter(m => !ids.has(m.id))
+              return fresh.length ? [...prev, ...fresh] : prev
+            })
+            scrollToEnd()
+          }
+        }
+      } catch { /* silent — AI reply is best-effort */ }
+      finally { setIsTyping(false) }
+    }
   }
 
   const pickAndSendMedia = async () => {
@@ -468,6 +495,22 @@ export default function ChatScreen() {
         ) : null}
       />
 
+      {/* AI typing indicator — shown while AI is composing a reply for students */}
+      {isTyping && (
+        <View style={g.typingBar}>
+          <View style={g.headerAvatar}>
+            <Ionicons name="hardware-chip-outline" size={16} color={C.white} />
+          </View>
+          <View style={g.typingBubble}>
+            <View style={g.typingDots}>
+              <View style={[g.typingDot, { opacity: 0.4 }]} />
+              <View style={[g.typingDot, { opacity: 0.7 }]} />
+              <View style={g.typingDot} />
+            </View>
+          </View>
+        </View>
+      )}
+
       {/* Upload progress */}
       {uploading && (
         <View style={g.progressBar}>
@@ -590,6 +633,10 @@ const mkG = (C: ColorPalette) => StyleSheet.create({
   onlineRow:      { flexDirection: 'row', alignItems: 'center', marginTop: 2, gap: 4 },
   onlineDot:      { width: 6, height: 6, borderRadius: 3, backgroundColor: '#22C55E' },
   onlineTxt:      { fontSize: 11, color: C.slate500 },
+  typingBar:      { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: C.bg },
+  typingBubble:   { backgroundColor: C.white, borderRadius: 16, borderBottomLeftRadius: 4, paddingHorizontal: 14, paddingVertical: 10, elevation: 1 },
+  typingDots:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  typingDot:      { width: 6, height: 6, borderRadius: 3, backgroundColor: C.slate400 },
   progressBar:    { height: 4, backgroundColor: C.slate100, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12 },
   progressFill:   { height: 4, backgroundColor: C.blue, borderRadius: 2, position: 'absolute', left: 0, top: 0 },
   progressTxt:    { fontSize: 10, color: C.slate400, marginLeft: 'auto' },
