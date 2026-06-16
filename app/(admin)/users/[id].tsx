@@ -6,6 +6,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { C } from '@/constants/colors'
 
 const ROLES = ['student', 'counselor', 'agent', 'admin']
@@ -19,8 +20,9 @@ const STAGE_LABEL: Record<string,string> = {
 }
 
 export default function AdminUserDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>()
-  const router  = useRouter()
+  const { id }  = useLocalSearchParams<{ id: string }>()
+  const router   = useRouter()
+  const insets   = useSafeAreaInsets()
   const [user, setUser]           = useState<any>(null)
   const [profile, setProfile]     = useState<any>(null)
   const [loading, setLoading]     = useState(true)
@@ -73,7 +75,7 @@ export default function AdminUserDetailScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Ionicons name="arrow-back" size={22} color={C.navy} />
         </TouchableOpacity>

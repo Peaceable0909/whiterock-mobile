@@ -6,6 +6,7 @@ import {
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { C } from '@/constants/colors'
 
 const ROLE_FILTERS = [
@@ -21,7 +22,8 @@ const ROLE_COLOR: Record<string, string> = {
 }
 
 export default function AdminUsersScreen() {
-  const router = useRouter()
+  const router  = useRouter()
+  const insets  = useSafeAreaInsets()
   const [users, setUsers]         = useState<any[]>([])
   const [search, setSearch]       = useState('')
   const [filter, setFilter]       = useState('all')
@@ -51,7 +53,7 @@ export default function AdminUsersScreen() {
 
   return (
     <View style={s.bg}>
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Ionicons name="arrow-back" size={22} color={C.navy} />
         </TouchableOpacity>

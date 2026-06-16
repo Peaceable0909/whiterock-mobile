@@ -6,10 +6,12 @@ import {
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { C } from '@/constants/colors'
 
 export default function AdminAssignScreen() {
-  const router = useRouter()
+  const router  = useRouter()
+  const insets  = useSafeAreaInsets()
   const [students, setStudents]       = useState<any[]>([])
   const [counselors, setCounselors]   = useState<any[]>([])
   const [selectedStudent, setSelectedStudent] = useState<any>(null)
@@ -87,7 +89,7 @@ export default function AdminAssignScreen() {
   if (selectedStudent) {
     return (
       <View style={{ flex: 1, backgroundColor: C.bg }}>
-        <View style={s.header}>
+        <View style={[s.header, { paddingTop: insets.top + 16 }]}>
           <TouchableOpacity onPress={() => setSelectedStudent(null)} style={s.backBtn}>
             <Ionicons name="arrow-back" size={22} color={C.navy} />
           </TouchableOpacity>

@@ -6,6 +6,7 @@ import {
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { C } from '@/constants/colors'
 
 const STAGES = [
@@ -33,7 +34,8 @@ interface Stats {
 }
 
 export default function AdminAnalyticsScreen() {
-  const router = useRouter()
+  const router  = useRouter()
+  const insets  = useSafeAreaInsets()
   const [stats, setStats]       = useState<Stats | null>(null)
   const [loading, setLoading]   = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -118,7 +120,7 @@ export default function AdminAnalyticsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Ionicons name="arrow-back" size={22} color={C.navy} />
         </TouchableOpacity>

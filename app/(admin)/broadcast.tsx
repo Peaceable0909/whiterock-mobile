@@ -6,6 +6,7 @@ import {
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { C } from '@/constants/colors'
 
 const AUDIENCES = [
@@ -15,7 +16,8 @@ const AUDIENCES = [
 ] as const
 
 export default function AdminBroadcastScreen() {
-  const router = useRouter()
+  const router  = useRouter()
+  const insets  = useSafeAreaInsets()
   const [title, setTitle]       = useState('')
   const [body, setBody]         = useState('')
   const [audience, setAudience] = useState<typeof AUDIENCES[number]['key']>('all_students')
@@ -63,7 +65,7 @@ export default function AdminBroadcastScreen() {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={{ flex: 1, backgroundColor: C.bg }}>
-        <View style={s.header}>
+        <View style={[s.header, { paddingTop: insets.top + 16 }]}>
           <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
             <Ionicons name="arrow-back" size={22} color={C.navy} />
           </TouchableOpacity>

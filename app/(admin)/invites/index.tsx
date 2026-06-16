@@ -6,6 +6,7 @@ import {
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { C } from '@/constants/colors'
 
 const ROLE_OPTIONS = ['student', 'counselor', 'agent'] as const
@@ -21,6 +22,7 @@ function codeStatus(code: any): { label: string; color: string } {
 
 export default function AdminInvitesScreen() {
   const router  = useRouter()
+  const insets  = useSafeAreaInsets()
   const [codes, setCodes]           = useState<any[]>([])
   const [loading, setLoading]       = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -77,7 +79,7 @@ export default function AdminInvitesScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Ionicons name="arrow-back" size={22} color={C.navy} />
         </TouchableOpacity>
