@@ -164,7 +164,7 @@ export default function MoreScreen() {
   ]
 
   return (
-    <ScrollView style={s.bg} contentContainerStyle={[s.content, { paddingTop: insets.top }]} showsVerticalScrollIndicator={false}>
+    <ScrollView style={s.bg} contentContainerStyle={[s.content, { paddingTop: insets.top, paddingBottom: 40 + insets.bottom }]} showsVerticalScrollIndicator={false}>
 
       {/* ── Header ── */}
       <View style={s.pageHeader}>

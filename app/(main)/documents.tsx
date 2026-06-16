@@ -11,6 +11,7 @@ import { ImageModal } from '@/components/ImageModal'
 import { supabase } from '@/lib/supabase'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif', 'avif'])
 
@@ -36,6 +37,7 @@ const STATUS_CONFIG = {
 export default function DocumentsScreen() {
   const C = useColors()
   const s = mkS(C)
+  const insets = useSafeAreaInsets()
   const [docs, setDocs]           = useState<any[]>([])
   const [myId, setMyId]           = useState('')
   const [loading, setLoading]     = useState(true)
@@ -186,7 +188,7 @@ export default function DocumentsScreen() {
       <FlatList
         data={displayed}
         keyExtractor={d => d.id}
-        contentContainerStyle={{ padding: 14, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: 14, paddingBottom: 100 + insets.bottom }}
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load() }} tintColor={C.blue} />}
         ListHeaderComponent={
@@ -208,6 +210,7 @@ export default function DocumentsScreen() {
             {/* Category filter */}
             <FlatList
               horizontal
+              nestedScrollEnabled
               data={DOC_CATEGORIES}
               keyExtractor={c => c.key}
               showsHorizontalScrollIndicator={false}

@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { useColors, useTheme } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 interface Msg { id?: string; role: 'user' | 'assistant'; content: string; created_at?: string }
 
@@ -17,6 +18,7 @@ const API_BASE = 'https://whiterock-connect.vercel.app'
 export default function AIScreen() {
   const { C, resolvedWallpaper } = useTheme()
   const s = mkS(C)
+  const insets = useSafeAreaInsets()
   const [msgs, setMsgs]         = useState<Msg[]>([])
   const [input, setInput]       = useState('')
   const [loading, setLoading]   = useState(false)
@@ -216,7 +218,7 @@ export default function AIScreen() {
       />
 
       {/* Input */}
-      <View style={s.inputBar}>
+      <View style={[s.inputBar, { paddingBottom: 12 + insets.bottom }]}>
         <TextInput
           style={s.input} value={input} onChangeText={setInput}
           placeholder="Ask anything about your UK application…"

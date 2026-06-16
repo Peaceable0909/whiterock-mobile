@@ -113,7 +113,7 @@ export default function HomeScreen() {
 
   /* ─────────────── STUDENT DASHBOARD ─────────────── */
   if (isStudent) return (
-    <ScrollView style={s.bg} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]} showsVerticalScrollIndicator={false}>
+    <ScrollView style={s.bg} contentContainerStyle={[s.content, { paddingTop: insets.top + 8, paddingBottom: 40 + insets.bottom }]} showsVerticalScrollIndicator={false}>
 
       {/* ── Header ── */}
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingTop: 8, marginBottom: 20 }}>
@@ -299,7 +299,7 @@ export default function HomeScreen() {
 
   /* ─────────────── STAFF DASHBOARD ─────────────── */
   return (
-    <ScrollView style={s.bg} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]} showsVerticalScrollIndicator={false}>
+    <ScrollView style={s.bg} contentContainerStyle={[s.content, { paddingTop: insets.top + 8, paddingBottom: 40 + insets.bottom }]} showsVerticalScrollIndicator={false}>
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingTop: 8, marginBottom: 20 }}>
         <View style={{ flex: 1 }}>
           <Text style={s.overline}>Dashboard Overview</Text>

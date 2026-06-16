@@ -81,7 +81,7 @@ export default function NotificationsScreen() {
       <FlatList
         data={items}
         keyExtractor={n => n.id}
-        contentContainerStyle={{ padding: 14, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: 14, paddingBottom: 100 + insets.bottom }}
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
         ListHeaderComponent={
           <View style={s.header}>

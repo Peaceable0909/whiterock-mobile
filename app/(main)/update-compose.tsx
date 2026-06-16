@@ -119,7 +119,7 @@ export default function UpdateComposeScreen() {
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 60 }}>
           {/* Category picker */}
           <Text style={s.label}>Category</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 4 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} nestedScrollEnabled contentContainerStyle={{ gap: 8, paddingBottom: 4 }}>
             {CATEGORIES.map(c => {
               const active = category === c.key
               return (

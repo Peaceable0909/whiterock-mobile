@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const CATEGORY_FILTERS = [
   { key: 'all',          label: 'All'         },
@@ -66,6 +67,7 @@ export default function UpdatesScreen() {
   const c = mkC(C)
   const g = mkG(C)
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const { width: screenW } = useWindowDimensions()
   const [updates, setUpdates]     = useState<any[]>([])
   const [likedIds, setLikedIds]   = useState<Set<string>>(new Set())
@@ -310,7 +312,7 @@ export default function UpdatesScreen() {
       <FlatList
         data={displayUpdates}
         keyExtractor={u => u.id}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: 100 + insets.bottom }}
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load() }} tintColor={C.blue} />}
         ListHeaderComponent={
@@ -320,7 +322,7 @@ export default function UpdatesScreen() {
               <Text style={g.headerTitle}>Updates</Text>
             </View>
             {/* Category filters */}
-            <RNScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 14, paddingBottom: 12, gap: 8 }}>
+            <RNScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 14, paddingBottom: 12, gap: 8 }}>
               {CATEGORY_FILTERS.map(f => (
                 <TouchableOpacity
                   key={f.key}

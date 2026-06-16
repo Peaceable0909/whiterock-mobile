@@ -172,7 +172,7 @@ export default function SettingsScreen() {
         <Text style={s.headerTitle}>Settings</Text>
       </View>
 
-      <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[s.content, { paddingBottom: 48 + insets.bottom }]} showsVerticalScrollIndicator={false}>
         {/* Profile card */}
         <View style={[s.profileCard, bgStyle]}>
           <View style={s.avatar}>

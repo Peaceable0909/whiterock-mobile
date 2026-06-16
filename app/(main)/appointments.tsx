@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { AppHeader } from '@/components/AppHeader'
 import { supabase } from '@/lib/supabase'
 import { C } from '@/constants/colors'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const EVENT_TYPES = [
   { key: 'consultation',  label: 'Consultation',  icon: 'chatbubbles-outline',    color: '#1D4ED8' },
@@ -44,6 +45,7 @@ export default function AppointmentsScreen() {
   const [showModal, setShowModal]   = useState(false)
   const [saving, setSaving]         = useState(false)
   const [tab, setTab]               = useState<'upcoming' | 'past'>('upcoming')
+  const insets                      = useSafeAreaInsets()
 
   // Form state
   const [form, setForm] = useState({
@@ -155,7 +157,7 @@ export default function AppointmentsScreen() {
       <FlatList
         data={displayed}
         keyExtractor={e => e.id}
-        contentContainerStyle={{ padding: 14, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: 14, paddingBottom: 100 + insets.bottom }}
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load() }} tintColor={C.blue} />}
         ListEmptyComponent={
