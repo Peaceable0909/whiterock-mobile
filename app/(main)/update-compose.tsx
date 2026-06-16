@@ -7,7 +7,8 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
-import { C } from '@/constants/colors'
+import { useColors } from '@/lib/theme'
+import { ColorPalette } from '@/constants/colors'
 
 const CATEGORIES = [
   { key: 'announcement', label: 'Announce',   color: '#1D4ED8', icon: 'megaphone-outline'      },
@@ -25,6 +26,7 @@ const AUDIENCES = [
 ] as const
 
 export default function UpdateComposeScreen() {
+  const C      = useColors()
   const router = useRouter()
   const params = useLocalSearchParams<{ editId?: string }>()
   const isEdit = !!params.editId
@@ -88,6 +90,7 @@ export default function UpdateComposeScreen() {
   }
 
   const cat = CATEGORIES.find(c => c.key === category)!
+  const s   = mkS(C)
 
   if (loadingEdit) {
     return (
@@ -220,7 +223,7 @@ export default function UpdateComposeScreen() {
   )
 }
 
-const s = StyleSheet.create({
+const mkS = (C: ColorPalette) => StyleSheet.create({
   header:        { flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: 56, backgroundColor: C.white, borderBottomWidth: 1, borderColor: C.slate100 },
   backBtn:       { marginRight: 12 },
   title:         { flex: 1, fontSize: 17, fontWeight: '800', color: C.navy },

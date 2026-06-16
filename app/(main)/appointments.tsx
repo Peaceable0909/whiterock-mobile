@@ -7,7 +7,8 @@ import {
 import { Ionicons } from '@expo/vector-icons'
 import { AppHeader } from '@/components/AppHeader'
 import { supabase } from '@/lib/supabase'
-import { C } from '@/constants/colors'
+import { useColors } from '@/lib/theme'
+import { ColorPalette } from '@/constants/colors'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Skeleton, SkeletonCard, EmptyState } from '@/components/Skeleton'
 
@@ -37,6 +38,7 @@ const formatTime = (iso: string) => {
 const isUpcoming = (iso: string) => new Date(iso) > new Date()
 
 export default function AppointmentsScreen() {
+  const C                            = useColors()
   const [events, setEvents]         = useState<any[]>([])
   const [loading, setLoading]       = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -134,6 +136,7 @@ export default function AppointmentsScreen() {
     tab === 'upcoming' ? isUpcoming(e.starts_at) : !isUpcoming(e.starts_at)
   )
 
+  const s = mkS(C)
   if (loading) return (
     <View style={s.bg}>
       <AppHeader title="Appointments" />
@@ -351,7 +354,7 @@ export default function AppointmentsScreen() {
   )
 }
 
-const s = StyleSheet.create({
+const mkS = (C: ColorPalette) => StyleSheet.create({
   bg:             { flex: 1, backgroundColor: C.bg },
   center:         { flex: 1, alignItems: 'center', justifyContent: 'center' },
   tabRow:         { flexDirection: 'row', marginHorizontal: 14, marginBottom: 12, backgroundColor: C.white, borderRadius: 14, padding: 4, gap: 4 },
