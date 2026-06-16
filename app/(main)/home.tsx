@@ -351,6 +351,8 @@ export default function HomeScreen() {
 
       <StaffStats userId={user?.id} />
 
+      <DailyBriefing firstName={firstName} userId={user?.id} />
+
       <View style={s.grid}>
         {([
           { label: 'Messages', iconName: 'chatbubble-outline',    route: '/(main)/messages' as const },
@@ -404,6 +406,67 @@ function StaffStats({ userId }: { userId?: string }) {
           <Text style={ss.statLabel}>{item.label}</Text>
         </View>
       ))}
+    </View>
+  )
+}
+
+function DailyBriefing({ firstName, userId }: { firstName: string; userId?: string }) {
+  const C = useColors()
+  const [displayed, setDisplayed] = useState('')
+  const [brief, setBrief]         = useState('')
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    if (!userId) return
+    const go = async () => {
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+      const or = `counselor_id.eq.${userId},agent_id.eq.${userId}`
+      const [{ count: total }, { data: activeConvs }, { count: pending }] = await Promise.all([
+        supabase.from('conversations').select('id', { count: 'exact', head: true }).or(or),
+        supabase.from('conversations').select('id').or(or).gt('last_message_at', weekAgo),
+        supabase.from('documents').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+      ])
+      const h = new Date().getHours()
+      const g = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening'
+      let t = `Good ${g}, ${firstName}. `
+      if (total)               t += `${total} student${total !== 1 ? 's' : ''} in your pipeline. `
+      if (activeConvs?.length) t += `${activeConvs.length} active conversation${activeConvs.length !== 1 ? 's' : ''} this week. `
+      if ((pending ?? 0) > 0)  t += `⚠ ${pending} document${pending !== 1 ? 's' : ''} pending review.`
+      else                     t += 'All documents are up to date.'
+      setBrief(t)
+    }
+    go()
+  }, [userId, firstName])
+
+  useEffect(() => {
+    if (!brief) return
+    setDisplayed('')
+    let i = 0
+    timerRef.current = setInterval(() => {
+      setDisplayed(brief.slice(0, ++i))
+      if (i >= brief.length) { clearInterval(timerRef.current!); timerRef.current = null }
+    }, 18)
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
+  }, [brief])
+
+  if (!brief) return null
+  const typing = displayed.length < brief.length
+  return (
+    <View style={{ backgroundColor: C.navy, borderRadius: 20, padding: 18, marginBottom: 14, shadowColor: C.navy, shadowOpacity: 0.25, shadowRadius: 10, elevation: 4 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <View style={{ width: 24, height: 24, borderRadius: 7, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="sparkles-outline" size={13} color="#60A5FA" />
+        </View>
+        <Text style={{ fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.5)', letterSpacing: 1.5, textTransform: 'uppercase' }}>AI Briefing</Text>
+        {typing && (
+          <View style={{ backgroundColor: C.blue, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginLeft: 2 }}>
+            <Text style={{ fontSize: 9, fontWeight: '800', color: C.white, letterSpacing: 0.5 }}>LIVE</Text>
+          </View>
+        )}
+      </View>
+      <Text style={{ fontSize: 14, color: C.white, lineHeight: 22, fontWeight: '500' }}>
+        {displayed}<Text style={{ color: typing ? 'rgba(255,255,255,0.6)' : 'transparent' }}>▌</Text>
+      </Text>
     </View>
   )
 }
