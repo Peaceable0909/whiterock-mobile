@@ -136,18 +136,17 @@ export default function DocumentsScreen() {
         {
           text: 'Delete', style: 'destructive',
           onPress: async () => {
-            try {
-              const match = doc.url?.match(/\/documents\/(.+?)(\?|$)/)
-              if (match?.[1]) {
-                const { error: storageErr } = await supabase.storage.from('documents').remove([decodeURIComponent(match[1])])
-                if (storageErr) throw storageErr
-              }
-              const { error: deleteErr } = await supabase.from('documents').delete().eq('id', doc.id)
-              if (deleteErr) throw deleteErr
-              setDocs(prev => prev.filter(d => d.id !== doc.id))
-            } catch (e: any) {
-              Alert.alert('Delete failed', e.message)
+            // Best-effort storage removal — don't let a missing file block the DB delete
+            const match = doc.url?.match(/\/documents\/(.+?)(\?|$)/)
+            if (match?.[1]) {
+              await supabase.storage.from('documents').remove([decodeURIComponent(match[1])])
             }
+            const { error: deleteErr } = await supabase.from('documents').delete().eq('id', doc.id)
+            if (deleteErr) {
+              Alert.alert('Delete failed', deleteErr.message)
+              return
+            }
+            setDocs(prev => prev.filter(d => d.id !== doc.id))
           },
         },
       ]
