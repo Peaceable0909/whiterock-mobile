@@ -7,7 +7,8 @@ import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { C } from '@/constants/colors'
+import { useColors } from '@/lib/theme'
+import { ColorPalette } from '@/constants/colors'
 
 const ROLE_FILTERS = [
   { key: 'all',       label: 'All' },
@@ -18,10 +19,11 @@ const ROLE_FILTERS = [
 ]
 
 const ROLE_COLOR: Record<string, string> = {
-  student: C.blue, counselor: '#7C3AED', agent: '#059669', admin: '#DC2626',
+  student: '#1B4FD8', counselor: '#7C3AED', agent: '#059669', admin: '#DC2626',
 }
 
 export default function AdminUsersScreen() {
+  const C       = useColors()
   const router  = useRouter()
   const insets  = useSafeAreaInsets()
   const [users, setUsers]         = useState<any[]>([])
@@ -49,6 +51,7 @@ export default function AdminUsersScreen() {
     return matchSearch && matchFilter
   })
 
+  const s = mkS(C)
   if (loading) return <View style={s.center}><ActivityIndicator color={C.blue} /></View>
 
   return (
@@ -123,7 +126,7 @@ export default function AdminUsersScreen() {
   )
 }
 
-const s = StyleSheet.create({
+const mkS = (C: ColorPalette) => StyleSheet.create({
   bg:          { flex: 1, backgroundColor: C.bg },
   center:      { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg },
   header:      { flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: 56, backgroundColor: C.white, borderBottomWidth: 1, borderColor: C.slate100 },

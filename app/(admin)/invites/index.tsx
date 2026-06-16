@@ -7,20 +7,22 @@ import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { C } from '@/constants/colors'
+import { useColors } from '@/lib/theme'
+import { ColorPalette } from '@/constants/colors'
 
 const ROLE_OPTIONS = ['student', 'counselor', 'agent'] as const
 const ROLE_COLOR: Record<string, string> = {
-  student: C.blue, counselor: '#7C3AED', agent: '#059669',
+  student: '#1B4FD8', counselor: '#7C3AED', agent: '#059669',
 }
 
 function codeStatus(code: any): { label: string; color: string } {
-  if (code.used_by)                             return { label: 'Used',    color: C.slate400 }
-  if (new Date(code.expires_at) < new Date())   return { label: 'Expired', color: C.red500  }
-  return                                               { label: 'Active',  color: '#059669'  }
+  if (code.used_by)                             return { label: 'Used',    color: '#94A3B8' }
+  if (new Date(code.expires_at) < new Date())   return { label: 'Expired', color: '#EF4444' }
+  return                                               { label: 'Active',  color: '#059669' }
 }
 
 export default function AdminInvitesScreen() {
+  const C       = useColors()
   const router  = useRouter()
   const insets  = useSafeAreaInsets()
   const [codes, setCodes]           = useState<any[]>([])
@@ -72,6 +74,7 @@ export default function AdminInvitesScreen() {
     ])
   }
 
+  const s = mkS(C)
   if (loading) return <View style={s.center}><ActivityIndicator color={C.blue} /></View>
 
   const active  = codes.filter(c => !c.used_by && new Date(c.expires_at) > new Date()).length
@@ -201,7 +204,7 @@ export default function AdminInvitesScreen() {
   )
 }
 
-const s = StyleSheet.create({
+const mkS = (C: ColorPalette) => StyleSheet.create({
   center:          { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg },
   header:          { flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: 56, backgroundColor: C.white, borderBottomWidth: 1, borderColor: C.slate100 },
   backBtn:         { marginRight: 12 },

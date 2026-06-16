@@ -1,9 +1,10 @@
 import { Stack } from 'expo-router'
 import { View, ActivityIndicator } from 'react-native'
 import { useRoleGuard } from '@/hooks/useRoleGuard'
-import { C } from '@/constants/colors'
+import { useColors } from '@/lib/theme'
 
 export default function AdminLayout() {
+  const C    = useColors()
   const role = useRoleGuard(['admin'])
   if (!role) return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg }}>

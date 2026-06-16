@@ -7,7 +7,8 @@ import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { C } from '@/constants/colors'
+import { useColors } from '@/lib/theme'
+import { ColorPalette } from '@/constants/colors'
 
 const AUDIENCES = [
   { key: 'all_students', label: 'All Students', icon: 'school-outline',   color: C.blue,   roles: ['student']             },
@@ -16,6 +17,8 @@ const AUDIENCES = [
 ] as const
 
 export default function AdminBroadcastScreen() {
+  const C       = useColors()
+  const s       = mkS(C)
   const router  = useRouter()
   const insets  = useSafeAreaInsets()
   const [title, setTitle]       = useState('')
@@ -149,7 +152,7 @@ export default function AdminBroadcastScreen() {
   )
 }
 
-const s = StyleSheet.create({
+const mkS = (C: ColorPalette) => StyleSheet.create({
   header:         { flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: 56, backgroundColor: C.white, borderBottomWidth: 1, borderColor: C.slate100 },
   backBtn:        { marginRight: 12 },
   title:          { fontSize: 18, fontWeight: '800', color: C.navy },

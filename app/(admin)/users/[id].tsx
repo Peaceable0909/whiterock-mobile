@@ -7,11 +7,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { C } from '@/constants/colors'
+import { useColors } from '@/lib/theme'
+import { ColorPalette } from '@/constants/colors'
 
 const ROLES = ['student', 'counselor', 'agent', 'admin']
 const ROLE_COLOR: Record<string, string> = {
-  student: C.blue, counselor: '#7C3AED', agent: '#059669', admin: '#DC2626',
+  student: '#1B4FD8', counselor: '#7C3AED', agent: '#059669', admin: '#DC2626',
 }
 const STAGE_LABEL: Record<string,string> = {
   lead:'Lead', application_submitted:'Applied', offer_received:'Offer Received',
@@ -20,7 +21,8 @@ const STAGE_LABEL: Record<string,string> = {
 }
 
 export default function AdminUserDetailScreen() {
-  const { id }  = useLocalSearchParams<{ id: string }>()
+  const C        = useColors()
+  const { id }   = useLocalSearchParams<{ id: string }>()
   const router   = useRouter()
   const insets   = useSafeAreaInsets()
   const [user, setUser]           = useState<any>(null)
@@ -67,6 +69,7 @@ export default function AdminUserDetailScreen() {
     )
   }
 
+  const s = mkS(C)
   if (loading) return <View style={s.center}><ActivityIndicator color={C.blue} /></View>
   if (!user)   return <View style={s.center}><Text style={s.emptyText}>User not found</Text></View>
 
@@ -166,7 +169,7 @@ export default function AdminUserDetailScreen() {
   )
 }
 
-const s = StyleSheet.create({
+const mkS = (C: ColorPalette) => StyleSheet.create({
   center:         { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg },
   emptyText:      { fontSize: 14, color: C.slate400, fontWeight: '600' },
   header:         { flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: 56, backgroundColor: C.white, borderBottomWidth: 1, borderColor: C.slate100 },

@@ -7,9 +7,11 @@ import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { C } from '@/constants/colors'
+import { useColors } from '@/lib/theme'
+import { ColorPalette } from '@/constants/colors'
 
 export default function AdminAssignScreen() {
+  const C       = useColors()
   const router  = useRouter()
   const insets  = useSafeAreaInsets()
   const [students, setStudents]       = useState<any[]>([])
@@ -83,6 +85,7 @@ export default function AdminAssignScreen() {
     setAssigning(false)
   }
 
+  const s = mkS(C)
   if (loading) return <View style={s.center}><ActivityIndicator color={C.blue} /></View>
 
   // Counselor picker view
@@ -182,7 +185,7 @@ export default function AdminAssignScreen() {
   )
 }
 
-const s = StyleSheet.create({
+const mkS = (C: ColorPalette) => StyleSheet.create({
   center:          { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg },
   header:          { flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: 56, backgroundColor: C.white, borderBottomWidth: 1, borderColor: C.slate100 },
   backBtn:         { marginRight: 12 },

@@ -7,7 +7,8 @@ import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
-import { C } from '@/constants/colors'
+import { useColors } from '@/lib/theme'
+import { ColorPalette } from '@/constants/colors'
 
 const STAGES = ['lead','application_submitted','offer_received','deposit_paid','cas_requested','cas_issued','visa_submitted','visa_decision']
 const STAGE_LABEL: Record<string,string> = {
@@ -17,8 +18,8 @@ const STAGE_LABEL: Record<string,string> = {
 }
 
 const ACTIONS = [
-  { label: 'Users',     icon: 'people-outline',    route: '/(admin)/users',   color: C.blue },
-  { label: 'Invites',   icon: 'ticket-outline',    route: '/(admin)/invites', color: '#7C3AED' },
+  { label: 'Users',     icon: 'people-outline',    route: '/(admin)/users',         color: '#1B4FD8' },
+  { label: 'Invites',   icon: 'ticket-outline',    route: '/(admin)/invites',       color: '#7C3AED' },
   { label: 'Assign',    icon: 'git-merge-outline', route: '/(admin)/assign',        color: '#0891B2' },
   { label: 'Broadcast', icon: 'megaphone-outline', route: '/(admin)/broadcast',     color: '#059669' },
   { label: 'Analytics', icon: 'bar-chart-outline', route: '/(admin)/analytics',     color: '#D97706' },
@@ -26,8 +27,10 @@ const ACTIONS = [
 ] as const
 
 export default function AdminDashboard() {
+  const C       = useColors()
   const router  = useRouter()
   const insets  = useSafeAreaInsets()
+  const s       = mkS(C)
   const [stats, setStats]       = useState<any>(null)
   const [loading, setLoading]   = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -129,7 +132,7 @@ export default function AdminDashboard() {
   )
 }
 
-const s = StyleSheet.create({
+const mkS = (C: ColorPalette) => StyleSheet.create({
   bg:          { flex: 1, backgroundColor: C.bg },
   center:      { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg },
   overline:    { fontSize: 11, fontWeight: '700', color: '#7C3AED', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 2 },
