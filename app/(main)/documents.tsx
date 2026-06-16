@@ -97,8 +97,13 @@ export default function DocumentsScreen() {
     const mimeType = asset.mimeType ?? 'application/octet-stream'
     const rawName = asset.name ?? `doc_${Date.now()}`
     const ext = rawName.includes('.') ? rawName.split('.').pop()!.toLowerCase() : 'bin'
-    const path = `docs/${myId}/${category}-${Date.now()}.${ext}`
+    // Path must start with the user's own ID — storage RLS checks the first folder segment
+    const path = `${myId}/${category}-${Date.now()}.${ext}`
     const isImage = mimeType.startsWith('image/')
+    const fileType = mimeType.includes('pdf') ? 'pdf'
+      : mimeType.startsWith('image/') ? 'image'
+      : ['doc', 'docx'].includes(ext) ? 'docx'
+      : ext === 'zip' ? 'zip' : 'other'
 
     setUploading(true)
     try {
@@ -111,11 +116,14 @@ export default function DocumentsScreen() {
       const url = supabase.storage.from('documents').getPublicUrl(path).data.publicUrl
 
       const { data: doc, error: dbErr } = await supabase.from('documents').insert({
-        student_id: myId,
+        student_id:    myId,
         category,
+        original_name: rawName,
         url,
-        file_type: ext,
-        status: 'pending',
+        file_type:     fileType,
+        size:          asset.size ?? 0,
+        uploaded_by:   myId,
+        status:        'pending',
       }).select('id').single()
       if (dbErr) throw dbErr
       await load()

@@ -69,7 +69,8 @@ export default function MoreScreen() {
       })
       if (upErr) throw upErr
       const url = `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}?t=${Date.now()}`
-      await supabase.from('users').update({ avatar_url: url }).eq('id', user.id)
+      const { error: updateErr } = await supabase.from('users').update({ avatar_url: url }).eq('id', user.id)
+      if (updateErr) throw updateErr
       setUser((u: any) => ({ ...u, avatar_url: url }))
     } catch (e: any) {
       Alert.alert('Upload failed', e.message)
@@ -81,17 +82,19 @@ export default function MoreScreen() {
   const saveName = async () => {
     if (!nameInput.trim()) return
     setSavingName(true)
-    await supabase.from('users').update({ name: nameInput.trim() }).eq('id', user.id)
-    setUser((u: any) => ({ ...u, name: nameInput.trim() }))
+    const { error } = await supabase.from('users').update({ name: nameInput.trim() }).eq('id', user.id)
     setSavingName(false)
+    if (error) { Alert.alert('Could not save name', error.message); return }
+    setUser((u: any) => ({ ...u, name: nameInput.trim() }))
     setEditingName(false)
   }
 
   const savePhone = async () => {
     setSavingPhone(true)
-    await supabase.from('users').update({ phone: phoneInput.trim() }).eq('id', user.id)
-    setUser((u: any) => ({ ...u, phone: phoneInput.trim() }))
+    const { error } = await supabase.from('users').update({ phone: phoneInput.trim() }).eq('id', user.id)
     setSavingPhone(false)
+    if (error) { Alert.alert('Could not save phone', error.message); return }
+    setUser((u: any) => ({ ...u, phone: phoneInput.trim() }))
     setEditingPhone(false)
   }
 
