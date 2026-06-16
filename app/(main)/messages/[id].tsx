@@ -57,7 +57,9 @@ export default function ChatScreen() {
   const { top: safeTop } = useSafeAreaInsets()
   const { id }   = useLocalSearchParams<{ id: string }>()
   const router   = useRouter()
-  const listRef  = useRef<FlatList>(null)
+  const listRef            = useRef<FlatList>(null)
+  const scrollTimer        = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const initialScrollDone  = useRef(false)
   const { width: screenW } = useWindowDimensions()
   const mediaW   = Math.min(screenW - 80, 280)
 
@@ -86,7 +88,13 @@ export default function ChatScreen() {
   const appState = useRef(AppState.currentState)
 
   const scrollToEnd = useCallback(() => {
-    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100)
+    if (scrollTimer.current) clearTimeout(scrollTimer.current)
+    const animated = initialScrollDone.current
+    scrollTimer.current = setTimeout(() => {
+      listRef.current?.scrollToEnd({ animated })
+      initialScrollDone.current = true
+      scrollTimer.current = null
+    }, 120)
   }, [])
 
   const fetchMissed = useCallback(async () => {
