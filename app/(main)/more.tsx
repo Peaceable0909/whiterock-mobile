@@ -200,6 +200,32 @@ export default function MoreScreen() {
         </View>
       </View>
 
+      {/* ── Admin tools (admin role only) ── */}
+      {user?.role === 'admin' && (
+        <>
+          <Text style={s.sectionLabel}>ADMIN TOOLS</Text>
+          <View style={s.card}>
+            {([
+              { label: 'Invite Codes',      icon: 'ticket-outline',    color: '#1D4ED8', bg: '#EFF6FF', route: '/(main)/invite-codes' },
+              { label: 'Broadcast Message', icon: 'megaphone-outline', color: '#D97706', bg: '#FEF9C3', route: '/(main)/broadcast'    },
+              { label: 'Assign Counselor',  icon: 'person-add-outline',color: '#059669', bg: '#F0FDF4', route: '/(main)/assign-counselor' },
+            ] as const).map((item, i, arr) => (
+              <TouchableOpacity
+                key={item.label}
+                style={[s.row, i < arr.length - 1 && s.border]}
+                onPress={() => router.push(item.route as any)}
+              >
+                <View style={[s.iconBox, { backgroundColor: item.bg }]}>
+                  <Ionicons name={item.icon as any} size={18} color={item.color} />
+                </View>
+                <Text style={s.rowLabel}>{item.label}</Text>
+                <Ionicons name="chevron-forward" size={15} color={C.slate300} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        </>
+      )}
+
       {/* ── Quick access ── */}
       <Text style={s.sectionLabel}>QUICK ACCESS</Text>
       <View style={s.card}>
