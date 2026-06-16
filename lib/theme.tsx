@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react'
 import { Appearance } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { LIGHT, DARK, ColorPalette } from '@/constants/colors'
