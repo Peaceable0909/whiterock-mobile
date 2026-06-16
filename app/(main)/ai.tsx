@@ -253,7 +253,7 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   sparkleBox:     { width: 64, height: 64, borderRadius: 20, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', marginBottom: 12, shadowColor: C.blue, shadowOpacity: 0.3, shadowRadius: 10, elevation: 4 },
   emptyTitle:     { fontSize: 20, fontWeight: '800', color: C.navy },
   emptySub:       { fontSize: 13, color: C.slate500, textAlign: 'center', marginTop: 6, paddingHorizontal: 20 },
-  memoryChip:     { flexDirection: 'row', alignItems: 'flex-start', gap: 6, backgroundColor: '#EFF6FF', borderRadius: 12, padding: 10, marginTop: 12, marginHorizontal: 8, borderWidth: 1, borderColor: '#DBEAFE' },
+  memoryChip:     { flexDirection: 'row', alignItems: 'flex-start', gap: 6, backgroundColor: C.blue + '18', borderRadius: 12, padding: 10, marginTop: 12, marginHorizontal: 8, borderWidth: 1, borderColor: C.blue + '35' },
   memoryText:     { fontSize: 11, color: C.blue, flex: 1, lineHeight: 16 },
   msgRow:         { flexDirection: 'row', marginBottom: 10, gap: 8 },
   msgMe:          { justifyContent: 'flex-end' },

@@ -29,15 +29,16 @@ const DOC_CATEGORIES = [
   { key: 'other',        label: 'Other',          icon: 'attach-outline'          },
 ] as const
 
-const STATUS_CONFIG = {
-  pending:  { bg: '#FEF9C3', text: '#B45309', label: 'Pending Review' },
-  approved: { bg: '#DCFCE7', text: '#16A34A', label: 'Approved'       },
-  rejected: { bg: '#FEE2E2', text: '#DC2626', label: 'Rejected'       },
-} as const
+const mkStatusConfig = (C: ColorPalette) => ({
+  pending:  { bg: C.orange500 + '30', text: C.orange500, label: 'Pending Review' },
+  approved: { bg: C.green400  + '30', text: C.green400,  label: 'Approved'       },
+  rejected: { bg: C.red500    + '30', text: C.red500,    label: 'Rejected'       },
+})
 
 export default function DocumentsScreen() {
   const C = useColors()
   const s = mkS(C)
+  const STATUS_CONFIG = mkStatusConfig(C)
   const insets = useSafeAreaInsets()
   const [docs, setDocs]           = useState<any[]>([])
   const [myId, setMyId]           = useState('')
@@ -270,7 +271,7 @@ export default function DocumentsScreen() {
           </View>
         }
         renderItem={({ item }) => {
-          const st = STATUS_CONFIG[item.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.pending
+          const st = STATUS_CONFIG[item.status as 'pending' | 'approved' | 'rejected'] ?? STATUS_CONFIG.pending
           const catMeta = DOC_CATEGORIES.find(c => c.key === item.category) ?? DOC_CATEGORIES[DOC_CATEGORIES.length - 1]
           const isExpanded = expandedId === item.id
 
