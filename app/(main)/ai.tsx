@@ -142,7 +142,7 @@ export default function AIScreen() {
   return (
     <KeyboardAvoidingView style={s.bg} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
       {/* Header */}
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: insets.top + 8 }]}>
         <View style={s.botAvatar}><Ionicons name="hardware-chip-outline" size={20} color={C.white} /></View>
         <View style={{ flex: 1 }}>
           <Text style={s.headerTitle}>WhiteRock AI</Text>

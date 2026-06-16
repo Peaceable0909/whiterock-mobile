@@ -6,6 +6,7 @@ import {
 } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
@@ -23,6 +24,7 @@ export default function StudentProfileScreen() {
   const C        = useColors()
   const { id }   = useLocalSearchParams<{ id: string }>()
   const router   = useRouter()
+  const insets   = useSafeAreaInsets()
 
   const [student, setStudent]     = useState<any>(null)
   const [profile, setProfile]     = useState<any>(null)
@@ -198,7 +200,7 @@ Summarize the application status and suggest 2-3 next steps.`
   return (
     <View style={s.bg}>
       {/* Header */}
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: insets.top + 14 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.back}>
           <Ionicons name="arrow-back" size={22} color={C.navy} />
         </TouchableOpacity>
@@ -476,12 +478,12 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   infoRow:          { backgroundColor: C.white, borderRadius: 12, padding: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   infoLabel:        { fontSize: 12, color: C.slate400, fontWeight: '600' },
   infoValue:        { fontSize: 13, color: C.navy, fontWeight: '600', flex: 1, textAlign: 'right' },
-  vaultHeader:      { backgroundColor: C.navy, borderRadius: 16, padding: 16, marginBottom: 8 },
-  vaultTitle:       { fontSize: 14, fontWeight: '800', color: '#93C5FD', textTransform: 'uppercase', letterSpacing: 1 },
+  vaultHeader:      { backgroundColor: C.blue + '18', borderRadius: 16, padding: 16, marginBottom: 8, borderWidth: 1, borderColor: C.blue + '30' },
+  vaultTitle:       { fontSize: 14, fontWeight: '800', color: C.blue, textTransform: 'uppercase', letterSpacing: 1 },
   vaultStats:       { flexDirection: 'row', justifyContent: 'space-around', marginTop: 12 },
   vaultStat:        { alignItems: 'center' },
   vaultCount:       { fontSize: 22, fontWeight: '900' },
-  vaultLabel:       { fontSize: 10, color: '#93C5FD', marginTop: 2 },
+  vaultLabel:       { fontSize: 10, color: C.slate500, marginTop: 2 },
   docCard:          { backgroundColor: C.white, borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center' },
   docName:          { fontSize: 13, fontWeight: '600', color: C.navy },
   docMeta:          { flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 5 },

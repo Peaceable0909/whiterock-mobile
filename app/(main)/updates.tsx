@@ -343,7 +343,7 @@ export default function UpdatesScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load() }} tintColor={C.blue} />}
         ListHeaderComponent={
           <>
-            <View style={g.header}>
+            <View style={[g.header, { paddingTop: insets.top + 14 }]}>
               <Ionicons name="newspaper-outline" size={20} color={C.blue} />
               <Text style={g.headerTitle}>Updates</Text>
             </View>
@@ -372,7 +372,7 @@ export default function UpdatesScreen() {
       />
       {canPost && (
         <TouchableOpacity
-          style={g.fab}
+          style={[g.fab, { bottom: 20 + insets.bottom }]}
           onPress={() => router.push('/(main)/update-compose' as any)}
           accessibilityLabel="Create update"
         >

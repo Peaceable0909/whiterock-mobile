@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
@@ -13,6 +14,7 @@ const FILTERS = [{ key:'all', label:'All' },{ key:'application_submitted', label
 export default function StudentsScreen() {
   const C      = useColors()
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const [students, setStudents]   = useState<any[]>([])
   const [convMap, setConvMap]     = useState<Record<string, string>>({})
   const [search, setSearch]       = useState('')
@@ -73,7 +75,7 @@ export default function StudentsScreen() {
   )
 
   return (
-    <View style={s.bg}>
+    <View style={[s.bg, { paddingTop: insets.top }]}>
       {/* Search */}
       <View style={s.searchWrap}>
         <Ionicons name="search-outline" size={16} color={C.slate400} />
@@ -112,7 +114,7 @@ export default function StudentsScreen() {
       <FlatList
         data={filtered}
         keyExtractor={st => st.id}
-        contentContainerStyle={{ padding: 14, paddingTop: 0, paddingBottom: 80 }}
+        contentContainerStyle={{ padding: 14, paddingTop: 0, paddingBottom: 80 + insets.bottom }}
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load() }} tintColor={C.blue} />}
         ListEmptyComponent={<View style={s.center}><Text style={s.emptyText}>No students found</Text></View>}
@@ -151,7 +153,7 @@ export default function StudentsScreen() {
       />
 
       {role === 'admin' && (
-        <TouchableOpacity style={s.fab} onPress={() => router.push('/(admin)/invites' as any)}>
+        <TouchableOpacity style={[s.fab, { bottom: 20 + insets.bottom }]} onPress={() => router.push('/(admin)/invites' as any)}>
           <Ionicons name="person-add-outline" size={20} color={C.white} />
         </TouchableOpacity>
       )}
