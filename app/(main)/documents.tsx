@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Skeleton, SkeletonCard } from '@/components/Skeleton'
 
 const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif', 'avif'])
 
@@ -179,7 +180,30 @@ export default function DocumentsScreen() {
     pending:  docs.filter(d => d.status === 'pending').length,
   }
 
-  if (loading) return <View style={s.center}><ActivityIndicator color={C.blue} size="large" /></View>
+  if (loading) return (
+    <View style={s.bg}>
+      <AppHeader title="Digital Vault" />
+      <View style={{ padding: 14, gap: 10 }}>
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
+          {[0, 1, 2].map(i => <Skeleton key={i} height={52} radius={12} style={{ flex: 1 }} />)}
+        </View>
+        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+          {[0, 1, 2, 3].map(i => <Skeleton key={i} height={28} width={70} radius={20} />)}
+        </View>
+        {[0, 1, 2].map(i => (
+          <SkeletonCard key={i}>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <Skeleton height={40} width={40} radius={10} />
+              <View style={{ flex: 1, gap: 7 }}>
+                <Skeleton height={13} width={'65%'} radius={4} />
+                <Skeleton height={11} width={'40%'} radius={4} />
+              </View>
+            </View>
+          </SkeletonCard>
+        ))}
+      </View>
+    </View>
+  )
 
   return (
     <View style={s.bg}>

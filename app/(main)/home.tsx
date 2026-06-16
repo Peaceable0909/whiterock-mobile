@@ -1,11 +1,12 @@
 import { useEffect, useState, useRef } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Animated, Image } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated, Image } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
+import { Skeleton, SkeletonCard } from '@/components/Skeleton'
 
 const JOURNEY_STAGES = ['lead','application_submitted','offer_received','deposit_paid','cas_requested','cas_issued','visa_submitted','visa_decision']
 const STAGE_LABEL: Record<string,string> = { lead:'New Lead', application_submitted:'Applied', offer_received:'Offer', deposit_paid:'Deposit', cas_requested:'CAS Pending', cas_issued:'CAS Issued', visa_submitted:'Visa Submitted', visa_decision:'Visa Decision' }
@@ -109,7 +110,46 @@ export default function HomeScreen() {
     }).start()
   }, [pct])
 
-  if (loading) return <View style={[s.center, { paddingTop: insets.top }]}><ActivityIndicator color={C.blue} size="large" /></View>
+  if (loading) return (
+    <ScrollView style={s.bg} contentContainerStyle={[s.content, { paddingTop: insets.top + 8, paddingBottom: 40 + insets.bottom }]} showsVerticalScrollIndicator={false}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
+        <View style={{ flex: 1, gap: 8 }}>
+          <Skeleton height={11} width={'50%'} radius={4} />
+          <Skeleton height={22} width={'70%'} radius={4} />
+        </View>
+        <Skeleton height={36} width={36} radius={18} style={{ marginLeft: 12 }} />
+        <Skeleton height={36} width={36} radius={18} style={{ marginLeft: 8 }} />
+      </View>
+      <SkeletonCard style={{ marginBottom: 14 }}>
+        <Skeleton height={13} width={'50%'} radius={4} style={{ marginBottom: 14 }} />
+        <Skeleton height={8} radius={4} style={{ marginBottom: 10 }} />
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+          <Skeleton height={11} width={'35%'} radius={4} />
+          <Skeleton height={11} width={'15%'} radius={4} />
+        </View>
+      </SkeletonCard>
+      <SkeletonCard style={{ marginBottom: 14 }}>
+        <Skeleton height={13} width={'40%'} radius={4} style={{ marginBottom: 16 }} />
+        {[0, 1, 2].map(i => (
+          <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: i < 2 ? 12 : 0 }}>
+            <Skeleton height={36} width={36} radius={10} />
+            <View style={{ flex: 1, gap: 6 }}>
+              <Skeleton height={12} width={'60%'} radius={4} />
+              <Skeleton height={10} width={'40%'} radius={4} />
+            </View>
+          </View>
+        ))}
+      </SkeletonCard>
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        {[0, 1, 2].map(i => (
+          <SkeletonCard key={i} style={{ flex: 1 }}>
+            <Skeleton height={28} radius={6} style={{ marginBottom: 8 }} />
+            <Skeleton height={10} width={'70%'} radius={4} />
+          </SkeletonCard>
+        ))}
+      </View>
+    </ScrollView>
+  )
 
   /* ─────────────── STUDENT DASHBOARD ─────────────── */
   if (isStudent) return (

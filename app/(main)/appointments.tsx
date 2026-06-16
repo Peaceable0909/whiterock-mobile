@@ -9,6 +9,7 @@ import { AppHeader } from '@/components/AppHeader'
 import { supabase } from '@/lib/supabase'
 import { C } from '@/constants/colors'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Skeleton, SkeletonCard, EmptyState } from '@/components/Skeleton'
 
 const EVENT_TYPES = [
   { key: 'consultation',  label: 'Consultation',  icon: 'chatbubbles-outline',    color: '#1D4ED8' },
@@ -133,7 +134,32 @@ export default function AppointmentsScreen() {
     tab === 'upcoming' ? isUpcoming(e.starts_at) : !isUpcoming(e.starts_at)
   )
 
-  if (loading) return <View style={s.center}><ActivityIndicator color={C.blue} size="large" /></View>
+  if (loading) return (
+    <View style={s.bg}>
+      <AppHeader title="Appointments" />
+      <View style={{ padding: 14, gap: 10 }}>
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
+          <Skeleton height={32} width={90} radius={20} />
+          <Skeleton height={32} width={90} radius={20} />
+        </View>
+        {[0, 1, 2].map(i => (
+          <SkeletonCard key={i}>
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 10 }}>
+              <Skeleton height={38} width={38} radius={10} />
+              <View style={{ flex: 1, gap: 6 }}>
+                <Skeleton height={13} width={'60%'} radius={4} />
+                <Skeleton height={11} width={'40%'} radius={4} />
+              </View>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Skeleton height={24} width={90} radius={20} />
+              <Skeleton height={24} width={70} radius={20} />
+            </View>
+          </SkeletonCard>
+        ))}
+      </View>
+    </View>
+  )
 
   return (
     <View style={s.bg}>
@@ -161,13 +187,11 @@ export default function AppointmentsScreen() {
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load() }} tintColor={C.blue} />}
         ListEmptyComponent={
-          <View style={s.emptyBox}>
-            <Ionicons name="calendar-outline" size={44} color={C.slate200} />
-            <Text style={s.emptyTitle}>{tab === 'upcoming' ? 'No upcoming appointments' : 'No past appointments'}</Text>
-            {myRole !== 'student' && tab === 'upcoming' && (
-              <Text style={s.emptySub}>Tap + to schedule one</Text>
-            )}
-          </View>
+          <EmptyState
+            icon="calendar-outline"
+            title={tab === 'upcoming' ? 'No upcoming appointments' : 'No past appointments'}
+            subtitle={myRole !== 'student' && tab === 'upcoming' ? 'Tap + to schedule one' : undefined}
+          />
         }
         renderItem={({ item }) => {
           const meta = TYPE_MAP[item.type as EventType] ?? TYPE_MAP['other']

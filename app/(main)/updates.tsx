@@ -13,6 +13,7 @@ import { supabase } from '@/lib/supabase'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Skeleton, SkeletonCard, EmptyState } from '@/components/Skeleton'
 
 const CATEGORY_FILTERS = [
   { key: 'all',          label: 'All'         },
@@ -305,7 +306,32 @@ export default function UpdatesScreen() {
 
   const canPost = myRole === 'counselor' || myRole === 'agent' || myRole === 'admin'
 
-  if (loading) return <View style={g.center}><ActivityIndicator color={C.blue} size="large" /></View>
+  if (loading) return (
+    <View style={g.flex}>
+      <View style={{ padding: 14, paddingTop: insets.top + 8, gap: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+          <Skeleton height={20} width={20} radius={4} />
+          <Skeleton height={18} width={'40%'} radius={4} />
+        </View>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {[0, 1, 2, 3].map(i => <Skeleton key={i} height={30} width={70} radius={20} />)}
+        </View>
+        {[0, 1, 2].map(i => (
+          <SkeletonCard key={i}>
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 10 }}>
+              <Skeleton height={40} width={40} radius={10} />
+              <View style={{ flex: 1, gap: 6 }}>
+                <Skeleton height={13} width={'55%'} radius={4} />
+                <Skeleton height={11} width={'35%'} radius={4} />
+              </View>
+            </View>
+            <Skeleton height={12} radius={4} style={{ marginBottom: 6 }} />
+            <Skeleton height={12} width={'70%'} radius={4} />
+          </SkeletonCard>
+        ))}
+      </View>
+    </View>
+  )
 
   return (
     <View style={g.flex}>
@@ -336,11 +362,11 @@ export default function UpdatesScreen() {
           </>
         }
         ListEmptyComponent={
-          <View style={g.empty}>
-            <Ionicons name="newspaper-outline" size={44} color={C.slate200} />
-            <Text style={g.emptyTitle}>No updates yet</Text>
-            <Text style={g.emptySub}>Agency announcements will appear here</Text>
-          </View>
+          <EmptyState
+            icon="newspaper-outline"
+            title="No updates yet"
+            subtitle="Agency announcements will appear here"
+          />
         }
         renderItem={renderUpdate}
       />

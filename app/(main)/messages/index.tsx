@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
+import { Skeleton, EmptyState } from '@/components/Skeleton'
 
 const formatConvTime = (iso: string) => {
   const d = new Date(iso)
@@ -128,7 +129,23 @@ export default function MessagesScreen() {
 
   const filteredStudents = students.filter(s => !studentSearch || s.name.toLowerCase().includes(studentSearch.toLowerCase()))
 
-  if (loading) return <View style={[s.center, { paddingTop: insets.top }]}><ActivityIndicator color={C.blue} /></View>
+  if (loading) return (
+    <View style={[s.bg, { paddingTop: insets.top }]}>
+      <View style={{ padding: 12, paddingHorizontal: 16 }}>
+        <Skeleton height={38} radius={10} />
+      </View>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <View key={i} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12, borderBottomWidth: 1, borderBottomColor: C.slate100 }}>
+          <Skeleton height={48} width={48} radius={24} />
+          <View style={{ flex: 1, gap: 8 }}>
+            <Skeleton height={14} width={'55%'} radius={4} />
+            <Skeleton height={12} width={'75%'} radius={4} />
+          </View>
+          <Skeleton height={10} width={32} radius={4} />
+        </View>
+      ))}
+    </View>
+  )
 
   return (
     <View style={[s.bg, { paddingTop: insets.top }]}>
@@ -167,11 +184,11 @@ export default function MessagesScreen() {
         ItemSeparatorComponent={() => <View style={s.sep} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load() }} tintColor={C.blue} />}
         ListEmptyComponent={
-          <View style={s.empty}>
-            <Ionicons name="chatbubbles-outline" size={44} color={C.slate200} />
-            <Text style={s.emptyText}>No conversations yet</Text>
-            <Text style={s.emptySub}>{role === 'student' ? 'Messages from your agent will appear here' : 'Tap + to start a conversation'}</Text>
-          </View>
+          <EmptyState
+            icon="chatbubbles-outline"
+            title="No conversations yet"
+            subtitle={role === 'student' ? 'Messages from your agent will appear here' : 'Tap + to start a conversation'}
+          />
         }
         renderItem={({ item }) => {
           const other = role === 'student' ? (item.agent || item.counselor) : item.student

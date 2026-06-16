@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
+import { Skeleton, SkeletonCard, EmptyState } from '@/components/Skeleton'
 
 const ICON_NAMES: Record<string, string> = {
   message:   'chatbubble-outline',
@@ -74,7 +75,25 @@ export default function NotificationsScreen() {
     return () => { supabase.removeChannel(sub) }
   }, [])
 
-  if (loading) return <View style={[s.center, { paddingTop: insets.top }]}><ActivityIndicator color={C.blue} /></View>
+  if (loading) return (
+    <View style={[s.bg, { paddingTop: insets.top }]}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, gap: 12 }}>
+        <Skeleton height={28} width={28} radius={8} />
+        <Skeleton height={18} width={'45%'} radius={4} />
+      </View>
+      <View style={{ padding: 14, gap: 10 }}>
+        {Array.from({ length: 6 }).map((_, i) => (
+          <SkeletonCard key={i} style={{ flexDirection: 'row', gap: 12 }}>
+            <Skeleton height={40} width={40} radius={12} />
+            <View style={{ flex: 1, gap: 8 }}>
+              <Skeleton height={13} width={'70%'} radius={4} />
+              <Skeleton height={11} width={'50%'} radius={4} />
+            </View>
+          </SkeletonCard>
+        ))}
+      </View>
+    </View>
+  )
 
   return (
     <View style={[s.bg, { paddingTop: insets.top }]}>
@@ -92,11 +111,11 @@ export default function NotificationsScreen() {
           </View>
         }
         ListEmptyComponent={
-          <View style={s.empty}>
-            <Ionicons name="notifications-outline" size={40} color={C.slate200} />
-            <Text style={s.emptyTitle}>Nothing yet</Text>
-            <Text style={s.emptySub}>Messages, documents and visa updates land here</Text>
-          </View>
+          <EmptyState
+            icon="notifications-outline"
+            title="Nothing yet"
+            subtitle="Messages, documents and visa updates land here"
+          />
         }
         renderItem={({ item }) => {
           const iconName = ICON_NAMES[item.type] ?? 'information-circle-outline'
