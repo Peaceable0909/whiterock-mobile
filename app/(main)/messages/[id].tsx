@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import {
   View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ActivityIndicator, Image, Alert, AppState,
@@ -19,6 +19,64 @@ import { ColorPalette } from '@/constants/colors'
 
 const PAGE_SIZE = 50
 const API_BASE  = 'https://whiterock-connect.vercel.app'
+
+const MSG_URL_RE = /https?:\/\/[^\s<>"']+/g
+
+function getYouTubeId(url: string): string | null {
+  const m = url.match(/(?:youtube\.com\/(?:[^/?#]*[?&]v=|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/)
+  return m?.[1] ?? null
+}
+
+function MsgText({ text, isMe, C }: { text: string; isMe: boolean; C: ColorPalette }) {
+  const textStyle = { fontSize: 14, color: isMe ? C.white : C.navy, lineHeight: 20, paddingHorizontal: 14, paddingVertical: 10 } as const
+  const urlMatches = useMemo(() => [...text.matchAll(MSG_URL_RE)], [text])
+
+  if (urlMatches.length === 0) {
+    return <Text style={textStyle}>{text}</Text>
+  }
+
+  const parts: React.ReactNode[] = []
+  let last = 0
+  urlMatches.forEach((m, i) => {
+    const idx = m.index ?? 0
+    if (idx > last) parts.push(text.slice(last, idx))
+    const url = m[0]
+    parts.push(
+      <Text key={`u${i}`}
+        style={{ color: isMe ? 'rgba(255,255,255,0.9)' : C.blue, textDecorationLine: 'underline' }}
+        onPress={() => WebBrowser.openBrowserAsync(url)}>
+        {url}
+      </Text>
+    )
+    last = idx + url.length
+  })
+  if (last < text.length) parts.push(text.slice(last))
+
+  const ytId = urlMatches.map(m => getYouTubeId(m[0])).find(Boolean) ?? null
+
+  return (
+    <View>
+      <Text style={textStyle}>{parts}</Text>
+      {ytId ? (
+        <TouchableOpacity
+          onPress={() => WebBrowser.openBrowserAsync(`https://www.youtube.com/watch?v=${ytId}`)}
+          activeOpacity={0.85}
+          style={{ marginHorizontal: 10, marginBottom: 8, borderRadius: 10, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: isMe ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.1)' }}>
+          <Image
+            source={{ uri: `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` }}
+            style={{ width: '100%', aspectRatio: 16 / 9 }}
+            resizeMode="cover"
+          />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 7, backgroundColor: isMe ? 'rgba(255,255,255,0.12)' : '#F8FAFC' }}>
+            <Ionicons name="logo-youtube" size={14} color="#FF0000" />
+            <Text style={{ fontSize: 12, fontWeight: '600', color: isMe ? 'rgba(255,255,255,0.9)' : C.navy, flex: 1 }}>YouTube</Text>
+            <Ionicons name="open-outline" size={11} color={isMe ? 'rgba(255,255,255,0.5)' : C.slate400} />
+          </View>
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  )
+}
 
 const getInitials = (name: string) =>
   (name ?? '').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || '?'
@@ -470,7 +528,7 @@ export default function ChatScreen() {
               </View>
             </TouchableOpacity>
           ) : (
-            <Text style={[ms.text, isMe && ms.textMe]}>{item.content ?? ''}</Text>
+            <MsgText text={item.content ?? ''} isMe={isMe} C={C} />
           )}
 
           <View style={[ms.meta, isMe ? ms.metaMe : ms.metaThem]}>
