@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import {
   View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator, Image, Alert, AppState,
+  KeyboardAvoidingView, Modal, Platform, ActivityIndicator, Image, Alert, AppState,
   useWindowDimensions, Vibration,
 } from 'react-native'
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router'
@@ -112,7 +112,7 @@ export default function ChatScreen() {
   const { C, resolvedWallpaper } = useTheme()
   const ms = mkMS(C)
   const g = mkG(C)
-  const { top: safeTop } = useSafeAreaInsets()
+  const insets = useSafeAreaInsets()
   const { id }   = useLocalSearchParams<{ id: string }>()
   const router   = useRouter()
   const listRef            = useRef<FlatList>(null)
@@ -137,6 +137,7 @@ export default function ChatScreen() {
   const [isTyping, setIsTyping]   = useState(false)
   const [aiAssist, setAiAssist] = useState(false)
   const [aiDrafting, setAiDrafting] = useState(false)
+  const [profileModal, setProfileModal] = useState(false)
   const aiReplyingRef = useRef(false)
   const oldestTs   = useRef<string | null>(null)
   const latestMsgTs = useRef<string | null>(null)
@@ -183,7 +184,7 @@ export default function ChatScreen() {
 
       const [{ data: conv }, { data: dbUser }, { data: history }] = await Promise.all([
         supabase.from('conversations')
-          .select('*, student:student_id(id,name,avatar_url,is_online), agent:agent_id(id,name,avatar_url), counselor:counselor_id(id,name,avatar_url)')
+          .select('*, student:student_id(id,name,avatar_url,is_online), agent:agent_id(id,name,avatar_url,role,is_online), counselor:counselor_id(id,name,avatar_url,role,is_online)')
           .eq('id', id).single(),
         supabase.from('users').select('role').eq('id', user.id).single(),
         supabase.from('messages').select('*').eq('conversation_id', id)
@@ -557,29 +558,57 @@ export default function ChatScreen() {
 
   if (loading) return <View style={g.center}><ActivityIndicator color={C.blue} size="large" /></View>
 
+  const otherRole: string = (otherUser as any)?.role ?? ''
+  const otherRoleCap = otherRole ? otherRole.charAt(0).toUpperCase() + otherRole.slice(1) : ''
+
   return (
     <>
     <ImageModal uri={previewImg} onClose={() => setPreviewImg(null)} />
-    <KeyboardAvoidingView style={g.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? safeTop : 0}>
+
+    {/* Contact info bottom sheet */}
+    <Modal transparent animationType="slide" visible={profileModal} onRequestClose={() => setProfileModal(false)}>
+      <TouchableOpacity style={g.modalOverlay} activeOpacity={1} onPress={() => setProfileModal(false)}>
+        <View style={[g.infoSheet, { paddingBottom: insets.bottom + 24 }]}>
+          <View style={g.infoHandle} />
+          <View style={g.infoAvatarWrap}>
+            {otherUser?.avatar_url
+              ? <Image source={{ uri: otherUser.avatar_url }} style={g.infoAvatarImg} />
+              : <Text style={g.infoAvatarText}>{getInitials(otherUser?.name ?? 'WR')}</Text>}
+          </View>
+          <Text style={g.infoName}>{otherUser?.name ?? 'WhiteRock Counseling'}</Text>
+          {otherRoleCap ? <Text style={g.infoRole}>{otherRoleCap}</Text> : null}
+          <View style={[g.onlineRow, { justifyContent: 'center', marginTop: 8 }]}>
+            <View style={[g.onlineDot, !otherUser?.is_online && { backgroundColor: C.slate300 }]} />
+            <Text style={g.onlineTxt}>{otherUser?.is_online ? 'Online now' : 'Offline'}</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+
+    <KeyboardAvoidingView style={g.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 0}>
       {/* Header */}
-      <View style={g.header}>
+      <View style={[g.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => router.back()} style={g.backBtn}>
           <Ionicons name="arrow-back" size={22} color={C.navy} />
         </TouchableOpacity>
-        <View style={g.headerAvatar}>
-          {otherUser?.avatar_url
-            ? <Image source={{ uri: otherUser.avatar_url }} style={g.headerAvatarImg} />
-            : <Text style={g.headerAvatarText}>{getInitials(otherUser?.name ?? 'WR')}</Text>}
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={g.headerName} numberOfLines={1}>
-            {myRole === 'student' ? (otherUser?.name ?? 'WhiteRock Counseling') : (otherUser?.name ?? 'Student')}
-          </Text>
-          <View style={g.onlineRow}>
-            {otherUser?.is_online && <View style={g.onlineDot} />}
-            <Text style={g.onlineTxt}>{otherUser?.is_online ? 'Online' : 'Tap for info'}</Text>
+        <TouchableOpacity style={g.headerInfo} activeOpacity={0.7} onPress={() => setProfileModal(true)}>
+          <View style={g.headerAvatar}>
+            {otherUser?.avatar_url
+              ? <Image source={{ uri: otherUser.avatar_url }} style={g.headerAvatarImg} />
+              : <Text style={g.headerAvatarText}>{getInitials(otherUser?.name ?? 'WR')}</Text>}
           </View>
-        </View>
+          <View style={{ flex: 1 }}>
+            <Text style={g.headerName} numberOfLines={1}>
+              {myRole === 'student' ? (otherUser?.name ?? 'WhiteRock Counseling') : (otherUser?.name ?? 'Student')}
+            </Text>
+            <View style={g.onlineRow}>
+              {otherUser?.is_online && <View style={g.onlineDot} />}
+              <Text style={g.onlineTxt}>
+                {otherUser?.is_online ? 'Online' : (otherRoleCap || 'Tap for info')}
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
       </View>
 
       {/* Messages — wallpaper-aware */}
@@ -674,7 +703,7 @@ export default function ChatScreen() {
       )}
 
       {/* Input */}
-      <View style={g.bar}>
+      <View style={[g.bar, { paddingBottom: insets.bottom + 10 }]}>
         <TouchableOpacity onPress={pickAndSendMedia} disabled={uploading} style={g.attach}>
           <Ionicons name="attach-outline" size={20} color={uploading ? C.slate300 : C.slate500} />
         </TouchableOpacity>
@@ -741,7 +770,7 @@ const mkG = (C: ColorPalette) => StyleSheet.create({
   loadMoreBtn:    { alignSelf: 'center', marginBottom: 12, paddingHorizontal: 16, paddingVertical: 7, backgroundColor: C.white, borderRadius: 20, borderWidth: 1, borderColor: C.slate200, minWidth: 48, alignItems: 'center' },
   loadMoreTxt:    { fontSize: 12, color: C.blue, fontWeight: '600' },
   center:         { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg },
-  header:         { flexDirection: 'row', alignItems: 'center', backgroundColor: C.white, paddingTop: 52, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderColor: C.slate100 },
+  header:         { flexDirection: 'row', alignItems: 'center', backgroundColor: C.white, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderColor: C.slate100 },
   backBtn:        { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', marginRight: 6 },
   headerAvatar:   { width: 38, height: 38, borderRadius: 19, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', marginRight: 10, overflow: 'hidden' },
   headerAvatarImg:{ width: 38, height: 38, borderRadius: 19 },
@@ -765,7 +794,7 @@ const mkG = (C: ColorPalette) => StyleSheet.create({
   aiToggleText:   { fontSize: 11, fontWeight: '700', color: C.blue },
   aiDraftBtn:     { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 14, backgroundColor: C.blue + '18', borderWidth: 1, borderColor: C.blue + '35' },
   aiDraftText:    { fontSize: 11, fontWeight: '700', color: C.blue },
-  bar:            { flexDirection: 'row', alignItems: 'flex-end', padding: 10, paddingBottom: Platform.OS === 'ios' ? 28 : 10, backgroundColor: C.white, borderTopWidth: 1, borderColor: C.slate100, gap: 8 },
+  bar:            { flexDirection: 'row', alignItems: 'flex-end', padding: 10, backgroundColor: C.white, borderTopWidth: 1, borderColor: C.slate100, gap: 8 },
   attach:         { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: C.slate100, borderRadius: 12 },
   input:          { flex: 1, backgroundColor: C.bg, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: C.navy, maxHeight: 100 },
   sendBtn:        { width: 44, height: 44, borderRadius: 14, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
@@ -773,4 +802,15 @@ const mkG = (C: ColorPalette) => StyleSheet.create({
   dateSep:        { flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 10, paddingHorizontal: 4 },
   dateSepLine:    { flex: 1, height: 1, backgroundColor: C.slate200 },
   dateSepText:    { fontSize: 11, fontWeight: '700', color: C.slate400, paddingHorizontal: 6 },
+  // Header info tap area
+  headerInfo:     { flex: 1, flexDirection: 'row', alignItems: 'center' },
+  // Contact info bottom sheet
+  modalOverlay:   { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  infoSheet:      { backgroundColor: C.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, alignItems: 'center' },
+  infoHandle:     { width: 36, height: 4, borderRadius: 2, backgroundColor: C.slate200, marginBottom: 20 },
+  infoAvatarWrap: { width: 80, height: 80, borderRadius: 40, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', marginBottom: 12, overflow: 'hidden' },
+  infoAvatarImg:  { width: 80, height: 80, borderRadius: 40 },
+  infoAvatarText: { fontSize: 28, fontWeight: '800', color: C.white },
+  infoName:       { fontSize: 20, fontWeight: '800', color: C.navy, marginBottom: 2 },
+  infoRole:       { fontSize: 13, color: C.slate500, fontWeight: '600' },
 })

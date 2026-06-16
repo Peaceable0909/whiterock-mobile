@@ -212,6 +212,7 @@ export default function MoreScreen() {
           { label: 'Notifications', icon: 'notifications-outline', color: '#F59E0B', route: '/(main)/notifications' },
           { label: 'Appointments',  icon: 'calendar-outline',      color: '#16A34A', route: '/(main)/appointments'  },
           { label: 'Documents',     icon: 'folder-open-outline',   color: '#7C3AED', route: '/(main)/documents'     },
+          { label: 'Appearance',    icon: 'color-palette-outline', color: '#0D9488', route: '/(main)/settings'      },
         ] as const).map((item, i, arr) => (
           <TouchableOpacity
             key={item.label}
