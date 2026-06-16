@@ -3,14 +3,22 @@ import * as Device from 'expo-device'
 import { Platform } from 'react-native'
 import { supabase } from '@/lib/supabase'
 
-// Show notifications even while the app is open
+// Tracks which conversation the user is actively viewing so we can
+// suppress the notification banner for that conversation only.
+let _activeConvId: string | null = null
+export const setActiveConvId = (id: string | null) => { _activeConvId = id }
+
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
+  handleNotification: async (notification) => {
+    const data = notification.request.content.data as any
+    const isCurrentConv = data?.screen === 'messages' && data?.convId && data.convId === _activeConvId
+    return {
+      shouldShowBanner: !isCurrentConv,
+      shouldShowList: true,
+      shouldPlaySound: !isCurrentConv,
+      shouldSetBadge: !isCurrentConv,
+    }
+  },
 })
 
 // Ask permission, grab the FCM device token, save it so the server can push.

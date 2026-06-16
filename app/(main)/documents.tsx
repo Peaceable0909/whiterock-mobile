@@ -135,9 +135,11 @@ export default function DocumentsScreen() {
             try {
               const match = doc.url?.match(/\/documents\/(.+?)(\?|$)/)
               if (match?.[1]) {
-                await supabase.storage.from('documents').remove([decodeURIComponent(match[1])])
+                const { error: storageErr } = await supabase.storage.from('documents').remove([decodeURIComponent(match[1])])
+                if (storageErr) throw storageErr
               }
-              await supabase.from('documents').delete().eq('id', doc.id)
+              const { error: deleteErr } = await supabase.from('documents').delete().eq('id', doc.id)
+              if (deleteErr) throw deleteErr
               setDocs(prev => prev.filter(d => d.id !== doc.id))
             } catch (e: any) {
               Alert.alert('Delete failed', e.message)

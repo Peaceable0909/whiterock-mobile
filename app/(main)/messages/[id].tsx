@@ -13,6 +13,7 @@ import { ImageModal } from '@/components/ImageModal'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { uploadVideo } from '@/lib/cloudinary'
+import { setActiveConvId } from '@/lib/notifications'
 import { useColors, useTheme } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 
@@ -482,6 +483,11 @@ export default function ChatScreen() {
   }
 
   useFocusEffect(useCallback(() => { fetchMissed() }, [fetchMissed]))
+
+  useFocusEffect(useCallback(() => {
+    setActiveConvId(id)
+    return () => setActiveConvId(null)
+  }, [id]))
 
   if (loading) return <View style={g.center}><ActivityIndicator color={C.blue} size="large" /></View>
 
