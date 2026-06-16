@@ -96,6 +96,7 @@ export default function HomeScreen() {
   )
 
   const isStudent  = user?.role === 'student'
+  const isAgent    = user?.role === 'agent'
   const stageIdx   = profile ? Math.max(JOURNEY_STAGES.indexOf(profile.stage), 0) : 0
   const pct        = Math.round((stageIdx / (JOURNEY_STAGES.length - 1)) * 100)
   const firstName  = (user?.name ?? 'User').split(' ')[0]
@@ -342,26 +343,31 @@ export default function HomeScreen() {
     <ScrollView style={s.bg} contentContainerStyle={[s.content, { paddingTop: insets.top + 8, paddingBottom: 40 + insets.bottom }]} showsVerticalScrollIndicator={false}>
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingTop: 8, marginBottom: 20 }}>
         <View style={{ flex: 1 }}>
-          <Text style={s.overline}>Dashboard Overview</Text>
+          <Text style={s.overline}>{isAgent ? 'Recruitment Pipeline' : 'Dashboard Overview'}</Text>
           <Text style={s.heading}>Good morning, {firstName}.</Text>
         </View>
         <BellButton />
         <AvatarButton />
       </View>
 
-      <StaffStats userId={user?.id} />
+      {isAgent ? <AgentPipeline userId={user?.id} /> : <StaffStats userId={user?.id} />}
 
       <DailyBriefing firstName={firstName} userId={user?.id} />
 
       <View style={s.grid}>
-        {([
+        {(isAgent ? [
+          { label: 'Messages',     iconName: 'chatbubble-outline',  route: '/(main)/messages'     as const },
+          { label: 'Students',     iconName: 'people-outline',      route: '/(main)/students'     as const },
+          { label: 'Updates',      iconName: 'newspaper-outline',   route: '/(main)/updates'      as const },
+          { label: 'Appointments', iconName: 'calendar-outline',    route: '/(main)/appointments' as const },
+        ] : [
           { label: 'Messages', iconName: 'chatbubble-outline',    route: '/(main)/messages' as const },
           { label: 'Students', iconName: 'people-outline',        route: '/(main)/students' as const },
-          { label: 'AI Tools', iconName: 'hardware-chip-outline', route: '/(main)/ai' as const },
-          { label: 'Updates',  iconName: 'newspaper-outline',     route: '/(main)/updates' as const },
+          { label: 'AI Tools', iconName: 'hardware-chip-outline', route: '/(main)/ai'       as const },
+          { label: 'Updates',  iconName: 'newspaper-outline',     route: '/(main)/updates'  as const },
         ] as const).map(({ label, iconName, route }) => (
-          <TouchableOpacity key={label} style={s.gridCard} onPress={() => router.push(route)}>
-            <Ionicons name={iconName} size={22} color={C.blue} />
+          <TouchableOpacity key={label} style={s.gridCard} onPress={() => router.push(route as any)}>
+            <Ionicons name={iconName as any} size={22} color={C.blue} />
             <Text style={[s.gridLabel, { marginTop: 8 }]}>{label}</Text>
           </TouchableOpacity>
         ))}
@@ -467,6 +473,48 @@ function DailyBriefing({ firstName, userId }: { firstName: string; userId?: stri
       <Text style={{ fontSize: 14, color: C.white, lineHeight: 22, fontWeight: '500' }}>
         {displayed}<Text style={{ color: typing ? 'rgba(255,255,255,0.6)' : 'transparent' }}>▌</Text>
       </Text>
+    </View>
+  )
+}
+
+function AgentPipeline({ userId }: { userId?: string }) {
+  const C = useColors()
+  const [stats, setStats] = useState({ leads: 0, inProgress: 0, converted: 0, total: 0 })
+
+  useEffect(() => {
+    if (!userId) return
+    const load = async () => {
+      const { data: convs } = await supabase
+        .from('conversations').select('student_id').eq('agent_id', userId)
+      if (!convs?.length) return
+      const ids = convs.map((c: any) => c.student_id)
+      const { data: profiles } = await supabase
+        .from('student_profiles').select('stage').in('user_id', ids)
+      const p = profiles ?? []
+      setStats({
+        total:      p.length,
+        leads:      p.filter(x => ['lead','application_submitted'].includes(x.stage)).length,
+        inProgress: p.filter(x => ['offer_received','deposit_paid','cas_requested','cas_issued','visa_submitted'].includes(x.stage)).length,
+        converted:  p.filter(x => x.stage === 'visa_decision').length,
+      })
+    }
+    load()
+  }, [userId])
+
+  const ss = mkSS(C)
+  const items = [
+    { label: 'Leads',       val: stats.leads,      color: C.blue },
+    { label: 'In Progress', val: stats.inProgress, color: '#7C3AED' },
+    { label: 'Converted',   val: stats.converted,  color: '#059669' },
+  ]
+  return (
+    <View style={ss.statsCard}>
+      {items.map((item, i) => (
+        <View key={item.label} style={[ss.statItem, i < items.length - 1 && ss.statBorder]}>
+          <Text style={[ss.statNum, { color: item.color }]}>{item.val}</Text>
+          <Text style={ss.statLabel}>{item.label}</Text>
+        </View>
+      ))}
     </View>
   )
 }
