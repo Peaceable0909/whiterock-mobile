@@ -97,7 +97,6 @@ export default function HomeScreen() {
 
   const isStudent  = user?.role === 'student'
   const isAgent    = user?.role === 'agent'
-  const isAdmin    = user?.role === 'admin'
   const stageIdx   = profile ? Math.max(JOURNEY_STAGES.indexOf(profile.stage), 0) : 0
   const pct        = Math.round((stageIdx / (JOURNEY_STAGES.length - 1)) * 100)
   const firstName  = (user?.name ?? 'User').split(' ')[0]
@@ -352,17 +351,10 @@ export default function HomeScreen() {
       </View>
 
       {isAgent ? <AgentPipeline userId={user?.id} /> : <StaffStats userId={user?.id} />}
-
-
       <DailyBriefing firstName={firstName} userId={user?.id} />
 
       <View style={s.grid}>
-        {(isAdmin ? [
-          { label: 'Invite Codes', iconName: 'ticket-outline',      route: '/(main)/invite-codes' as const },
-          { label: 'Broadcast',    iconName: 'megaphone-outline',   route: '/(main)/broadcast'    as const },
-          { label: 'Students',     iconName: 'people-outline',      route: '/(main)/students'     as const },
-          { label: 'Updates',      iconName: 'newspaper-outline',   route: '/(main)/updates'      as const },
-        ] : isAgent ? [
+        {(isAgent ? [
           { label: 'Messages',     iconName: 'chatbubble-outline',  route: '/(main)/messages'     as const },
           { label: 'Students',     iconName: 'people-outline',      route: '/(main)/students'     as const },
           { label: 'Updates',      iconName: 'newspaper-outline',   route: '/(main)/updates'      as const },

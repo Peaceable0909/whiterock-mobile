@@ -5,6 +5,7 @@ import {
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
 import { C } from '@/constants/colors'
 
@@ -25,7 +26,8 @@ const ACTIONS = [
 ] as const
 
 export default function AdminDashboard() {
-  const router = useRouter()
+  const router  = useRouter()
+  const insets  = useSafeAreaInsets()
   const [stats, setStats]       = useState<any>(null)
   const [loading, setLoading]   = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -68,7 +70,7 @@ export default function AdminDashboard() {
   return (
     <ScrollView
       style={s.bg}
-      contentContainerStyle={{ padding: 16, paddingTop: 56, paddingBottom: 48 }}
+      contentContainerStyle={{ padding: 16, paddingTop: insets.top + 16, paddingBottom: 48 + insets.bottom }}
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load() }} tintColor={C.blue} />}
     >
