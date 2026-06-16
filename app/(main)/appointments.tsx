@@ -382,7 +382,7 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   modalHeader:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderColor: C.slate100 },
   modalTitle:     { fontSize: 16, fontWeight: '800', color: C.navy },
   fieldLabel:     { fontSize: 11, fontWeight: '700', color: C.slate400, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
-  input:          { backgroundColor: '#F8FAFC', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: C.navy, borderWidth: 1, borderColor: C.slate200 },
+  input:          { backgroundColor: C.slate100, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: C.navy, borderWidth: 1, borderColor: C.slate200 },
   typeChip:       { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: C.slate200, backgroundColor: C.white },
   typeChipText:   { fontSize: 12, fontWeight: '600', color: C.slate500 },
   studentChip:    { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: C.slate200, backgroundColor: C.white },

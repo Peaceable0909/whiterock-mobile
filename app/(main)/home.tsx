@@ -324,8 +324,8 @@ export default function HomeScreen() {
       </View>
       <TouchableOpacity style={s.card} onPress={() => router.push('/(main)/resources' as any)}>
         <View style={s.row}>
-          <View style={[s.iconCircle, { backgroundColor: '#FEF3C7' }]}>
-            <Ionicons name="library-outline" size={20} color="#D97706" />
+          <View style={[s.iconCircle, { backgroundColor: C.orange500 + '25' }]}>
+            <Ionicons name="library-outline" size={20} color={C.orange500} />
           </View>
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={s.cardTitle}>Resources & Guides</Text>
@@ -541,7 +541,7 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   headerAvatarText: { fontSize: 15, fontWeight: '800', color: C.white },
   card:             { backgroundColor: C.white, borderRadius: 20, padding: 18, marginBottom: 14, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
   row:              { flexDirection: 'row', alignItems: 'center' },
-  iconCircle:       { width: 40, height: 40, borderRadius: 12, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center' },
+  iconCircle:       { width: 40, height: 40, borderRadius: 12, backgroundColor: C.blue + '18', alignItems: 'center', justifyContent: 'center' },
   cardTitle:        { fontSize: 15, fontWeight: '700', color: C.navy },
   cardSub:          { fontSize: 12, color: C.slate400, marginTop: 2 },
   bigPct:           { fontSize: 28, fontWeight: '900', color: C.blue },
@@ -551,15 +551,15 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   nextStepBold:     { fontWeight: '600', color: C.slate500 },
   btn:              { height: 44, backgroundColor: C.blue, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', elevation: 2 },
   btnText:          { color: C.white, fontWeight: '700', fontSize: 14 },
-  onlineBadge:      { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0FDF4', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1, borderColor: '#BBF7D0' },
+  onlineBadge:      { flexDirection: 'row', alignItems: 'center', backgroundColor: C.green400 + '18', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1, borderColor: C.green400 + '40' },
   dot:              { width: 6, height: 6, borderRadius: 3, backgroundColor: '#22C55E', marginRight: 4 },
-  onlineText:       { fontSize: 9, fontWeight: '700', color: '#15803D' },
+  onlineText:       { fontSize: 9, fontWeight: '700', color: C.green400 },
   agentRow:         { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
   agentAvatar:      { width: 48, height: 48, borderRadius: 24, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   agentAvatarText:  { color: C.white, fontWeight: '700', fontSize: 16 },
   agentName:        { fontSize: 15, fontWeight: '700', color: C.navy },
   agentRole:        { fontSize: 12, color: C.slate500 },
-  aiCard:           { backgroundColor: '#EFF6FF', borderRadius: 20, padding: 18, marginBottom: 14, borderWidth: 1.5, borderColor: '#BFDBFE', shadowColor: '#1D4ED8', shadowOpacity: 0.1, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  aiCard:           { backgroundColor: C.blue + '18', borderRadius: 20, padding: 18, marginBottom: 14, borderWidth: 1.5, borderColor: C.blue + '35', shadowColor: C.blue, shadowOpacity: 0.1, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
   aiIconBox:        { width: 44, height: 44, borderRadius: 14, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
   aiDesc:           { fontSize: 13, color: C.slate500, lineHeight: 20 },
   grid:             { flexDirection: 'row', gap: 12, marginBottom: 14 },
@@ -575,8 +575,8 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   viewAll:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 14 },
   viewAllText:      { fontSize: 12, fontWeight: '700', color: C.blue, marginRight: 2 },
   sectionLabel:     { fontSize: 10, fontWeight: '800', color: C.slate400, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 10, marginTop: 6, paddingHorizontal: 2 },
-  visaBanner:       { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#ECFDF5', borderWidth: 1.5, borderColor: '#6EE7B7', borderRadius: 20, padding: 16, marginBottom: 14 },
+  visaBanner:       { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.green400 + '18', borderWidth: 1.5, borderColor: C.green400 + '50', borderRadius: 20, padding: 16, marginBottom: 14 },
   visaEmoji:        { fontSize: 28 },
-  visaBannerTitle:  { fontSize: 15, fontWeight: '800', color: '#065F46', marginBottom: 3 },
-  visaBannerSub:    { fontSize: 12, color: '#059669', lineHeight: 17 },
+  visaBannerTitle:  { fontSize: 15, fontWeight: '800', color: C.green400, marginBottom: 3 },
+  visaBannerSub:    { fontSize: 12, color: C.green400, lineHeight: 17 },
 })

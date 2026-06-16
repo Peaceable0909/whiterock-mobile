@@ -225,7 +225,7 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   roleText:        { fontSize: 10, fontWeight: '700', textTransform: 'capitalize' },
   statusBadge:     { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   statusText:      { fontSize: 10, fontWeight: '700' },
-  revokeBtn:       { width: 28, height: 28, borderRadius: 8, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center' },
+  revokeBtn:       { width: 28, height: 28, borderRadius: 8, backgroundColor: C.red500 + '18', alignItems: 'center', justifyContent: 'center' },
   modalBg:         { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   modal:           { backgroundColor: C.white, borderRadius: 24, padding: 24, margin: 12 },
   modalTitle:      { fontSize: 18, fontWeight: '800', color: C.navy },

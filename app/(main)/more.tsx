@@ -229,7 +229,7 @@ export default function MoreScreen() {
       <View style={s.card}>
         {/* Display name */}
         <View style={[s.row, s.border]}>
-          <View style={[s.iconBox, { backgroundColor: '#EFF6FF' }]}>
+          <View style={[s.iconBox, { backgroundColor: C.blue + '18' }]}>
             <Ionicons name="person-outline" size={18} color={C.blue} />
           </View>
           {editingName ? (
@@ -259,8 +259,8 @@ export default function MoreScreen() {
 
         {/* Phone */}
         <View style={[s.row, s.border]}>
-          <View style={[s.iconBox, { backgroundColor: '#F0FDF4' }]}>
-            <Ionicons name="call-outline" size={18} color="#16A34A" />
+          <View style={[s.iconBox, { backgroundColor: C.green400 + '18' }]}>
+            <Ionicons name="call-outline" size={18} color={C.green400} />
           </View>
           {editingPhone ? (
             <TextInput
@@ -286,14 +286,14 @@ export default function MoreScreen() {
           >
             {savingPhone
               ? <ActivityIndicator size="small" color={C.blue} />
-              : <Ionicons name={editingPhone ? 'checkmark-circle' : 'pencil-outline'} size={20} color={editingPhone ? '#16A34A' : C.slate400} />}
+              : <Ionicons name={editingPhone ? 'checkmark-circle' : 'pencil-outline'} size={20} color={editingPhone ? C.green400 : C.slate400} />}
           </TouchableOpacity>
         </View>
 
         {/* Email (read-only) */}
         <View style={[s.row, s.border]}>
-          <View style={[s.iconBox, { backgroundColor: '#FEF9C3' }]}>
-            <Ionicons name="mail-outline" size={18} color="#CA8A04" />
+          <View style={[s.iconBox, { backgroundColor: C.orange500 + '20' }]}>
+            <Ionicons name="mail-outline" size={18} color={C.orange500} />
           </View>
           <Text style={[s.rowLabel, { color: C.slate500 }]} numberOfLines={1}>{user?.email ?? ''}</Text>
           <Text style={s.readOnlyTag}>via auth</Text>
@@ -301,8 +301,8 @@ export default function MoreScreen() {
 
         {/* Change password */}
         <View style={s.row}>
-          <View style={[s.iconBox, { backgroundColor: '#FEF3C7' }]}>
-            <Ionicons name="key-outline" size={18} color="#D97706" />
+          <View style={[s.iconBox, { backgroundColor: C.orange500 + '25' }]}>
+            <Ionicons name="key-outline" size={18} color={C.orange500} />
           </View>
           <Text style={s.rowLabel}>Change Password</Text>
           <TouchableOpacity onPress={handleChangePassword} style={s.sendLinkBtn}>
@@ -333,7 +333,7 @@ export default function MoreScreen() {
       <Text style={s.sectionLabel}>NOTIFICATIONS</Text>
       <View style={s.card}>
         <View style={[s.row, s.border]}>
-          <View style={[s.iconBox, { backgroundColor: '#EFF6FF' }]}>
+          <View style={[s.iconBox, { backgroundColor: C.blue + '18' }]}>
             <Ionicons name="notifications-outline" size={18} color={C.blue} />
           </View>
           <View style={{ flex: 1 }}>
@@ -348,8 +348,8 @@ export default function MoreScreen() {
           />
         </View>
         <View style={s.row}>
-          <View style={[s.iconBox, { backgroundColor: '#F0FDF4' }]}>
-            <Ionicons name="mail-outline" size={18} color="#16A34A" />
+          <View style={[s.iconBox, { backgroundColor: C.green400 + '18' }]}>
+            <Ionicons name="mail-outline" size={18} color={C.green400} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={s.rowLabel}>Email Digest</Text>
@@ -358,8 +358,8 @@ export default function MoreScreen() {
           <Switch
             value={notifEmail}
             onValueChange={v => togglePref('email_digest', v)}
-            trackColor={{ false: C.slate200, true: '#16A34A66' }}
-            thumbColor={notifEmail ? '#16A34A' : C.slate400}
+            trackColor={{ false: C.slate200, true: C.green400 + '66' }}
+            thumbColor={notifEmail ? C.green400 : C.slate400}
           />
         </View>
       </View>
@@ -368,14 +368,14 @@ export default function MoreScreen() {
       <Text style={s.sectionLabel}>APP</Text>
       <View style={s.card}>
         <View style={[s.row, s.border]}>
-          <View style={[s.iconBox, { backgroundColor: '#EFF6FF' }]}>
+          <View style={[s.iconBox, { backgroundColor: C.blue + '18' }]}>
             <Ionicons name="information-circle-outline" size={18} color={C.blue} />
           </View>
           <Text style={s.rowLabel}>Version</Text>
           <Text style={s.rowValue}>v{Constants.expoConfig?.version ?? '1.0.0'}</Text>
         </View>
         <View style={s.row}>
-          <View style={[s.iconBox, { backgroundColor: '#F8FAFC' }]}>
+          <View style={[s.iconBox, { backgroundColor: C.slate100 }]}>
             <Ionicons name="shield-checkmark-outline" size={18} color={C.slate500} />
           </View>
           <Text style={s.rowLabel}>WhiteRock Connect</Text>
@@ -395,18 +395,18 @@ export default function MoreScreen() {
             ])
           }}
         >
-          <View style={[s.iconBox, { backgroundColor: '#FEF2F2' }]}>
-            <Ionicons name="log-out-outline" size={18} color="#EF4444" />
+          <View style={[s.iconBox, { backgroundColor: C.red500 + '18' }]}>
+            <Ionicons name="log-out-outline" size={18} color={C.red500} />
           </View>
-          <Text style={[s.rowLabel, { color: '#EF4444' }]}>Sign Out</Text>
+          <Text style={[s.rowLabel, { color: C.red500 }]}>Sign Out</Text>
           <Ionicons name="chevron-forward" size={15} color={C.slate300} />
         </TouchableOpacity>
         <TouchableOpacity style={s.row} onPress={handleDeleteAccount}>
-          <View style={[s.iconBox, { backgroundColor: '#FEF2F2' }]}>
-            <Ionicons name="trash-outline" size={18} color="#DC2626" />
+          <View style={[s.iconBox, { backgroundColor: C.red500 + '18' }]}>
+            <Ionicons name="trash-outline" size={18} color={C.red500} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[s.rowLabel, { color: '#DC2626' }]}>Delete Account</Text>
+            <Text style={[s.rowLabel, { color: C.red500 }]}>Delete Account</Text>
             <Text style={s.rowSub}>Permanently deletes all your data</Text>
           </View>
           <Ionicons name="chevron-forward" size={15} color={C.slate300} />
