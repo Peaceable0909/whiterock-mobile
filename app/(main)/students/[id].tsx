@@ -7,7 +7,8 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
-import { C } from '@/constants/colors'
+import { useColors } from '@/lib/theme'
+import { ColorPalette } from '@/constants/colors'
 
 const STAGES = ['lead','application_submitted','offer_received','deposit_paid','cas_requested','cas_issued','visa_submitted','visa_decision']
 const STAGE_LABEL: Record<string,string> = {
@@ -19,6 +20,7 @@ const STAGE_LABEL: Record<string,string> = {
 const API_BASE = 'https://whiterock-connect.vercel.app'
 
 export default function StudentProfileScreen() {
+  const C        = useColors()
   const { id }   = useLocalSearchParams<{ id: string }>()
   const router   = useRouter()
 
@@ -180,6 +182,7 @@ Summarize the application status and suggest 2-3 next steps.`
     ])
   }
 
+  const s = mkS(C)
   if (loading) return <View style={s.center}><ActivityIndicator color={C.blue} /></View>
   if (!student) return <View style={s.center}><Text>Student not found</Text></View>
 
@@ -434,7 +437,7 @@ Summarize the application status and suggest 2-3 next steps.`
   )
 }
 
-const s = StyleSheet.create({
+const mkS = (C: ColorPalette) => StyleSheet.create({
   bg:               { flex: 1, backgroundColor: C.bg },
   center:           { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header:           { flexDirection: 'row', alignItems: 'center', backgroundColor: C.white, paddingTop: 52, paddingBottom: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderColor: C.slate100 },

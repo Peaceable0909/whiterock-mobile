@@ -3,13 +3,15 @@ import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Activity
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
-import { C } from '@/constants/colors'
+import { useColors } from '@/lib/theme'
+import { ColorPalette } from '@/constants/colors'
 
 const STAGES = ['lead','application_submitted','offer_received','deposit_paid','cas_requested','cas_issued','visa_submitted','visa_decision']
 const STAGE_LABEL: Record<string,string> = { lead:'Lead', application_submitted:'Applied', offer_received:'Offer', deposit_paid:'Deposit', cas_requested:'CAS', cas_issued:'CAS Issued', visa_submitted:'Visa', visa_decision:'Decision' }
 const FILTERS = [{ key:'all', label:'All' },{ key:'application_submitted', label:'Applied' },{ key:'offer_received', label:'Offer' },{ key:'cas_requested', label:'CAS' },{ key:'visa_submitted', label:'Visa' }]
 
 export default function StudentsScreen() {
+  const C      = useColors()
   const router = useRouter()
   const [students, setStudents]   = useState<any[]>([])
   const [convMap, setConvMap]     = useState<Record<string, string>>({})
@@ -64,6 +66,7 @@ export default function StudentsScreen() {
   const casAlerts  = students.filter(s => s.profile?.stage === 'cas_requested').length
   const visaAlerts = students.filter(s => s.profile?.stage === 'visa_submitted').length
 
+  const s = mkS(C)
   if (loading) return <View style={s.center}><ActivityIndicator color={C.blue} /></View>
   if (role === 'student') return (
     <View style={s.center}><Text style={s.emptyText}>Students section is for staff only</Text></View>
@@ -156,7 +159,7 @@ export default function StudentsScreen() {
   )
 }
 
-const s = StyleSheet.create({
+const mkS = (C: ColorPalette) => StyleSheet.create({
   bg:           { flex: 1, backgroundColor: C.bg },
   center:       { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
   emptyText:    { fontSize: 14, color: C.slate400, fontWeight: '600' },
