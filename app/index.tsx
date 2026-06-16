@@ -2,9 +2,10 @@ import { useEffect } from 'react'
 import { View, ActivityIndicator } from 'react-native'
 import { useRouter } from 'expo-router'
 import { supabase } from '@/lib/supabase'
-import { C } from '@/constants/colors'
+import { useColors } from '@/lib/theme'
 
 export default function Index() {
+  const C      = useColors()
   const router = useRouter()
 
   useEffect(() => {
