@@ -654,7 +654,7 @@ export default function ChatScreen() {
             onPress={() => setAiAssist(v => !v)}
           >
             <Ionicons name="hardware-chip-outline" size={14} color={aiAssist ? C.white : C.blue} />
-            <Text style={[g.aiToggleText, aiAssist && { color: C.white }]}>AI Assist</Text>
+            <Text style={[g.aiToggleText, aiAssist && { color: C.white }]}>{aiAssist ? 'Assist ON' : 'Assist OFF'}</Text>
           </TouchableOpacity>
           {aiAssist && (
             <TouchableOpacity
