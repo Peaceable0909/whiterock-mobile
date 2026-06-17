@@ -8,7 +8,7 @@ import * as WebBrowser from 'expo-web-browser'
 import { Ionicons } from '@expo/vector-icons'
 import { AppHeader } from '@/components/AppHeader'
 import { ImageModal } from '@/components/ImageModal'
-import { supabase } from '@/lib/supabase'
+import { supabase, SUPABASE_URL, SUPABASE_ANON } from '@/lib/supabase'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -17,7 +17,6 @@ import { Skeleton, SkeletonCard } from '@/components/Skeleton'
 const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif', 'avif'])
 
 const API_BASE     = 'https://whiterock-connect.vercel.app'
-const SUPABASE_URL = 'https://bpranhebhhtvcgcmuegd.supabase.co'
 
 const DOC_CATEGORIES = [
   { key: 'all',          label: 'All',            icon: 'folder-outline'         },
@@ -124,6 +123,7 @@ export default function DocumentsScreen() {
         const xhr = new XMLHttpRequest()
         xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/documents/${path}`)
         xhr.setRequestHeader('Authorization', `Bearer ${session?.access_token}`)
+        xhr.setRequestHeader('apikey', SUPABASE_ANON)
         xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(xhr.responseText))
         xhr.onerror = () => reject(new Error('Upload failed'))
         const fd = new FormData()

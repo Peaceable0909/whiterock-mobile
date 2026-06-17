@@ -11,7 +11,7 @@ import * as ImagePicker from 'expo-image-picker'
 import * as WebBrowser from 'expo-web-browser'
 import { ImageModal } from '@/components/ImageModal'
 import { Ionicons } from '@expo/vector-icons'
-import { supabase } from '@/lib/supabase'
+import { supabase, SUPABASE_ANON } from '@/lib/supabase'
 import { uploadVideo } from '@/lib/cloudinary'
 import { setActiveConvId } from '@/lib/notifications'
 import { useColors, useTheme, BUBBLE_COLORS } from '@/lib/theme'
@@ -477,6 +477,7 @@ export default function ChatScreen() {
           const xhr = new XMLHttpRequest()
           xhr.open('POST', `https://bpranhebhhtvcgcmuegd.supabase.co/storage/v1/object/documents/${path}`)
           xhr.setRequestHeader('Authorization', `Bearer ${session?.access_token}`)
+          xhr.setRequestHeader('apikey', SUPABASE_ANON)
           xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(xhr.responseText))
           xhr.onerror = () => reject(new Error('Upload failed'))
           const fd = new FormData()

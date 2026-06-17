@@ -8,12 +8,11 @@ import { Ionicons } from '@expo/vector-icons'
 import Constants from 'expo-constants'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as ImagePicker from 'expo-image-picker'
-import { supabase } from '@/lib/supabase'
+import { supabase, SUPABASE_URL, SUPABASE_ANON } from '@/lib/supabase'
 import { useColors, useTheme, WALLPAPER_OPTIONS, ACCENT_COLORS, BUBBLE_COLORS, type ThemeMode } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 
 const VERSION    = Constants.expoConfig?.version ?? '1.0.0'
-const SUPABASE_URL = 'https://bpranhebhhtvcgcmuegd.supabase.co'
 
 const THEME_OPTIONS: { id: ThemeMode; label: string; icon: string }[] = [
   { id: 'light',  label: 'Light',   icon: 'sunny-outline' },
@@ -78,6 +77,7 @@ export default function SettingsScreen() {
         const xhr = new XMLHttpRequest()
         xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/avatars/${path}`)
         xhr.setRequestHeader('Authorization', `Bearer ${session?.access_token}`)
+        xhr.setRequestHeader('apikey', SUPABASE_ANON)
         xhr.setRequestHeader('x-upsert', 'true')
         xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(xhr.responseText))
         xhr.onerror = () => reject(new Error('Upload failed'))
