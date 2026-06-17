@@ -1,4 +1,4 @@
-import { View, TouchableOpacity, StyleSheet } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
@@ -43,7 +43,6 @@ export default function TabBar({ tab, onTabChange }: TabBarProps) {
             </TouchableOpacity>
           )
         })}
-      </View>
     </View>
   )
 }
