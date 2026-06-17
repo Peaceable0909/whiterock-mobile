@@ -317,7 +317,7 @@ export default function ChatScreen() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: [
-            { role: 'system', content: 'You are a UK student placement counselor at WhiteRock Connect. Draft a professional, empathetic reply to the student. Keep it concise.' },
+            { role: 'system', content: 'You are a university placement counselor at Apply Connect. Draft a professional, empathetic reply to the student. Keep it concise.' },
             ...apiMessages,
           ],
         }),
@@ -575,7 +575,7 @@ export default function ChatScreen() {
               ? <Image source={{ uri: otherUser.avatar_url }} style={g.infoAvatarImg} />
               : <Text style={g.infoAvatarText}>{getInitials(otherUser?.name ?? 'WR')}</Text>}
           </View>
-          <Text style={g.infoName}>{otherUser?.name ?? 'WhiteRock Counseling'}</Text>
+          <Text style={g.infoName}>{otherUser?.name ?? 'Apply Support'}</Text>
           {otherRoleCap ? <Text style={g.infoRole}>{otherRoleCap}</Text> : null}
           <View style={[g.onlineRow, { justifyContent: 'center', marginTop: 8 }]}>
             <View style={[g.onlineDot, !otherUser?.is_online && { backgroundColor: C.slate300 }]} />
@@ -599,7 +599,7 @@ export default function ChatScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={g.headerName} numberOfLines={1}>
-              {myRole === 'student' ? (otherUser?.name ?? 'WhiteRock Counseling') : (otherUser?.name ?? 'Student')}
+              {myRole === 'student' ? (otherUser?.name ?? 'Apply Support') : (otherUser?.name ?? 'Student')}
             </Text>
             <View style={g.onlineRow}>
               {otherUser?.is_online && <View style={g.onlineDot} />}

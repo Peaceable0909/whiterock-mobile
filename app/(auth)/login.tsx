@@ -124,9 +124,9 @@ export default function LoginScreen() {
         <View style={s.iconBox}>
           <Ionicons name="airplane-outline" size={30} color="#fff" />
         </View>
-        <Text style={s.wordmark}>WhiteRock Connect</Text>
+        <Text style={s.wordmark}>Connect</Text>
         <Text style={s.title}>Welcome Back</Text>
-        <Text style={s.subtitle}>Secure access to your global{'\n'}recruitment dashboard</Text>
+        <Text style={s.subtitle}>Secure access to your global{'\n'}placement dashboard</Text>
       </View>
 
       {/* Card */}
@@ -192,7 +192,7 @@ export default function LoginScreen() {
 
       <TouchableOpacity onPress={() => router.push('/(auth)/register')} style={s.switchRow}>
         <Text style={s.registerLink}>
-          New to WhiteRock?{' '}
+          New to Connect?{' '}
           <Text style={s.registerBold}>Create account</Text>
         </Text>
       </TouchableOpacity>

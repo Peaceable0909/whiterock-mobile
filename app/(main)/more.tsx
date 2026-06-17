@@ -391,8 +391,8 @@ export default function MoreScreen() {
           <View style={[s.iconBox, { backgroundColor: C.slate100 }]}>
             <Ionicons name="shield-checkmark-outline" size={18} color={C.slate500} />
           </View>
-          <Text style={s.rowLabel}>WhiteRock Connect</Text>
-          <Text style={s.rowValue}>UK Placement</Text>
+          <Text style={s.rowLabel}>Apply Connect</Text>
+          <Text style={s.rowValue}>University Placement</Text>
         </View>
       </View>
 

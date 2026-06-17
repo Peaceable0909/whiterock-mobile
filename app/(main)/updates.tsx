@@ -184,7 +184,7 @@ export default function UpdatesScreen() {
     try {
       await Share.share({
         title: update.title,
-        message: `${update.title}\n\n${update.content ?? ''}\n\n— WhiteRock Connect`,
+        message: `${update.title}\n\n${update.content ?? ''}\n\n— Apply Connect`,
       })
     } catch { /* user cancelled */ }
   }
@@ -235,7 +235,7 @@ export default function UpdatesScreen() {
                 : <Text style={c.authorInitials}>{getInitials(author?.name ?? 'WR')}</Text>}
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={c.authorName}>{author?.name ?? 'WhiteRock Connect'}</Text>
+              <Text style={c.authorName}>{author?.name ?? 'Apply Connect'}</Text>
               <Text style={c.authorTime}>{formatRelativeTime(item.created_at)}</Text>
             </View>
             <View style={[c.catBadge, { backgroundColor: catColor.bg }]}>

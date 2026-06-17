@@ -90,7 +90,7 @@ export default function AIScreen() {
     try {
       const context = buildContext()
       const apiMessages = [
-        ...(context ? [{ role: 'system', content: `You are the WhiteRock Connect AI assistant. ${context} Always answer based on this student's specific situation.` }] : []),
+        ...(context ? [{ role: 'system', content: `You are the Connect AI assistant. ${context} Always answer based on this student's specific situation.` }] : []),
         ...next.map(m => ({ role: m.role, content: m.content })),
       ]
 
@@ -145,7 +145,7 @@ export default function AIScreen() {
       <View style={[s.header, { paddingTop: insets.top + 8 }]}>
         <View style={s.botAvatar}><Ionicons name="hardware-chip-outline" size={20} color={C.white} /></View>
         <View style={{ flex: 1 }}>
-          <Text style={s.headerTitle}>WhiteRock AI</Text>
+          <Text style={s.headerTitle}>Apply AI</Text>
           <View style={s.onlineRow}>
             <View style={s.dot} />
             <Text style={s.onlineTxt}>

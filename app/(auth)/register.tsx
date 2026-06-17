@@ -74,9 +74,9 @@ export default function RegisterScreen() {
         <View style={s.iconBox}>
           <Ionicons name="airplane-outline" size={30} color="#fff" />
         </View>
-        <Text style={s.wordmark}>WhiteRock Connect</Text>
+        <Text style={s.wordmark}>Connect</Text>
         <Text style={s.title}>Create Account</Text>
-        <Text style={s.subtitle}>Invite-only access · UK Student Placement</Text>
+        <Text style={s.subtitle}>Invite-only access · University Placement</Text>
       </View>
 
       <View style={s.card}>
@@ -106,7 +106,7 @@ export default function RegisterScreen() {
         </View>
         {codeRole
           ? <Text style={s.codeOk}>✓ You&apos;ll join as: <Text style={{ textTransform: 'capitalize' }}>{codeRole}</Text></Text>
-          : <Text style={s.codeHint}>Don&apos;t have a code? Ask your WhiteRock agent.</Text>}
+          : <Text style={s.codeHint}>Don&apos;t have a code? Ask your Apply agent.</Text>}
 
         <Text style={[s.label, { marginTop: 20 }]}>FULL NAME</Text>
         <View style={s.inputWrap}>
@@ -149,7 +149,7 @@ export default function RegisterScreen() {
         </TouchableOpacity>
       </View>
 
-      <Text style={s.version}>v{VERSION} · WhiteRock Connect</Text>
+      <Text style={s.version}>v{VERSION} · Connect</Text>
     </ScrollView>
   )
 }

@@ -397,8 +397,8 @@ export default function SettingsScreen() {
             <View style={[s.iconBox, { backgroundColor: '#F0FDF4' }]}>
               <Ionicons name="shield-checkmark-outline" size={18} color="#16A34A" />
             </View>
-            <Text style={s.rowLabel}>WhiteRock Connect</Text>
-            <Text style={s.rowValue}>UK Student Placement</Text>
+            <Text style={s.rowLabel}>Connect</Text>
+            <Text style={s.rowValue}>University Placement</Text>
           </View>
         </View>
 

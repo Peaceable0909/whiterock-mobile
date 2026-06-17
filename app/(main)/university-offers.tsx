@@ -27,7 +27,7 @@ const STAGE_TASKS: Record<string, { text: string; done?: boolean }[]> = {
     { text: 'Read your offer letter carefully' },
     { text: 'Check all conditional requirements' },
     { text: 'Accept your offer on UCAS Track' },
-    { text: 'Confirm your place with WhiteRock' },
+    { text: 'Confirm your place with Apply' },
   ],
   deposit_paid: [
     { text: 'Pay tuition deposit to university', done: true },
