@@ -48,38 +48,53 @@ export default function MoreScreen() {
   useEffect(() => { load() }, [])
 
   const changeAvatar = async () => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (!perm.granted) { Alert.alert('Permission needed', 'Allow photo access in Settings.'); return }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.85,
-    })
-    if (result.canceled || !result.assets?.[0]) return
-    const asset = result.assets[0]
-    const ext = asset.uri.split('.').pop() ?? 'jpg'
-    const path = `${user.id}/avatar.${ext}`
-    setUploading(true)
     try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
+      if (!perm.granted) {
+        Alert.alert('Permission needed', 'Allow photo access in Settings to change your profile photo.')
+        return
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+      })
+      if (result.canceled || !result.assets?.[0]) return
+
+      const asset = result.assets[0]
+      const ext  = (asset.uri.split('.').pop() ?? 'jpg').toLowerCase()
+      const mime = asset.mimeType ?? (ext === 'png' ? 'image/png' : 'image/jpeg')
+      const path = `${user.id}/avatar.${ext}`
+
+      setUploading(true)
       const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('Not signed in — please log out and back in.')
+
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest()
         xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/avatars/${path}`)
-        xhr.setRequestHeader('Authorization', `Bearer ${session?.access_token}`)
+        xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`)
         xhr.setRequestHeader('x-upsert', 'true')
-        xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(xhr.responseText))
-        xhr.onerror = () => reject(new Error('Upload failed'))
+        xhr.onload = () => {
+          if (xhr.status < 300) resolve()
+          else reject(new Error(`Storage error ${xhr.status}: ${xhr.responseText}`))
+        }
+        xhr.onerror = () => reject(new Error('Network error — check your connection.'))
         const fd = new FormData()
-        fd.append('file', { uri: asset.uri, name: `avatar.${ext}`, type: asset.mimeType ?? 'image/jpeg' } as any)
+        fd.append('file', { uri: asset.uri, name: `avatar.${ext}`, type: mime } as any)
         xhr.send(fd)
       })
+
       const url = `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}?t=${Date.now()}`
       const { error: updateErr } = await supabase.from('users').update({ avatar_url: url }).eq('id', user.id)
-      if (updateErr) throw updateErr
+      if (updateErr) throw new Error(`DB error: ${updateErr.message}`)
+
       setUser((u: any) => ({ ...u, avatar_url: url }))
+      Alert.alert('Done!', 'Your profile photo has been updated.')
     } catch (e: any) {
-      Alert.alert('Upload failed', e.message)
+      Alert.alert('Could not update photo', e.message ?? 'An unknown error occurred.')
     } finally {
       setUploading(false)
     }
@@ -193,7 +208,11 @@ export default function MoreScreen() {
       <View style={s.profileCard}>
         <TouchableOpacity style={s.avatarWrap} onPress={changeAvatar} disabled={uploading} accessibilityLabel="Change profile photo">
           {user?.avatar_url ? (
-            <Image source={{ uri: user.avatar_url }} style={s.avatarImg} />
+            <Image
+              source={{ uri: user.avatar_url }}
+              style={s.avatarImg}
+              onError={() => setUser((u: any) => ({ ...u, avatar_url: null }))}
+            />
           ) : (
             <View style={s.avatarFallback}>
               <Text style={s.avatarInitials}>{initials}</Text>
