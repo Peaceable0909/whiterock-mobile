@@ -157,6 +157,7 @@ export default function MoreScreen() {
 
   const initials = (user?.name ?? 'U').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
   const roleCap = ((user?.role ?? 'student') as string).charAt(0).toUpperCase() + ((user?.role ?? 'student') as string).slice(1)
+  const canGoBack = router.canGoBack()
 
   if (loading) return <View style={s.center}><ActivityIndicator color={C.blue} size="large" /></View>
 
@@ -171,9 +172,13 @@ export default function MoreScreen() {
 
       {/* ── Header ── */}
       <View style={s.pageHeader}>
-        <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={22} color={C.navy} />
-        </TouchableOpacity>
+        {canGoBack ? (
+          <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={22} color={C.navy} />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 40 }} />
+        )}
         <Text style={s.pageTitle}>Profile & Settings</Text>
         <View style={{ width: 40 }} />
       </View>
@@ -207,12 +212,16 @@ export default function MoreScreen() {
       <Text style={s.sectionLabel}>QUICK ACCESS</Text>
       <View style={s.card}>
         {([
-          { label: 'AI Assistant',  icon: 'hardware-chip-outline', color: '#6366F1', route: '/(main)/ai'            },
-          { label: 'Updates',       icon: 'newspaper-outline',     color: C.blue,    route: '/(main)/updates'       },
-          { label: 'Notifications', icon: 'notifications-outline', color: '#F59E0B', route: '/(main)/notifications' },
-          { label: 'Appointments',  icon: 'calendar-outline',      color: '#16A34A', route: '/(main)/appointments'  },
-          { label: 'Documents',     icon: 'folder-open-outline',   color: '#7C3AED', route: '/(main)/documents'     },
-          { label: 'Appearance',    icon: 'color-palette-outline', color: '#0D9488', route: '/(main)/settings'      },
+          { label: 'AI Assistant',  icon: 'hardware-chip-outline',    color: '#6366F1', route: '/(main)/ai'            },
+          { label: 'Updates',       icon: 'newspaper-outline',        color: C.blue,    route: '/(main)/updates'       },
+          { label: 'Notifications', icon: 'notifications-outline',    color: '#F59E0B', route: '/(main)/notifications' },
+          { label: 'Appointments',  icon: 'calendar-outline',         color: '#16A34A', route: '/(main)/appointments'  },
+          { label: 'Documents',     icon: 'folder-open-outline',      color: '#7C3AED', route: '/(main)/documents'     },
+          { label: 'Tasks',         icon: 'checkbox-outline',         color: '#8B5CF6', route: '/(main)/tasks'         },
+          { label: 'Calendar',      icon: 'calendar-clear-outline',   color: '#0EA5E9', route: '/(main)/calendar'      },
+          { label: 'Groups',        icon: 'people-circle-outline',    color: '#F59E0B', route: '/(main)/groups'        },
+          { label: 'My Profile',    icon: 'person-circle-outline',    color: '#EC4899', route: '/(main)/my-profile'    },
+          { label: 'Appearance',    icon: 'color-palette-outline',    color: '#0D9488', route: '/(main)/settings'      },
         ] as const).map((item, i, arr) => (
           <TouchableOpacity
             key={item.label}

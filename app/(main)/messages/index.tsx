@@ -224,7 +224,7 @@ export default function MessagesScreen() {
 
       {/* FAB — staff: new conversation; student: go to AI */}
       <TouchableOpacity
-        style={s.fab}
+        style={[s.fab, { bottom: 20 + insets.bottom }]}
         onPress={role === 'student' ? () => router.push('/(main)/ai') : openNewConvModal}
         accessibilityLabel={role === 'student' ? 'Open AI' : 'New conversation'}
       >

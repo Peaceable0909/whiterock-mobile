@@ -18,6 +18,24 @@ export const WALLPAPER_OPTIONS = [
   { id: 'lavender', name: 'Lavender', color: '#EDE9FE' },
 ]
 
+export const ACCENT_COLORS = [
+  { id: 'blue',     name: 'Blue',     color: '#3B82F6' },
+  { id: 'purple',   name: 'Purple',   color: '#8B5CF6' },
+  { id: 'pink',     name: 'Pink',     color: '#EC4899' },
+  { id: 'emerald',  name: 'Emerald',  color: '#10B981' },
+  { id: 'orange',   name: 'Orange',   color: '#F59E0B' },
+  { id: 'red',      name: 'Red',      color: '#EF4444' },
+]
+
+export const BUBBLE_COLORS = [
+  { id: 'blue',     name: 'Blue',     color: '#3B82F6' },
+  { id: 'purple',   name: 'Purple',   color: '#8B5CF6' },
+  { id: 'pink',     name: 'Pink',     color: '#EC4899' },
+  { id: 'emerald',  name: 'Emerald',  color: '#10B981' },
+  { id: 'orange',   name: 'Orange',   color: '#F59E0B' },
+  { id: 'teal',     name: 'Teal',     color: '#0D9488' },
+]
+
 export const WALLPAPER_COLORS: Record<string, string> = Object.fromEntries(
   WALLPAPER_OPTIONS.filter(w => w.id && w.color).map(w => [w.id, w.color!])
 )
@@ -32,12 +50,18 @@ type Ctx = {
   wallpaper: string
   setWallpaper: (w: string) => void
   resolvedWallpaper: ResolvedWallpaper | null
+  accentColor: string
+  setAccentColor: (c: string) => void
+  bubbleColor: string
+  setBubbleColor: (c: string) => void
 }
 
 const ThemeCtx = createContext<Ctx>({
   mode: 'system', isDark: false, C: LIGHT,
   setMode: () => {}, wallpaper: '', setWallpaper: () => {},
   resolvedWallpaper: null,
+  accentColor: 'blue', setAccentColor: () => {},
+  bubbleColor: 'blue', setBubbleColor: () => {},
 })
 
 function resolveWp(wp: string): ResolvedWallpaper | null {
@@ -50,6 +74,8 @@ function resolveWp(wp: string): ResolvedWallpaper | null {
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [mode, setModeState]           = useState<ThemeMode>('system')
   const [wallpaper, setWallpaperState] = useState('')
+  const [accentColor, setAccentColorState] = useState('blue')
+  const [bubbleColor, setBubbleColorState] = useState('blue')
   const [systemDark, setSystemDark]    = useState(Appearance.getColorScheme() === 'dark')
   const isDark  = mode === 'dark' || (mode === 'system' && systemDark)
 
@@ -63,9 +89,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     Promise.all([
       AsyncStorage.getItem('app_theme'),
       AsyncStorage.getItem('app_wallpaper'),
-    ]).then(([t, w]) => {
+      AsyncStorage.getItem('app_accent_color'),
+      AsyncStorage.getItem('app_bubble_color'),
+    ]).then(([t, w, ac, bc]) => {
       if (t === 'light' || t === 'dark' || t === 'system') setModeState(t)
       if (w !== null) setWallpaperState(w)
+      if (ac !== null) setAccentColorState(ac)
+      if (bc !== null) setBubbleColorState(bc)
     })
 
     // Sync from Supabase for cross-device persistence
@@ -80,6 +110,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       if (p.mobile_wallpaper !== undefined) {
         setWallpaperState(p.mobile_wallpaper)
         AsyncStorage.setItem('app_wallpaper', p.mobile_wallpaper)
+      }
+      if (p.mobile_accent_color !== undefined) {
+        setAccentColorState(p.mobile_accent_color)
+        AsyncStorage.setItem('app_accent_color', p.mobile_accent_color)
+      }
+      if (p.mobile_bubble_color !== undefined) {
+        setBubbleColorState(p.mobile_bubble_color)
+        AsyncStorage.setItem('app_bubble_color', p.mobile_bubble_color)
       }
     }).catch(() => {})
   }, [])
@@ -115,11 +153,25 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     persistPrefs('mobile_wallpaper', w)
   }
 
+  const setAccentColor = (ac: string) => {
+    setAccentColorState(ac)
+    AsyncStorage.setItem('app_accent_color', ac)
+    persistPrefs('mobile_accent_color', ac)
+  }
+
+  const setBubbleColor = (bc: string) => {
+    setBubbleColorState(bc)
+    AsyncStorage.setItem('app_bubble_color', bc)
+    persistPrefs('mobile_bubble_color', bc)
+  }
+
   return (
     <ThemeCtx.Provider value={{
       mode, isDark, C: isDark ? DARK : LIGHT,
       setMode, wallpaper, setWallpaper,
       resolvedWallpaper: resolveWp(wallpaper),
+      accentColor, setAccentColor,
+      bubbleColor, setBubbleColor,
     }}>
       {children}
     </ThemeCtx.Provider>

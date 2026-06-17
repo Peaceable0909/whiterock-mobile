@@ -9,7 +9,7 @@ import Constants from 'expo-constants'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as ImagePicker from 'expo-image-picker'
 import { supabase } from '@/lib/supabase'
-import { useColors, useTheme, WALLPAPER_OPTIONS, type ThemeMode } from '@/lib/theme'
+import { useColors, useTheme, WALLPAPER_OPTIONS, ACCENT_COLORS, BUBBLE_COLORS, type ThemeMode } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 
 const VERSION    = Constants.expoConfig?.version ?? '1.0.0'
@@ -26,7 +26,7 @@ export default function SettingsScreen() {
   const s          = mkS(C)
   const router     = useRouter()
   const insets     = useSafeAreaInsets()
-  const { mode, setMode, wallpaper, setWallpaper } = useTheme()
+  const { mode, setMode, wallpaper, setWallpaper, accentColor, setAccentColor, bubbleColor, setBubbleColor } = useTheme()
 
   const [user, setUser]               = useState<any>(null)
   const [loading, setLoading]         = useState(true)
@@ -295,6 +295,72 @@ export default function SettingsScreen() {
               </View>
             </View>
           )}
+        </View>
+
+        {/* Accent Color */}
+        <View style={s.section}>
+          <View style={[s.row, s.borderBottom, { paddingBottom: 12 }]}>
+            <View style={[s.iconBox, { backgroundColor: '#F5F3FF' }]}>
+              <Ionicons name="sparkles-outline" size={18} color="#8B5CF6" />
+            </View>
+            <Text style={s.rowLabel}>Accent Color</Text>
+          </View>
+          <View style={s.swatchGrid}>
+            {ACCENT_COLORS.map(ac => {
+              const active = accentColor === ac.id
+              return (
+                <TouchableOpacity
+                  key={ac.id}
+                  style={[
+                    s.swatch,
+                    { backgroundColor: ac.color },
+                    active && s.swatchActive,
+                  ]}
+                  onPress={() => setAccentColor(ac.id)}
+                >
+                  {active && (
+                    <View style={s.swatchCheck}>
+                      <Ionicons name="checkmark" size={12} color={C.white} />
+                    </View>
+                  )}
+                  <Text style={s.swatchLabel}>{ac.name}</Text>
+                </TouchableOpacity>
+              )
+            })}
+          </View>
+        </View>
+
+        {/* Chat Bubble Color */}
+        <View style={s.section}>
+          <View style={[s.row, s.borderBottom, { paddingBottom: 12 }]}>
+            <View style={[s.iconBox, { backgroundColor: '#FEF3C7' }]}>
+              <Ionicons name="chatbubbles-outline" size={18} color="#F59E0B" />
+            </View>
+            <Text style={s.rowLabel}>Chat Bubble Color</Text>
+          </View>
+          <View style={s.swatchGrid}>
+            {BUBBLE_COLORS.map(bc => {
+              const active = bubbleColor === bc.id
+              return (
+                <TouchableOpacity
+                  key={bc.id}
+                  style={[
+                    s.swatch,
+                    { backgroundColor: bc.color },
+                    active && s.swatchActive,
+                  ]}
+                  onPress={() => setBubbleColor(bc.id)}
+                >
+                  {active && (
+                    <View style={s.swatchCheck}>
+                      <Ionicons name="checkmark" size={12} color={C.white} />
+                    </View>
+                  )}
+                  <Text style={s.swatchLabel}>{bc.name}</Text>
+                </TouchableOpacity>
+              )
+            })}
+          </View>
         </View>
 
         {/* Reset */}
