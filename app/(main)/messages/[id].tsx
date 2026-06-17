@@ -352,7 +352,7 @@ export default function ChatScreen() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: [
-            { role: 'system', content: 'You are a university placement counselor at Apply Connect. Draft a professional, empathetic reply to the student. Keep it concise.' },
+            { role: 'system', content: 'You are a WhiteRock Connect counselor drafting a reply to a student viewing it on a mobile phone. Apply mobile-friendly formatting: short paragraphs separated by blank lines, **bold** for key values (fees, statuses, document names), bullet points with • for unordered lists, and numbered steps for sequences. Keep the reply professional, warm, and concise. Never send walls of text.' },
             ...apiMessages,
           ],
         }),
