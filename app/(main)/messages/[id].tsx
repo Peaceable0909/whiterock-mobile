@@ -358,7 +358,15 @@ export default function ChatScreen() {
         }),
       })
       const { reply } = await res.json()
-      if (reply) setInput(reply)
+      if (reply) {
+        // Fix inline lists before putting into the input box
+        const fixed = reply
+          .replace(/([^.\n!?]):\s+(\d{1,2}\.\s)/g, '$1:\n\n$2')
+          .replace(/([.!?])\s+(\d{1,2}\.\s)/g, '$1\n$2')
+          .replace(/\n{3,}/g, '\n\n')
+          .trim()
+        setInput(fixed)
+      }
     } catch {
       Alert.alert('AI Draft', 'Could not generate a draft. Try again.')
     } finally {
