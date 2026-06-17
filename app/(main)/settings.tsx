@@ -283,7 +283,7 @@ export default function SettingsScreen() {
           </View>
 
           {/* Wallpaper preview strip */}
-          {previewWp && (
+          {!!previewWp && (
             <View style={s.previewStrip}>
               <View style={[
                 s.previewBubble,
