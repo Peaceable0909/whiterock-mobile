@@ -1,6 +1,5 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
+import { View, TouchableOpacity, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 
@@ -14,7 +13,6 @@ interface TabBarProps {
 export default function TabBar({ tab, onTabChange }: TabBarProps) {
   const C = useColors()
   const s = mkS(C)
-  const insets = useSafeAreaInsets()
 
   const tabs: { key: Tab; label: string; icon: string }[] = [
     { key: 'overview',   label: 'Overview',   icon: 'person-outline'     },
@@ -24,14 +22,7 @@ export default function TabBar({ tab, onTabChange }: TabBarProps) {
   ]
 
   return (
-    <View style={[s.header, { paddingTop: insets.top + 10 }]}>
-      <TouchableOpacity onPress={() => {}} style={s.backBtn} disabled>
-        <Ionicons name="arrow-back" size={22} color={C.navy} />
-      </TouchableOpacity>
-      <Text style={s.headerTitle}>My Profile</Text>
-      <View style={{ width: 40 }} />
-
-      <View style={s.tabBar}>
+    <View style={s.tabBar}>
         {tabs.map(t => {
           const active = tab === t.key
           return (
@@ -58,9 +49,6 @@ export default function TabBar({ tab, onTabChange }: TabBarProps) {
 }
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
-  header:         { backgroundColor: C.white, borderBottomWidth: 1, borderColor: C.slate100 },
-  backBtn:        { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle:    { fontSize: 18, fontWeight: '800', color: C.navy },
   tabBar:         { flexDirection: 'row', backgroundColor: C.white, borderBottomWidth: 1, borderColor: C.slate100 },
   tabBtn:         { flex: 1, alignItems: 'center', paddingVertical: 12, gap: 4 },
   tabBtnActive:   { borderBottomWidth: 3, borderBottomColor: C.blue },
