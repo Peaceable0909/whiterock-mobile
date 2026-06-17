@@ -173,6 +173,7 @@ export default function ChatScreen() {
   const [aiAssist, setAiAssist] = useState(false)
   const [aiDrafting, setAiDrafting] = useState(false)
   const [profileModal, setProfileModal] = useState(false)
+  const [aiEnabled, setAiEnabled]   = useState(true)
   const aiReplyingRef = useRef(false)
   const oldestTs   = useRef<string | null>(null)
   const latestMsgTs = useRef<string | null>(null)
@@ -231,6 +232,7 @@ export default function ChatScreen() {
       if (conv) {
         const other = role === 'student' ? (conv.counselor || conv.agent) : conv.student
         setOther(other)
+        setAiEnabled(conv.ai_enabled ?? true)
       }
       const ordered = (history ?? []).reverse()
       setMsgs(ordered)
@@ -274,6 +276,13 @@ export default function ChatScreen() {
         }, (payload) => {
           const updated = payload.new as any
           setMsgs(prev => prev.map(m => m.id === updated.id ? { ...m, ...updated } : m))
+        })
+        .on('postgres_changes', {
+          event: 'UPDATE', schema: 'public', table: 'conversations',
+          filter: `id=eq.${id}`,
+        }, (payload) => {
+          const updated = payload.new as any
+          if (typeof updated.ai_enabled === 'boolean') setAiEnabled(updated.ai_enabled)
         })
         .subscribe()
       channelRef.current = ch
@@ -397,8 +406,8 @@ export default function ChatScreen() {
     scrollToEnd()
     setSending(false)
 
-    // AI auto-reply: only for students when their counselor is offline; guard prevents concurrent replies
-    if (myRole === 'student' && saved && !otherUser?.is_online && !aiReplyingRef.current) {
+    // AI auto-reply: only for students when their counselor is offline AND AI is enabled
+    if (myRole === 'student' && saved && !otherUser?.is_online && !aiReplyingRef.current && aiEnabled) {
       aiReplyingRef.current = true
       setIsTyping(true)
       scrollToEnd()
@@ -426,6 +435,12 @@ export default function ChatScreen() {
       } catch { /* silent — AI reply is best-effort */ }
       finally { setIsTyping(false); aiReplyingRef.current = false }
     }
+  }
+
+  const toggleAiEnabled = async () => {
+    const next = !aiEnabled
+    setAiEnabled(next)
+    await supabase.from('conversations').update({ ai_enabled: next }).eq('id', id)
   }
 
   const pickAndSendMedia = async () => {
@@ -664,7 +679,29 @@ export default function ChatScreen() {
             </View>
           </View>
         </TouchableOpacity>
+        {/* AI toggle — counselors can pause/resume AI for this conversation */}
+        {myRole !== 'student' && (
+          <TouchableOpacity
+            onPress={toggleAiEnabled}
+            style={[g.headerAiBtn, !aiEnabled && g.headerAiBtnOff]}
+            activeOpacity={0.75}
+          >
+            <Ionicons
+              name={aiEnabled ? 'hardware-chip' : 'hardware-chip-outline'}
+              size={17}
+              color={aiEnabled ? C.blue : C.slate400}
+            />
+          </TouchableOpacity>
+        )}
       </View>
+
+      {/* AI paused banner — visible to both parties */}
+      {!aiEnabled && (
+        <View style={g.aiPausedBanner}>
+          <Ionicons name="pause-circle-outline" size={13} color="#B45309" />
+          <Text style={g.aiPausedText}>AI paused · you are talking directly</Text>
+        </View>
+      )}
 
       {/* Messages — wallpaper-aware */}
       <View style={{ flex: 1 }}>
@@ -843,6 +880,10 @@ const mkG = (C: ColorPalette) => StyleSheet.create({
   progressTxt:    { fontSize: 10, color: C.slate400, marginLeft: 'auto' },
   replyPreviewBar:{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.blue + '18', paddingHorizontal: 16, paddingVertical: 8, borderTopWidth: 1, borderColor: C.blue + '35' },
   replyPreviewText:{ flex: 1, fontSize: 12, color: C.blue, fontStyle: 'italic' },
+  headerAiBtn:    { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: C.blue + '14', marginLeft: 4 },
+  headerAiBtnOff: { backgroundColor: C.slate100 },
+  aiPausedBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 7, backgroundColor: '#FEF3C7', borderBottomWidth: 1, borderColor: '#FDE68A' },
+  aiPausedText:   { fontSize: 12, fontWeight: '600', color: '#B45309', flex: 1 },
   aiBar:          { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: C.white, borderTopWidth: 1, borderColor: C.slate100 },
   aiToggle:       { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, borderWidth: 1, borderColor: C.blue, backgroundColor: C.white },
   aiToggleOn:     { backgroundColor: C.blue },

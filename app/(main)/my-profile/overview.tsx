@@ -14,19 +14,24 @@ export default function OverviewTab() {
   const s      = mkS(C)
   const insets = useSafeAreaInsets()
 
-  const [profile, setProfile] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [editing, setEditing] = useState('')
-  const [values, setValues]   = useState<Record<string, string>>({})
-  const [saving, setSaving]   = useState(false)
+  const [profile, setProfile]   = useState<any>(null)
+  const [loading, setLoading]   = useState(true)
+  const [editing, setEditing]   = useState('')
+  const [values, setValues]     = useState<Record<string, string>>({})
+  const [saving, setSaving]     = useState(false)
+  const [convId, setConvId]     = useState<string | null>(null)
+  const [aiEnabled, setAiEnabled] = useState(true)
+  const [togglingAi, setTogglingAi] = useState(false)
 
   useEffect(() => { load() }, [])
 
   const load = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setLoading(false); return }
-    const { data } = await supabase.from('student_profiles')
-      .select('*').eq('user_id', user.id).single()
+    const [{ data }, { data: conv }] = await Promise.all([
+      supabase.from('student_profiles').select('*').eq('user_id', user.id).single(),
+      supabase.from('conversations').select('id, ai_enabled').eq('student_id', user.id).maybeSingle(),
+    ])
     setProfile(data)
     if (data) {
       setValues({
@@ -39,7 +44,20 @@ export default function OverviewTab() {
         school: data.school || '',
       })
     }
+    if (conv) {
+      setConvId(conv.id)
+      setAiEnabled(conv.ai_enabled ?? true)
+    }
     setLoading(false)
+  }
+
+  const toggleAi = async () => {
+    if (!convId || togglingAi) return
+    setTogglingAi(true)
+    const next = !aiEnabled
+    setAiEnabled(next)
+    await supabase.from('conversations').update({ ai_enabled: next }).eq('id', convId)
+    setTogglingAi(false)
   }
 
   const edit = (field: string) => setEditing(field)
@@ -108,6 +126,35 @@ export default function OverviewTab() {
           </View>
         )
       })}
+
+      {/* AI Assistant toggle — only shown when student has a conversation */}
+      {convId && (
+        <View style={s.aiCard}>
+          <View style={[s.aiIconBox, { backgroundColor: aiEnabled ? C.blue + '18' : C.slate100 }]}>
+            <Ionicons
+              name={aiEnabled ? 'hardware-chip' : 'hardware-chip-outline'}
+              size={20}
+              color={aiEnabled ? C.blue : C.slate400}
+            />
+          </View>
+          <View style={s.aiBody}>
+            <Text style={s.aiTitle}>AI Assistant</Text>
+            <Text style={s.aiSub}>
+              {aiEnabled
+                ? 'Active · AI responds when your counsellor is offline'
+                : 'Paused · you are talking directly'}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={toggleAi}
+            disabled={togglingAi}
+            activeOpacity={0.8}
+            style={[s.toggleTrack, aiEnabled && s.toggleTrackOn]}
+          >
+            <View style={[s.toggleThumb, aiEnabled && s.toggleThumbOn]} />
+          </TouchableOpacity>
+        </View>
+      )}
     </ScrollView>
   )
 }
@@ -125,4 +172,14 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   fieldInput:   { fontSize: 15, color: C.navy, borderBottomWidth: 2, borderColor: C.blue, paddingVertical: 4, marginTop: 3 },
   editBtn:      { padding: 4 },
   noData:       { fontSize: 14, color: C.slate400 },
+  // AI toggle card
+  aiCard:       { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16, padding: 16, backgroundColor: C.white, borderRadius: 16, borderWidth: 1, borderColor: C.slate100, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 },
+  aiIconBox:    { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  aiBody:       { flex: 1 },
+  aiTitle:      { fontSize: 14, fontWeight: '700', color: C.navy },
+  aiSub:        { fontSize: 12, color: C.slate400, marginTop: 2 },
+  toggleTrack:  { width: 46, height: 26, borderRadius: 13, backgroundColor: C.slate200, padding: 3, justifyContent: 'center' },
+  toggleTrackOn:{ backgroundColor: C.blue },
+  toggleThumb:  { width: 20, height: 20, borderRadius: 10, backgroundColor: C.white, alignSelf: 'flex-start' },
+  toggleThumbOn:{ alignSelf: 'flex-end' },
 })
