@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
-  View, Text, FlatList, TouchableOpacity, StyleSheet,
+  View, Text, FlatList, TouchableOpacity, StyleSheet, Modal,
   ActivityIndicator, RefreshControl, Alert,
 } from 'react-native'
 import * as DocumentPicker from 'expo-document-picker'
@@ -30,6 +30,16 @@ const DOC_CATEGORIES = [
   { key: 'other',        label: 'Other',          icon: 'attach-outline'          },
 ] as const
 
+const UPLOAD_CATEGORIES = [
+  { key: 'passport',     label: 'Passport',       icon: 'card-outline',          color: '#3B82F6' },
+  { key: 'bank',         label: 'Bank Statement', icon: 'wallet-outline',        color: '#16A34A' },
+  { key: 'academic',     label: 'Academic',       icon: 'school-outline',        color: '#7C3AED' },
+  { key: 'offer_letter', label: 'Offer Letter',   icon: 'document-text-outline', color: '#EA580C' },
+  { key: 'cas',          label: 'CAS Letter',     icon: 'ribbon-outline',        color: '#0D9488' },
+  { key: 'visa',         label: 'Visa',           icon: 'globe-outline',         color: '#DC2626' },
+  { key: 'other',        label: 'Other',          icon: 'attach-outline',        color: '#6B7280' },
+]
+
 const mkStatusConfig = (C: ColorPalette) => ({
   pending:  { bg: C.orange500 + '30', text: C.orange500, label: 'Pending Review' },
   approved: { bg: C.green400  + '30', text: C.green400,  label: 'Approved'       },
@@ -48,6 +58,7 @@ export default function DocumentsScreen() {
   const [uploading, setUploading] = useState(false)
   const [analyzing, setAnalyzing] = useState<string | null>(null)
   const [catFilter, setCatFilter] = useState('all')
+  const [showCatPicker, setShowCatPicker] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [previewImg, setPreviewImg] = useState<string | null>(null)
 
@@ -176,16 +187,7 @@ export default function DocumentsScreen() {
     }
   }
 
-  const promptUpload = () => {
-    Alert.alert(
-      'Upload Document',
-      'Select the document category:',
-      DOC_CATEGORIES.slice(1).map(c => ({
-        text: c.label,
-        onPress: () => uploadDocument(c.key),
-      })).concat([{ text: 'Cancel', style: 'cancel' } as any]),
-    )
-  }
+  const promptUpload = () => setShowCatPicker(true)
 
   const displayed = catFilter === 'all' ? docs : docs.filter(d => d.category === catFilter)
 
@@ -359,6 +361,54 @@ export default function DocumentsScreen() {
 
       <ImageModal uri={previewImg} onClose={() => setPreviewImg(null)} />
 
+      {/* Category picker bottom sheet */}
+      <Modal
+        visible={showCatPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCatPicker(false)}
+      >
+        <View style={s.sheetOverlay}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowCatPicker(false)} />
+          <View style={[s.sheet, { paddingBottom: insets.bottom + 16 }]}>
+            <View style={s.sheetHandle} />
+
+            <View style={s.sheetHeader}>
+              <View style={s.sheetIconWrap}>
+                <Ionicons name="cloud-upload-outline" size={22} color={C.blue} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.sheetTitle}>Upload Document</Text>
+                <Text style={s.sheetSub}>Choose a category for your file</Text>
+              </View>
+            </View>
+
+            <View style={s.catGrid}>
+              {UPLOAD_CATEGORIES.map(cat => (
+                <TouchableOpacity
+                  key={cat.key}
+                  style={s.catCard}
+                  activeOpacity={0.75}
+                  onPress={() => {
+                    setShowCatPicker(false)
+                    uploadDocument(cat.key)
+                  }}
+                >
+                  <View style={[s.catCardIconWrap, { backgroundColor: cat.color + '18' }]}>
+                    <Ionicons name={cat.icon as any} size={22} color={cat.color} />
+                  </View>
+                  <Text style={s.catCardLabel}>{cat.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity style={s.sheetCancel} onPress={() => setShowCatPicker(false)}>
+              <Text style={s.sheetCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <TouchableOpacity
         style={[s.fab, uploading && { opacity: 0.6 }]}
         onPress={promptUpload}
@@ -411,4 +461,18 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   deleteBtn:     { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 9, backgroundColor: C.red500 + '18', borderRadius: 10 },
   deleteBtnText: { fontSize: 13, fontWeight: '600', color: C.red500 },
   fab:           { position: 'absolute', bottom: 20, right: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', elevation: 6, shadowColor: C.blue, shadowOpacity: 0.35, shadowRadius: 8 },
+  // Category picker sheet
+  sheetOverlay:     { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  sheet:            { backgroundColor: C.white, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 12 },
+  sheetHandle:      { width: 40, height: 4, backgroundColor: C.slate200, borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
+  sheetHeader:      { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 20 },
+  sheetIconWrap:    { width: 48, height: 48, borderRadius: 14, backgroundColor: C.blue + '18', alignItems: 'center', justifyContent: 'center' },
+  sheetTitle:       { fontSize: 17, fontWeight: '800', color: C.navy },
+  sheetSub:         { fontSize: 12, color: C.slate400, marginTop: 2 },
+  catGrid:          { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 },
+  catCard:          { width: '47.5%', backgroundColor: C.bg, borderRadius: 16, padding: 14, gap: 10, borderWidth: 1, borderColor: C.slate100 },
+  catCardIconWrap:  { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  catCardLabel:     { fontSize: 13, fontWeight: '700', color: C.navy },
+  sheetCancel:      { height: 50, backgroundColor: C.slate100, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  sheetCancelText:  { fontSize: 15, fontWeight: '700', color: C.slate500 },
 })
