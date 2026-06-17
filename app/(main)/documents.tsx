@@ -16,7 +16,8 @@ import { Skeleton, SkeletonCard } from '@/components/Skeleton'
 
 const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif', 'avif'])
 
-const API_BASE = 'https://whiterock-connect.vercel.app'
+const API_BASE     = 'https://whiterock-connect.vercel.app'
+const SUPABASE_URL = 'https://bpranhebhhtvcgcmuegd.supabase.co'
 
 const DOC_CATEGORIES = [
   { key: 'all',          label: 'All',            icon: 'folder-outline'         },
@@ -107,11 +108,17 @@ export default function DocumentsScreen() {
 
     setUploading(true)
     try {
-      const blob = await fetch(asset.uri).then(r => r.blob())
-      const { error: uploadErr } = await supabase.storage
-        .from('documents')
-        .upload(path, blob, { contentType: mimeType })
-      if (uploadErr) throw uploadErr
+      const { data: { session } } = await supabase.auth.getSession()
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/documents/${path}`)
+        xhr.setRequestHeader('Authorization', `Bearer ${session?.access_token}`)
+        xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(xhr.responseText))
+        xhr.onerror = () => reject(new Error('Upload failed'))
+        const fd = new FormData()
+        fd.append('file', { uri: asset.uri, name: rawName, type: mimeType } as any)
+        xhr.send(fd)
+      })
 
       const url = supabase.storage.from('documents').getPublicUrl(path).data.publicUrl
 
