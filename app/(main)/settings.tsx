@@ -74,14 +74,17 @@ export default function SettingsScreen() {
       const path = `${au.id}/wallpaper.${ext}`
       const mime = ext.toLowerCase() === 'jpg' ? 'image/jpeg' : `image/${ext.toLowerCase()}`
       const { data: { session } } = await supabase.auth.getSession()
-      const formData = new FormData()
-      formData.append('', { uri, name: `wallpaper.${ext}`, type: mime } as any)
-      const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/avatars/${path}`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${session?.access_token}`, 'x-upsert': 'true' },
-        body: formData,
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/avatars/${path}`)
+        xhr.setRequestHeader('Authorization', `Bearer ${session?.access_token}`)
+        xhr.setRequestHeader('x-upsert', 'true')
+        xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(xhr.responseText))
+        xhr.onerror = () => reject(new Error('Upload failed'))
+        const fd = new FormData()
+        fd.append('file', { uri, name: `wallpaper.${ext}`, type: mime } as any)
+        xhr.send(fd)
       })
-      if (!uploadRes.ok) throw new Error(await uploadRes.text())
 
       const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
       const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`

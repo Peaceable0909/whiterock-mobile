@@ -62,12 +62,18 @@ export default function MoreScreen() {
     const path = `${user.id}/avatar.${ext}`
     setUploading(true)
     try {
-      const blob = await fetch(asset.uri).then(r => r.blob())
-      const { error: upErr } = await supabase.storage.from('avatars').upload(path, blob, {
-        contentType: asset.mimeType ?? 'image/jpeg',
-        upsert: true,
+      const { data: { session } } = await supabase.auth.getSession()
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/avatars/${path}`)
+        xhr.setRequestHeader('Authorization', `Bearer ${session?.access_token}`)
+        xhr.setRequestHeader('x-upsert', 'true')
+        xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(xhr.responseText))
+        xhr.onerror = () => reject(new Error('Upload failed'))
+        const fd = new FormData()
+        fd.append('file', { uri: asset.uri, name: `avatar.${ext}`, type: asset.mimeType ?? 'image/jpeg' } as any)
+        xhr.send(fd)
       })
-      if (upErr) throw upErr
       const url = `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}?t=${Date.now()}`
       const { error: updateErr } = await supabase.from('users').update({ avatar_url: url }).eq('id', user.id)
       if (updateErr) throw updateErr

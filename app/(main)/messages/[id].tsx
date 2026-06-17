@@ -103,9 +103,43 @@ const formatFileSize = (bytes: number) => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+function AudioMsg({ uri, isMe, C }: { uri: string; isMe: boolean; C: ColorPalette }) {
+  const player = useVideoPlayer(uri, p => { p.loop = false })
+  const [playing, setPlaying] = useState(false)
+  const toggle = () => {
+    if (playing) { player.pause(); setPlaying(false) }
+    else { player.play(); setPlaying(true) }
+  }
+  return (
+    <TouchableOpacity onPress={toggle} activeOpacity={0.8}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 10 }}>
+      <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: isMe ? 'rgba(255,255,255,0.2)' : C.blue + '22', alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name={playing ? 'pause' : 'play'} size={16} color={isMe ? C.white : C.blue} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 13, fontWeight: '600', color: isMe ? C.white : C.navy }}>
+          {playing ? 'Playing…' : 'Voice note'}
+        </Text>
+        <Text style={{ fontSize: 11, marginTop: 2, color: isMe ? 'rgba(255,255,255,0.6)' : C.slate400 }}>
+          {playing ? 'Tap to pause' : 'Tap to play'}
+        </Text>
+      </View>
+      <Ionicons name="mic-outline" size={14} color={isMe ? 'rgba(255,255,255,0.5)' : C.slate400} />
+    </TouchableOpacity>
+  )
+}
+
 function VideoMsg({ uri }: { uri: string }) {
-  const player = useVideoPlayer(uri)
-  return <VideoView player={player} style={{ width: 240, height: 160, borderRadius: 12, backgroundColor: '#000' }} nativeControls allowsFullscreen />
+  const player = useVideoPlayer(uri, p => { p.loop = false })
+  return (
+    <VideoView
+      player={player}
+      style={{ width: 240, height: 160, borderRadius: 12, backgroundColor: '#000' }}
+      nativeControls
+      allowsFullscreen
+      contentFit="contain"
+    />
+  )
 }
 
 export default function ChatScreen() {
@@ -416,13 +450,16 @@ export default function ChatScreen() {
       } else {
         const path = `chat/${myId}/${Date.now()}.${ext}`
         const { data: { session } } = await supabase.auth.getSession()
-        const formData = new FormData()
-        formData.append('', { uri: asset.uri, name: fileName, type: mimeType } as any)
-        const uploadRes = await fetch(
-          `https://bpranhebhhtvcgcmuegd.supabase.co/storage/v1/object/documents/${path}`,
-          { method: 'POST', headers: { Authorization: `Bearer ${session?.access_token}` }, body: formData }
-        )
-        if (!uploadRes.ok) throw new Error(await uploadRes.text())
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest()
+          xhr.open('POST', `https://bpranhebhhtvcgcmuegd.supabase.co/storage/v1/object/documents/${path}`)
+          xhr.setRequestHeader('Authorization', `Bearer ${session?.access_token}`)
+          xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(xhr.responseText))
+          xhr.onerror = () => reject(new Error('Upload failed'))
+          const fd = new FormData()
+          fd.append('file', { uri: asset.uri, name: fileName, type: mimeType } as any)
+          xhr.send(fd)
+        })
         publicUrl = supabase.storage.from('documents').getPublicUrl(path).data.publicUrl
       }
 
@@ -514,11 +551,7 @@ export default function ChatScreen() {
           ) : item.type === 'video' && item.file_url ? (
             <VideoMsg uri={item.file_url} />
           ) : item.type === 'voice' && item.file_url ? (
-            <TouchableOpacity onPress={() => WebBrowser.openBrowserAsync(item.file_url)}
-              style={ms.audioRow} activeOpacity={0.8}>
-              <View style={ms.audioIcon}><Ionicons name="mic-outline" size={16} color={isMe ? C.white : C.blue} /></View>
-              <Text style={[ms.audioLabel, isMe && ms.textMe]}>Voice note · tap to play</Text>
-            </TouchableOpacity>
+            <AudioMsg uri={item.file_url} isMe={isMe} C={C} />
           ) : item.file_url ? (
             <TouchableOpacity onPress={() => {
               const url: string = item.file_url
