@@ -165,9 +165,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     persistPrefs('mobile_bubble_color', bc)
   }
 
+  const accentHex = ACCENT_COLORS.find(a => a.id === accentColor)?.color
+  const baseC = isDark ? DARK : LIGHT
+  const C = accentHex ? { ...baseC, blue: accentHex } : baseC
+
   return (
     <ThemeCtx.Provider value={{
-      mode, isDark, C: isDark ? DARK : LIGHT,
+      mode, isDark, C,
       setMode, wallpaper, setWallpaper,
       resolvedWallpaper: resolveWp(wallpaper),
       accentColor, setAccentColor,

@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
 import { uploadVideo } from '@/lib/cloudinary'
 import { setActiveConvId } from '@/lib/notifications'
-import { useColors, useTheme } from '@/lib/theme'
+import { useColors, useTheme, BUBBLE_COLORS } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 
 const PAGE_SIZE = 50
@@ -109,7 +109,8 @@ function VideoMsg({ uri }: { uri: string }) {
 }
 
 export default function ChatScreen() {
-  const { C, resolvedWallpaper } = useTheme()
+  const { C, resolvedWallpaper, bubbleColor } = useTheme()
+  const bubbleHex = BUBBLE_COLORS.find(b => b.id === bubbleColor)?.color ?? C.blue
   const ms = mkMS(C)
   const g = mkG(C)
   const insets = useSafeAreaInsets()
@@ -414,9 +415,14 @@ export default function ChatScreen() {
         publicUrl = await uploadVideo(asset.uri, mimeType, fileName, pct => setUploadPct(pct))
       } else {
         const path = `chat/${myId}/${Date.now()}.${ext}`
-        const blob = await fetch(asset.uri).then(r => r.blob())
-        const { error } = await supabase.storage.from('documents').upload(path, blob, { contentType: mimeType })
-        if (error) throw error
+        const { data: { session } } = await supabase.auth.getSession()
+        const formData = new FormData()
+        formData.append('', { uri: asset.uri, name: fileName, type: mimeType } as any)
+        const uploadRes = await fetch(
+          `https://bpranhebhhtvcgcmuegd.supabase.co/storage/v1/object/documents/${path}`,
+          { method: 'POST', headers: { Authorization: `Bearer ${session?.access_token}` }, body: formData }
+        )
+        if (!uploadRes.ok) throw new Error(await uploadRes.text())
         publicUrl = supabase.storage.from('documents').getPublicUrl(path).data.publicUrl
       }
 
@@ -483,7 +489,7 @@ export default function ChatScreen() {
           </View>
         )}
 
-        <View style={[ms.bubbleWrap, isMe ? ms.bubbleWrapMe : ms.bubbleWrapThem]}>
+        <View style={[ms.bubbleWrap, isMe ? [ms.bubbleWrapMe, { backgroundColor: bubbleHex }] : ms.bubbleWrapThem]}>
           {item.reply_to_id && !isDeleted && (
             <View style={[ms.replyBar, isMe ? ms.replyBarMe : ms.replyBarThem]}>
               <Text style={[ms.replyLabel, isMe && { color: 'rgba(255,255,255,0.7)' }]} numberOfLines={1}>
@@ -514,7 +520,15 @@ export default function ChatScreen() {
               <Text style={[ms.audioLabel, isMe && ms.textMe]}>Voice note · tap to play</Text>
             </TouchableOpacity>
           ) : item.file_url ? (
-            <TouchableOpacity onPress={() => WebBrowser.openBrowserAsync(item.file_url)}
+            <TouchableOpacity onPress={() => {
+              const url: string = item.file_url
+              const needsViewer = /\.(pdf|doc|docx|xls|xlsx|ppt|pptx)(\?|$)/i.test(url)
+              WebBrowser.openBrowserAsync(
+                needsViewer
+                  ? `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`
+                  : url
+              )
+            }}
               style={ms.fileRow} activeOpacity={0.8}>
               <View style={[ms.fileIcon, isMe && ms.fileIconMe]}>
                 <Ionicons name="document-text-outline" size={16} color={isMe ? C.white : C.blue} />

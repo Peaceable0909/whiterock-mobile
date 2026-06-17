@@ -119,6 +119,11 @@ export default function MainLayout() {
       <Tabs.Screen name="groups/index"          options={{ href: null }} />
       <Tabs.Screen name="groups/[id]"           options={{ href: null }} />
       <Tabs.Screen name="my-profile/index"      options={{ href: null }} />
+      <Tabs.Screen name="my-profile/overview"    options={{ href: null }} />
+      <Tabs.Screen name="my-profile/journey"     options={{ href: null }} />
+      <Tabs.Screen name="my-profile/interviews"  options={{ href: null }} />
+      <Tabs.Screen name="my-profile/ai-insights" options={{ href: null }} />
+      <Tabs.Screen name="my-profile/tab-bar"     options={{ href: null }} />
     </Tabs>
   )
 }
