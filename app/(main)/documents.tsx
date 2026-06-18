@@ -180,8 +180,10 @@ export default function DocumentsScreen() {
   }
 
   const openDocument = async (url: string, fileType?: string) => {
-    if (IMAGE_EXTS.has((fileType ?? '').toLowerCase())) {
+    if (fileType === 'image') {
       setPreviewImg(url)
+    } else if (fileType === 'pdf') {
+      await WebBrowser.openBrowserAsync(`https://docs.google.com/viewer?url=${encodeURIComponent(url)}`)
     } else {
       await WebBrowser.openBrowserAsync(url)
     }

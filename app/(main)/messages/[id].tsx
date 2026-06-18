@@ -7,11 +7,11 @@ import {
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { VideoView, useVideoPlayer } from 'expo-video'
-import * as ImagePicker from 'expo-image-picker'
+import * as DocumentPicker from 'expo-document-picker'
 import * as WebBrowser from 'expo-web-browser'
 import { ImageModal } from '@/components/ImageModal'
 import { Ionicons } from '@expo/vector-icons'
-import { supabase, SUPABASE_ANON } from '@/lib/supabase'
+import { supabase, SUPABASE_URL, SUPABASE_ANON } from '@/lib/supabase'
 import { uploadVideo } from '@/lib/cloudinary'
 import { setActiveConvId } from '@/lib/notifications'
 import { useColors, useTheme, BUBBLE_COLORS } from '@/lib/theme'
@@ -444,59 +444,64 @@ export default function ChatScreen() {
   }
 
   const pickAndSendMedia = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (!permission.granted) {
-      Alert.alert('Permission needed', 'Allow access to your photos and videos in Settings.')
+    let picked: DocumentPicker.DocumentPickerResult
+    try {
+      picked = await DocumentPicker.getDocumentAsync({
+        type: ['image/*', 'video/*', 'application/pdf',
+               'application/msword',
+               'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        copyToCacheDirectory: true,
+      })
+    } catch {
+      Alert.alert('Picker error', 'Could not open file picker. Try again.')
       return
     }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images', 'videos'],
-      quality: 0.85,
-      videoMaxDuration: 300,
-    })
-    if (result.canceled || !result.assets?.[0]) return
-    const asset = result.assets[0]
-    const isVideo = asset.type === 'video'
-    const mimeType = isVideo
-      ? (asset.mimeType ?? 'video/mp4')
-      : (asset.mimeType ?? 'image/jpeg')
-    const ext = asset.uri.split('.').pop() ?? (isVideo ? 'mp4' : 'jpg')
-    const fileName = `${isVideo ? 'video' : 'photo'}-${Date.now()}.${ext}`
-    const kind: string = isVideo ? 'video' : 'image'
+    if (picked.canceled || !picked.assets?.[0]) return
+
+    const asset    = picked.assets[0]
+    const mimeType = asset.mimeType ?? 'application/octet-stream'
+    const rawName  = asset.name ?? `file-${Date.now()}`
+    const ext      = rawName.includes('.') ? rawName.split('.').pop()!.toLowerCase() : 'bin'
+    const isImage  = mimeType.startsWith('image/')
+    const isVideo  = mimeType.startsWith('video/')
+    const kind: string = isVideo ? 'video' : isImage ? 'image' : 'file'
 
     setUploading(true)
     setUploadPct(0)
     try {
       let publicUrl: string
       if (isVideo) {
-        publicUrl = await uploadVideo(asset.uri, mimeType, fileName, pct => setUploadPct(pct))
+        publicUrl = await uploadVideo(asset.uri, mimeType, rawName, pct => setUploadPct(pct))
       } else {
         const path = `chat/${myId}/${Date.now()}.${ext}`
         const { data: { session } } = await supabase.auth.getSession()
         await new Promise<void>((resolve, reject) => {
           const xhr = new XMLHttpRequest()
-          xhr.open('POST', `https://bpranhebhhtvcgcmuegd.supabase.co/storage/v1/object/documents/${path}`)
+          xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/documents/${path}`)
           xhr.setRequestHeader('Authorization', `Bearer ${session?.access_token}`)
           xhr.setRequestHeader('apikey', SUPABASE_ANON)
+          xhr.upload.onprogress = e => {
+            if (e.lengthComputable) setUploadPct(Math.round((e.loaded / e.total) * 100))
+          }
           xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(xhr.responseText))
           xhr.onerror = () => reject(new Error('Upload failed'))
           const fd = new FormData()
-          fd.append('file', { uri: asset.uri, name: fileName, type: mimeType } as any)
+          fd.append('file', { uri: asset.uri, name: rawName, type: mimeType } as any)
           xhr.send(fd)
         })
         publicUrl = supabase.storage.from('documents').getPublicUrl(path).data.publicUrl
       }
 
-      const content = isVideo ? '🎬 Video' : '📷 Photo'
+      const caption = isVideo ? '🎬 Video' : isImage ? '📷 Photo' : `📎 ${rawName}`
       const { data: saved } = await supabase.from('messages').insert({
         conversation_id: id, sender_id: myId,
-        content, type: kind, file_url: publicUrl,
-        file_name: fileName, file_size: asset.fileSize ?? null,
+        content: caption, type: kind, file_url: publicUrl,
+        file_name: rawName, file_size: asset.size ?? null,
         is_ai: false,
       }).select().single()
       if (saved) setMsgs(prev => [...prev, saved])
       await supabase.from('conversations').update({
-        last_message: content, last_message_at: new Date().toISOString(),
+        last_message: caption, last_message_at: new Date().toISOString(),
       }).eq('id', id)
       scrollToEnd()
     } catch (err) {
@@ -579,16 +584,25 @@ export default function ChatScreen() {
           ) : item.file_url ? (
             <TouchableOpacity onPress={() => {
               const url: string = item.file_url
-              const needsViewer = /\.(pdf|doc|docx|xls|xlsx|ppt|pptx)(\?|$)/i.test(url)
+              const isPdf = /\.(pdf)(\?|$)/i.test(url) || item.file_name?.toLowerCase().endsWith('.pdf')
+              const isDoc = /\.(doc|docx|xls|xlsx|ppt|pptx)(\?|$)/i.test(url)
               WebBrowser.openBrowserAsync(
-                needsViewer
-                  ? `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`
+                (isPdf || isDoc)
+                  ? `https://docs.google.com/viewer?url=${encodeURIComponent(url)}`
                   : url
               )
             }}
               style={ms.fileRow} activeOpacity={0.8}>
               <View style={[ms.fileIcon, isMe && ms.fileIconMe]}>
-                <Ionicons name="document-text-outline" size={16} color={isMe ? C.white : C.blue} />
+                <Ionicons
+                  name={
+                    /\.(pdf)(\?|$)/i.test(item.file_url) || item.file_name?.toLowerCase().endsWith('.pdf')
+                      ? 'document-text-outline'
+                      : 'attach-outline'
+                  }
+                  size={16}
+                  color={isMe ? C.white : C.blue}
+                />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[ms.fileName, isMe && ms.textMe]} numberOfLines={1}>{item.file_name ?? 'File'}</Text>
@@ -597,7 +611,11 @@ export default function ChatScreen() {
                     {formatFileSize(item.file_size)}
                   </Text>
                 )}
+                <Text style={[ms.fileSize, isMe && { color: 'rgba(255,255,255,0.5)' }]}>
+                  Tap to open
+                </Text>
               </View>
+              <Ionicons name="open-outline" size={13} color={isMe ? 'rgba(255,255,255,0.5)' : C.slate400} />
             </TouchableOpacity>
           ) : (
             <MsgText text={item.content ?? ''} isMe={isMe} C={C} />
