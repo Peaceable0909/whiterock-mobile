@@ -668,11 +668,22 @@ export default function ChatScreen() {
       <TouchableOpacity style={g.modalOverlay} activeOpacity={1} onPress={() => setProfileModal(false)}>
         <View style={[g.infoSheet, { paddingBottom: insets.bottom + 24 }]}>
           <View style={g.infoHandle} />
-          <View style={g.infoAvatarWrap}>
-            {otherUser?.avatar_url
-              ? <Image source={{ uri: otherUser.avatar_url }} style={g.infoAvatarImg} />
-              : <Text style={g.infoAvatarText}>{getInitials(otherUser?.name ?? 'WR')}</Text>}
-          </View>
+          {otherUser?.avatar_url ? (
+            <TouchableOpacity
+              style={g.infoAvatarWrap}
+              activeOpacity={0.85}
+              onPress={() => setPreviewImg(otherUser.avatar_url)}
+            >
+              <Image source={{ uri: otherUser.avatar_url }} style={g.infoAvatarImg} />
+              <View style={g.infoAvatarHint}>
+                <Ionicons name="expand-outline" size={11} color={C.white} />
+              </View>
+            </TouchableOpacity>
+          ) : (
+            <View style={g.infoAvatarWrap}>
+              <Text style={g.infoAvatarText}>{getInitials(otherUser?.name ?? 'WR')}</Text>
+            </View>
+          )}
           <Text style={g.infoName}>{otherUser?.name ?? 'Apply Support'}</Text>
           {otherRoleCap ? <Text style={g.infoRole}>{otherRoleCap}</Text> : null}
           <View style={[g.onlineRow, { justifyContent: 'center', marginTop: 8 }]}>
@@ -934,6 +945,7 @@ const mkG = (C: ColorPalette) => StyleSheet.create({
   infoSheet:      { backgroundColor: C.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, alignItems: 'center' },
   infoHandle:     { width: 36, height: 4, borderRadius: 2, backgroundColor: C.slate200, marginBottom: 20 },
   infoAvatarWrap: { width: 80, height: 80, borderRadius: 40, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', marginBottom: 12, overflow: 'hidden' },
+  infoAvatarHint: { position: 'absolute', bottom: 4, right: 4, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 8, padding: 3 },
   infoAvatarImg:  { width: 80, height: 80, borderRadius: 40 },
   infoAvatarText: { fontSize: 28, fontWeight: '800', color: C.white },
   infoName:       { fontSize: 20, fontWeight: '800', color: C.navy, marginBottom: 2 },
