@@ -7,6 +7,7 @@ import { useRouter, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
+import { getAiAvatarUrl } from '@/lib/aiConfig'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 import { Skeleton, EmptyState } from '@/components/Skeleton'
@@ -37,6 +38,7 @@ export default function MessagesScreen() {
   const [myId, setMyId]           = useState('')
   const [loading, setLoading]     = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [aiAvatar, setAiAvatar]   = useState<string | null>(null)
 
   // New conversation modal (staff only — pick a student)
   const [newConvModal, setNewConvModal]   = useState(false)
@@ -67,6 +69,7 @@ export default function MessagesScreen() {
   }, [])
 
   useEffect(() => { load() }, [load])
+  useEffect(() => { getAiAvatarUrl().then(url => { if (url) setAiAvatar(url) }) }, [])
 
   // Realtime: re-fetch when conversations change
   useEffect(() => {
@@ -163,8 +166,10 @@ export default function MessagesScreen() {
       {/* AI pinned row (students only) */}
       {role === 'student' && (
         <TouchableOpacity style={s.aiRow} onPress={() => router.push('/(main)/ai')}>
-          <View style={s.aiAvatar}>
-            <Ionicons name="hardware-chip-outline" size={22} color={C.white} />
+          <View style={s.aiAvatarWrap}>
+            {aiAvatar
+              ? <Image source={{ uri: aiAvatar }} style={s.aiAvatarImg} />
+              : <View style={s.aiAvatar}><Ionicons name="hardware-chip-outline" size={22} color={C.white} /></View>}
             <View style={s.onlineDot} />
           </View>
           <View style={{ flex: 1 }}>
@@ -298,7 +303,9 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   searchWrap:     { flexDirection: 'row', alignItems: 'center', margin: 12, backgroundColor: C.bg, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: C.slate100 },
   searchInput:    { flex: 1, fontSize: 14, color: C.navy, marginLeft: 8 },
   aiRow:          { flexDirection: 'row', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderColor: C.slate100 },
-  aiAvatar:       { width: 48, height: 48, borderRadius: 24, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  aiAvatarWrap:   { position: 'relative', marginRight: 12 },
+  aiAvatar:       { width: 48, height: 48, borderRadius: 24, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
+  aiAvatarImg:    { width: 48, height: 48, borderRadius: 24 },
   aiName:         { fontSize: 14, fontWeight: '700', color: C.navy },
   aiSub:          { fontSize: 12, color: C.slate400, marginTop: 2 },
   row:            { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

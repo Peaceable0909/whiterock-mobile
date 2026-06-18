@@ -6,6 +6,7 @@ import {
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '@/lib/supabase'
+import { getAiAvatarUrl } from '@/lib/aiConfig'
 import { useColors, useTheme } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -39,6 +40,7 @@ export default function AIScreen() {
   const [myId, setMyId]         = useState('')
   const [memory, setMemory]     = useState<{ summary?: string; facts?: any } | null>(null)
   const [profile, setProfile]   = useState<any>(null)
+  const [aiAvatar, setAiAvatar] = useState<string | null>(null)
   const listRef = useRef<FlatList>(null)
 
   // Load persistent history + student memory
@@ -66,6 +68,7 @@ export default function AIScreen() {
     setMsgs((history ?? []) as Msg[])
     setMemory(mem)
     setProfile(prof)
+    getAiAvatarUrl().then(url => { if (url) setAiAvatar(url) })
     setInitializing(false)
     setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 100)
   }, [])
@@ -298,7 +301,9 @@ WhiteRock information always overrides training data. Never present training dat
     <KeyboardAvoidingView style={s.bg} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
       {/* Header */}
       <View style={[s.header, { paddingTop: insets.top + 8 }]}>
-        <View style={s.botAvatar}><Ionicons name="hardware-chip-outline" size={20} color={C.white} /></View>
+        {aiAvatar
+          ? <Image source={{ uri: aiAvatar }} style={s.botAvatarImg} />
+          : <View style={s.botAvatar}><Ionicons name="hardware-chip-outline" size={20} color={C.white} /></View>}
         <View style={{ flex: 1 }}>
           <Text style={s.headerTitle}>Apply AI</Text>
           <View style={s.onlineRow}>
@@ -333,9 +338,10 @@ WhiteRock information always overrides training data. Never present training dat
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
         ListHeaderComponent={isEmpty ? (
           <View style={s.emptyState}>
-            <View style={s.sparkleBox}>
-              <Ionicons name="hardware-chip-outline" size={32} color={C.white} />
-            </View>
+            {aiAvatar
+              ? <Image source={{ uri: aiAvatar }} style={s.sparkleImg} />
+              : <View style={s.sparkleBox}><Ionicons name="hardware-chip-outline" size={32} color={C.white} /></View>
+            }
             <Text style={s.emptyTitle}>Ask me anything</Text>
             <Text style={s.emptySub}>
               {profile
@@ -353,7 +359,9 @@ WhiteRock information always overrides training data. Never present training dat
         renderItem={({ item }) => (
           <View style={[s.msgRow, item.role === 'user' ? s.msgMe : s.msgThem]}>
             {item.role === 'assistant' && (
-              <View style={s.botMini}><Ionicons name="hardware-chip-outline" size={14} color={C.white} /></View>
+              aiAvatar
+                ? <Image source={{ uri: aiAvatar }} style={s.botMiniImg} />
+                : <View style={s.botMini}><Ionicons name="hardware-chip-outline" size={14} color={C.white} /></View>
             )}
             <View style={[s.bubble, item.role === 'user' ? s.bubbleMe : s.bubbleThem]}>
               {item.role === 'assistant' ? (
@@ -366,7 +374,9 @@ WhiteRock information always overrides training data. Never present training dat
         )}
         ListFooterComponent={loading ? (
           <View style={s.msgRow}>
-            <View style={s.botMini}><Ionicons name="hardware-chip-outline" size={14} color={C.white} /></View>
+            {aiAvatar
+              ? <Image source={{ uri: aiAvatar }} style={s.botMiniImg} />
+              : <View style={s.botMini}><Ionicons name="hardware-chip-outline" size={14} color={C.white} /></View>}
             <View style={[s.bubble, s.bubbleThem, { paddingVertical: 14 }]}>
               <ActivityIndicator color={C.blue} size="small" />
             </View>
@@ -399,6 +409,7 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   bg:             { flex: 1, backgroundColor: C.bg },
   header:         { flexDirection: 'row', alignItems: 'center', backgroundColor: C.white, paddingTop: 8, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderColor: C.slate100, gap: 12 },
   botAvatar:      { width: 40, height: 40, borderRadius: 20, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
+  botAvatarImg:   { width: 40, height: 40, borderRadius: 20 },
   headerTitle:    { fontSize: 14, fontWeight: '800', color: C.navy },
   onlineRow:      { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   dot:            { width: 6, height: 6, borderRadius: 3, backgroundColor: C.green400 },
@@ -408,6 +419,7 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   listContent:    { padding: 14, paddingBottom: 8 },
   emptyState:     { alignItems: 'center', paddingTop: 20 },
   sparkleBox:     { width: 64, height: 64, borderRadius: 20, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', marginBottom: 12, shadowColor: C.blue, shadowOpacity: 0.3, shadowRadius: 10, elevation: 4 },
+  sparkleImg:     { width: 64, height: 64, borderRadius: 20, marginBottom: 12 },
   emptyTitle:     { fontSize: 20, fontWeight: '800', color: C.navy },
   emptySub:       { fontSize: 13, color: C.slate500, textAlign: 'center', marginTop: 6, paddingHorizontal: 20 },
   memoryChip:     { flexDirection: 'row', alignItems: 'flex-start', gap: 6, backgroundColor: C.blue + '18', borderRadius: 12, padding: 10, marginTop: 12, marginHorizontal: 8, borderWidth: 1, borderColor: C.blue + '35' },
@@ -416,6 +428,7 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   msgMe:          { justifyContent: 'flex-end' },
   msgThem:        { justifyContent: 'flex-start', alignItems: 'flex-start' },
   botMini:        { width: 28, height: 28, borderRadius: 14, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
+  botMiniImg:     { width: 28, height: 28, borderRadius: 14 },
   bubble:         { maxWidth: '80%', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18 },
   bubbleMe:       { backgroundColor: C.blue, borderBottomRightRadius: 4 },
   bubbleThem:     { backgroundColor: C.white, borderBottomLeftRadius: 4, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },

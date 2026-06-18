@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { supabase, SUPABASE_URL, SUPABASE_ANON } from '@/lib/supabase'
 import { uploadVideo } from '@/lib/cloudinary'
 import { setActiveConvId } from '@/lib/notifications'
+import { getAiAvatarUrl } from '@/lib/aiConfig'
 import { useColors, useTheme, BUBBLE_COLORS } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 
@@ -174,6 +175,7 @@ export default function ChatScreen() {
   const [aiDrafting, setAiDrafting] = useState(false)
   const [profileModal, setProfileModal] = useState(false)
   const [aiEnabled, setAiEnabled]   = useState(true)
+  const [aiAvatar, setAiAvatar]     = useState<string | null>(null)
   const aiReplyingRef = useRef(false)
   const oldestTs   = useRef<string | null>(null)
   const latestMsgTs = useRef<string | null>(null)
@@ -243,6 +245,7 @@ export default function ChatScreen() {
       setHasMore((history ?? []).length >= PAGE_SIZE)
       setLoading(false)
       scrollToEnd()
+      getAiAvatarUrl().then(url => { if (url) setAiAvatar(url) })
 
       await supabase.rpc('mark_conversation_read', { conv_id: id })
       await supabase.from('conversations')
@@ -548,15 +551,17 @@ export default function ChatScreen() {
       >
         <View style={[ms.row, isMe ? ms.rowMe : ms.rowThem]}>
         {!isMe && (
-          <View style={ms.avatar}>
-            {item.is_ai ? (
-              <Ionicons name="hardware-chip-outline" size={14} color={C.white} />
-            ) : otherUser?.avatar_url ? (
-              <Image source={{ uri: otherUser.avatar_url }} style={ms.avatarImg} />
-            ) : (
-              <Text style={ms.avatarText}>{getInitials(otherUser?.name ?? '')}</Text>
-            )}
-          </View>
+          item.is_ai ? (
+            aiAvatar
+              ? <Image source={{ uri: aiAvatar }} style={ms.avatarImg} />
+              : <View style={ms.avatar}><Ionicons name="hardware-chip-outline" size={14} color={C.white} /></View>
+          ) : (
+            <View style={ms.avatar}>
+              {otherUser?.avatar_url
+                ? <Image source={{ uri: otherUser.avatar_url }} style={ms.avatarImg} />
+                : <Text style={ms.avatarText}>{getInitials(otherUser?.name ?? '')}</Text>}
+            </View>
+          )
         )}
 
         <View style={[ms.bubbleWrap, isMe ? [ms.bubbleWrapMe, { backgroundColor: bubbleHex }] : ms.bubbleWrapThem]}>
@@ -758,9 +763,10 @@ export default function ChatScreen() {
       {/* AI typing indicator — shown while AI is composing a reply for students */}
       {isTyping && (
         <View style={g.typingBar}>
-          <View style={g.headerAvatar}>
-            <Ionicons name="hardware-chip-outline" size={16} color={C.white} />
-          </View>
+          {aiAvatar
+            ? <Image source={{ uri: aiAvatar }} style={g.headerAvatarImg} />
+            : <View style={g.headerAvatar}><Ionicons name="hardware-chip-outline" size={16} color={C.white} /></View>}
+
           <View style={g.typingBubble}>
             <View style={g.typingDots}>
               <View style={[g.typingDot, { opacity: 0.4 }]} />
