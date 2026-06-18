@@ -1,9 +1,15 @@
+'use client'
 import { useEffect, useState, useRef } from 'react'
 import { Slot, useRouter, useSegments } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
+import { Animated, StyleSheet } from 'react-native'
+import { Image } from 'expo-image'
 import { supabase } from '@/lib/supabase'
 import { ThemeProvider, useTheme } from '@/lib/theme'
 import type { Session } from '@supabase/supabase-js'
+
+// How long the GIF plays before fading out (ms)
+const INTRO_MS = 2500
 
 function ThemedRoot() {
   const { isDark } = useTheme()
@@ -18,9 +24,10 @@ function ThemedRoot() {
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
-  const router    = useRouter()
-  const segments  = useSegments()
-  // Guard against re-entrant navigation while a redirect is in flight
+  const [showIntro, setShowIntro] = useState(true)
+  const fadeAnim   = useRef(new Animated.Value(1)).current
+  const router     = useRouter()
+  const segments   = useSegments()
   const navigating = useRef(false)
 
   useEffect(() => {
@@ -33,6 +40,18 @@ export default function RootLayout() {
     })
     return () => subscription.unsubscribe()
   }, [])
+
+  // After INTRO_MS, fade out over 400ms then unmount the overlay
+  useEffect(() => {
+    const t = setTimeout(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true,
+      }).start(() => setShowIntro(false))
+    }, INTRO_MS)
+    return () => clearTimeout(t)
+  }, [fadeAnim])
 
   useEffect(() => {
     if (loading) return
@@ -67,6 +86,23 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <ThemedRoot />
+      {showIntro && (
+        <Animated.View style={[styles.intro, { opacity: fadeAnim }]}>
+          <Image
+            source={require('../assets/intro.gif')}
+            style={StyleSheet.absoluteFill}
+            contentFit="contain"
+          />
+        </Animated.View>
+      )}
     </ThemeProvider>
   )
 }
+
+const styles = StyleSheet.create({
+  intro: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#FFFFFF',
+    zIndex: 999,
+  },
+})
