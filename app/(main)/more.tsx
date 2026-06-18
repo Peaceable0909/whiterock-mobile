@@ -9,6 +9,7 @@ import * as ImagePicker from 'expo-image-picker'
 import Constants from 'expo-constants'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase, SUPABASE_URL, SUPABASE_ANON } from '@/lib/supabase'
+import { unregisterForPush } from '@/lib/notifications'
 import { useColors, useTheme } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 import type { ThemeMode } from '@/lib/theme'
@@ -162,6 +163,7 @@ export default function MoreScreen() {
                 headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
               })
               if (res.ok) {
+                await unregisterForPush()
                 await supabase.auth.signOut()
               } else {
                 const body = await res.json().catch(() => ({}))
@@ -429,7 +431,13 @@ export default function MoreScreen() {
           onPress={() => {
             Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
               { text: 'Cancel', style: 'cancel' },
-              { text: 'Sign Out', style: 'destructive', onPress: () => supabase.auth.signOut() },
+              {
+                text: 'Sign Out', style: 'destructive',
+                onPress: async () => {
+                  await unregisterForPush()
+                  await supabase.auth.signOut()
+                },
+              },
             ])
           }}
         >

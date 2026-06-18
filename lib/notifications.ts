@@ -56,3 +56,16 @@ export async function registerForPush(): Promise<void> {
     )
   } catch { /* push is best-effort — never block the app */ }
 }
+
+// Remove the device's push token on logout so the server stops delivering notifications.
+export async function unregisterForPush(): Promise<void> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: token } = await Notifications.getDevicePushTokenAsync()
+    if (!token) return
+    await supabase.from('push_tokens').delete()
+      .eq('user_id', user.id)
+      .eq('token', String(token))
+  } catch { /* best-effort */ }
+}
