@@ -65,7 +65,8 @@ export default function MoreScreen() {
       const asset = result.assets[0]
       const ext  = (asset.uri.split('.').pop() ?? 'jpg').toLowerCase()
       const mime = asset.mimeType ?? (ext === 'png' ? 'image/png' : 'image/jpeg')
-      const path = `${user.id}/avatar.${ext}`
+      const ts   = Date.now()
+      const path = `${user.id}/avatar-${ts}.${ext}`
 
       setUploading(true)
       const { data: { session } } = await supabase.auth.getSession()
@@ -76,14 +77,13 @@ export default function MoreScreen() {
         xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/avatars/${path}`)
         xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`)
         xhr.setRequestHeader('apikey', SUPABASE_ANON)
-        xhr.setRequestHeader('x-upsert', 'true')
         xhr.onload = () => {
           if (xhr.status < 300) resolve()
           else reject(new Error(`Storage error ${xhr.status}: ${xhr.responseText}`))
         }
         xhr.onerror = () => reject(new Error('Network error — check your connection.'))
         const fd = new FormData()
-        fd.append('file', { uri: asset.uri, name: `avatar.${ext}`, type: mime } as any)
+        fd.append('file', { uri: asset.uri, name: `avatar-${ts}.${ext}`, type: mime } as any)
         xhr.send(fd)
       })
 

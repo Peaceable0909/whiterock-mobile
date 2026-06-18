@@ -69,20 +69,20 @@ export default function SettingsScreen() {
       if (!au) throw new Error('Not authenticated')
 
       const uri  = result.assets[0].uri
-      const ext  = uri.split('.').pop() ?? 'jpg'
-      const path = `${au.id}/wallpaper.${ext}`
-      const mime = ext.toLowerCase() === 'jpg' ? 'image/jpeg' : `image/${ext.toLowerCase()}`
+      const ext  = (uri.split('.').pop() ?? 'jpg').toLowerCase()
+      const mime = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`
+      const ts   = Date.now()
+      const path = `${au.id}/wallpaper-${ts}.${ext}`
       const { data: { session } } = await supabase.auth.getSession()
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest()
         xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/avatars/${path}`)
         xhr.setRequestHeader('Authorization', `Bearer ${session?.access_token}`)
         xhr.setRequestHeader('apikey', SUPABASE_ANON)
-        xhr.setRequestHeader('x-upsert', 'true')
         xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(xhr.responseText))
         xhr.onerror = () => reject(new Error('Upload failed'))
         const fd = new FormData()
-        fd.append('file', { uri, name: `wallpaper.${ext}`, type: mime } as any)
+        fd.append('file', { uri, name: `wallpaper-${ts}.${ext}`, type: mime } as any)
         xhr.send(fd)
       })
 
