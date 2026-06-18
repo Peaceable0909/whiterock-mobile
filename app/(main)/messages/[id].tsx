@@ -549,9 +549,13 @@ export default function ChatScreen() {
         <View style={[ms.row, isMe ? ms.rowMe : ms.rowThem]}>
         {!isMe && (
           <View style={ms.avatar}>
-            {otherUser?.avatar_url
-              ? <Image source={{ uri: otherUser.avatar_url }} style={ms.avatarImg} />
-              : <Text style={ms.avatarText}>{getInitials(item.is_ai ? 'AI' : otherUser?.name ?? '')}</Text>}
+            {item.is_ai ? (
+              <Ionicons name="hardware-chip-outline" size={14} color={C.white} />
+            ) : otherUser?.avatar_url ? (
+              <Image source={{ uri: otherUser.avatar_url }} style={ms.avatarImg} />
+            ) : (
+              <Text style={ms.avatarText}>{getInitials(otherUser?.name ?? '')}</Text>
+            )}
           </View>
         )}
 

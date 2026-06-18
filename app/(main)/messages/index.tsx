@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
   View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Modal, RefreshControl,
+  ActivityIndicator, Modal, RefreshControl, Image,
 } from 'react-native'
 import { useRouter, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -198,9 +198,13 @@ export default function MessagesScreen() {
           return (
             <TouchableOpacity style={s.convRow} onPress={() => router.push(`/(main)/messages/${item.id}`)}>
               <View style={s.avatarWrap}>
-                <View style={[s.avatar, unread > 0 && s.avatarActive]}>
-                  <Text style={[s.avatarText, unread > 0 && { color: C.white }]}>{getInitials(other.name)}</Text>
-                </View>
+                {other.avatar_url ? (
+                  <Image source={{ uri: other.avatar_url }} style={s.avatarImg} />
+                ) : (
+                  <View style={[s.avatar, unread > 0 && s.avatarActive]}>
+                    <Text style={[s.avatarText, unread > 0 && { color: C.white }]}>{getInitials(other.name)}</Text>
+                  </View>
+                )}
                 {other.is_online && <View style={s.onlineDotSmall} />}
               </View>
               <View style={{ flex: 1 }}>
@@ -307,6 +311,7 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   avatarWrap:     { position: 'relative', marginRight: 12 },
   avatar:         { width: 48, height: 48, borderRadius: 24, backgroundColor: C.slate200, alignItems: 'center', justifyContent: 'center' },
   avatarActive:   { backgroundColor: C.blue },
+  avatarImg:      { width: 48, height: 48, borderRadius: 24 },
   avatarText:     { fontSize: 16, fontWeight: '700', color: C.slate600 },
   name:           { fontSize: 14, fontWeight: '700', color: C.navy },
   time:           { fontSize: 11, color: C.slate400 },

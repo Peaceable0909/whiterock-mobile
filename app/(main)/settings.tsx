@@ -180,9 +180,13 @@ export default function SettingsScreen() {
       <ScrollView contentContainerStyle={[s.content, { paddingBottom: 48 + insets.bottom }]} showsVerticalScrollIndicator={false}>
         {/* Profile card */}
         <View style={[s.profileCard, bgStyle]}>
-          <View style={s.avatar}>
-            <Text style={s.avatarText}>{initials}</Text>
-          </View>
+          {user?.avatar_url ? (
+            <Image source={{ uri: user.avatar_url }} style={s.avatarImg} />
+          ) : (
+            <View style={s.avatar}>
+              <Text style={s.avatarText}>{initials}</Text>
+            </View>
+          )}
           <View style={s.profileInfo}>
             <Text style={s.profileName}>{user?.name ?? 'User'}</Text>
             <Text style={s.profileEmail}>{user?.email ?? ''}</Text>
@@ -437,6 +441,7 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
 
   profileCard:    { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: C.white, borderRadius: 20, padding: 16, marginBottom: 24, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   avatar:         { width: 56, height: 56, borderRadius: 28, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
+  avatarImg:      { width: 56, height: 56, borderRadius: 28 },
   avatarText:     { fontSize: 18, fontWeight: '800', color: C.white },
   profileInfo:    { flex: 1 },
   profileName:    { fontSize: 16, fontWeight: '800', color: C.navy },
