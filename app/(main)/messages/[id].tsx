@@ -473,11 +473,11 @@ export default function ChatScreen() {
       if (isVideo) {
         publicUrl = await uploadVideo(asset.uri, mimeType, rawName, pct => setUploadPct(pct))
       } else {
-        const path = `chat/${myId}/${Date.now()}.${ext}`
+        const path = `${myId}/${Date.now()}.${ext}`
         const { data: { session } } = await supabase.auth.getSession()
         await new Promise<void>((resolve, reject) => {
           const xhr = new XMLHttpRequest()
-          xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/documents/${path}`)
+          xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/chat-media/${path}`)
           xhr.setRequestHeader('Authorization', `Bearer ${session?.access_token}`)
           xhr.setRequestHeader('apikey', SUPABASE_ANON)
           xhr.upload.onprogress = e => {
@@ -489,7 +489,7 @@ export default function ChatScreen() {
           fd.append('file', { uri: asset.uri, name: rawName, type: mimeType } as any)
           xhr.send(fd)
         })
-        publicUrl = supabase.storage.from('documents').getPublicUrl(path).data.publicUrl
+        publicUrl = supabase.storage.from('chat-media').getPublicUrl(path).data.publicUrl
       }
 
       const caption = isVideo ? '🎬 Video' : isImage ? '📷 Photo' : `📎 ${rawName}`

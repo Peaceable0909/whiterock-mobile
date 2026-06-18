@@ -66,13 +66,32 @@ export default function DocumentsScreen() {
     if (!user) return
     setMyId(user.id)
 
-    const { data } = await supabase
+    const { data: rawDocs } = await supabase
       .from('documents')
       .select('*')
       .eq('student_id', user.id)
       .order('created_at', { ascending: false })
 
-    setDocs(data ?? [])
+    if (!rawDocs || rawDocs.length === 0) {
+      setDocs([])
+      setLoading(false)
+      setRefreshing(false)
+      return
+    }
+
+    // Bucket is private — generate 1-hour signed URLs for every doc
+    const paths = rawDocs.map(doc => {
+      // Handle legacy records that stored full public URLs
+      if (doc.url?.startsWith('http')) {
+        return decodeURIComponent(
+          doc.url.replace(/.*\/object\/(?:public|sign)\/documents\//, '').split('?')[0]
+        )
+      }
+      return doc.url
+    })
+    const { data: signed } = await supabase.storage.from('documents').createSignedUrls(paths, 3600)
+
+    setDocs(rawDocs.map((doc, i) => ({ ...doc, displayUrl: signed?.[i]?.signedUrl ?? null })))
     setLoading(false)
     setRefreshing(false)
   }, [])
@@ -131,13 +150,12 @@ export default function DocumentsScreen() {
         xhr.send(fd)
       })
 
-      const url = supabase.storage.from('documents').getPublicUrl(path).data.publicUrl
-
+      // Store storage path (not public URL) — bucket is private, signed URLs generated on load
       const { data: doc, error: dbErr } = await supabase.from('documents').insert({
         student_id:    myId,
         category,
         original_name: rawName,
-        url,
+        url:           path,
         file_type:     fileType,
         size:          asset.size ?? 0,
         uploaded_by:   myId,
@@ -145,7 +163,11 @@ export default function DocumentsScreen() {
       }).select('id').single()
       if (dbErr) throw dbErr
       await load()
-      if (doc?.id && isImage) analyzeDocument(doc.id, url, category)
+      if (doc?.id && isImage) {
+        // Generate a 24-hour signed URL for the AI analysis endpoint
+        const { data: sig } = await supabase.storage.from('documents').createSignedUrl(path, 86400)
+        if (sig?.signedUrl) analyzeDocument(doc.id, sig.signedUrl, category)
+      }
     } catch (e: any) {
       Alert.alert('Upload failed', e.message)
     } finally {
@@ -163,9 +185,11 @@ export default function DocumentsScreen() {
           text: 'Delete', style: 'destructive',
           onPress: async () => {
             // Best-effort storage removal — don't let a missing file block the DB delete
-            const match = doc.url?.match(/\/documents\/(.+?)(\?|$)/)
-            if (match?.[1]) {
-              await supabase.storage.from('documents').remove([decodeURIComponent(match[1])])
+            const storagePath = doc.url?.startsWith('http')
+              ? decodeURIComponent(doc.url.replace(/.*\/object\/(?:public|sign)\/documents\//, '').split('?')[0])
+              : doc.url
+            if (storagePath) {
+              await supabase.storage.from('documents').remove([storagePath])
             }
             const { error: deleteErr } = await supabase.from('documents').delete().eq('id', doc.id)
             if (deleteErr) {
@@ -343,8 +367,8 @@ export default function DocumentsScreen() {
                     </View>
                   ) : null}
                   <View style={s.docActions}>
-                    {item.url && (
-                      <TouchableOpacity style={s.viewBtn} onPress={() => openDocument(item.url, item.file_type)}>
+                    {item.displayUrl && (
+                      <TouchableOpacity style={s.viewBtn} onPress={() => openDocument(item.displayUrl, item.file_type)}>
                         <Ionicons name="eye-outline" size={14} color={C.blue} />
                         <Text style={s.viewBtnText}>View</Text>
                       </TouchableOpacity>
