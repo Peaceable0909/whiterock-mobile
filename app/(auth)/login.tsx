@@ -12,8 +12,9 @@ import { supabase } from '@/lib/supabase'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 
-// Supabase Google OAuth Web Client ID (configured in Supabase Auth → Providers → Google)
-const GOOGLE_WEB_CLIENT_ID = '247168518231-tf489dbnvcnv2951brfarre3bbqtdsal.apps.googleusercontent.com'
+// Web OAuth client from Firebase project (same project where SHA-1 is registered).
+// Must match the Client ID set in Supabase Auth → Providers → Google.
+const GOOGLE_WEB_CLIENT_ID = '149816206182-anl9ku2qei82mbgu1kih5s54nh09k59p.apps.googleusercontent.com'
 
 GoogleSignin.configure({
   webClientId: GOOGLE_WEB_CLIENT_ID,
