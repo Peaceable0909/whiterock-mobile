@@ -3,6 +3,7 @@ import { Tabs, router } from 'expo-router'
 import * as Notifications from 'expo-notifications'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Ionicons } from '@expo/vector-icons'
+import { View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { registerForPush } from '@/lib/notifications'
 import { supabase } from '@/lib/supabase'
@@ -14,11 +15,11 @@ export default function MainLayout() {
   const insets = useSafeAreaInsets()
 
   useEffect(() => {
-    // Fast path: cached role → instant tab bar on re-open
+    // Fast path: cached role
     AsyncStorage.getItem('cached_role').then(r => { if (r) setRole(r) })
 
     supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) { setRole('staff'); return }
+      if (!user) return
       const { data } = await supabase.from('users').select('role').eq('id', user.id).single()
       const r = data?.role ?? 'student'
       setRole(r)
@@ -40,8 +41,9 @@ export default function MainLayout() {
   }, [])
 
   const isStudent = role === 'student'
+  const isAdmin   = role === 'admin'
 
-  const tabBarStyle = isStudent ? {
+  const tabBarStyle = {
     backgroundColor: C.white,
     borderTopWidth: 1,
     borderTopColor: C.slate100,
@@ -53,7 +55,7 @@ export default function MainLayout() {
     shadowOpacity: 0.10,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: -4 },
-  } : { display: 'none' as const }
+  }
 
   return (
     <Tabs screenOptions={{
@@ -81,7 +83,6 @@ export default function MainLayout() {
           <Ionicons name={focused ? 'hardware-chip' : 'hardware-chip-outline'} size={22} color={color} />
         ),
       }} />
-      {/* Slot 4 swaps: students for staff, updates for students */}
       <Tabs.Screen name="students/index" options={{
         href: isStudent ? null : undefined,
         tabBarLabel: 'Students',

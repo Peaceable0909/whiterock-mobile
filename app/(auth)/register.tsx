@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ScrollView, ActivityIndicator, Alert
+  StyleSheet, ScrollView, ActivityIndicator, Alert, Image, Platform
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -12,6 +12,14 @@ import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 
 const VERSION = Constants.expoConfig?.version ?? '1.0.0'
+
+const showAlert = (title: string, msg: string) => {
+  if (Platform.OS === 'web') {
+    alert(`${title}: ${msg}`)
+  } else {
+    Alert.alert(title, msg)
+  }
+}
 
 export default function RegisterScreen() {
   const C = useColors()
@@ -27,40 +35,38 @@ export default function RegisterScreen() {
   const [loading, setLoading]   = useState(false)
 
   const verifyCode = async () => {
-    if (!code.trim()) { Alert.alert('Invite Code', 'Enter your invite code first'); return }
+    if (!code.trim()) { showAlert('Invite Code', 'Enter your invite code first'); return }
     setChecking(true)
     const { data, error } = await supabase.rpc('check_invite', { p_code: code })
     setChecking(false)
     if (error || !data) {
       setCodeRole(null)
-      Alert.alert('Invalid Code', 'This invite code is invalid or expired. Ask your agent for a new one.')
+      showAlert('Invalid Code', 'This invite code is invalid or expired. Ask your agent for a new one.')
       return
     }
     setCodeRole(data)
   }
 
   const handleRegister = async () => {
-    if (!codeRole) { Alert.alert('Invite Code', 'Verify your invite code first'); return }
-    if (!name || !email || !password) { Alert.alert('Error', 'Please fill in all fields'); return }
-    if (password.length < 6) { Alert.alert('Error', 'Password must be at least 6 characters'); return }
+    if (!codeRole) { showAlert('Invite Code', 'Verify your invite code first'); return }
+    if (!name || !email || !password) { showAlert('Error', 'Please fill in all fields'); return }
+    if (password.length < 6) { showAlert('Error', 'Password must be at least 6 characters'); return }
     setLoading(true)
 
     const { data, error } = await supabase.auth.signUp({
       email, password, options: { data: { name } },
     })
-    if (error) { Alert.alert('Registration Failed', error.message); setLoading(false); return }
+    if (error) { showAlert('Registration Failed', error.message); setLoading(false); return }
 
     if (data.session) {
       const { error: redeemErr } = await supabase.rpc('redeem_invite', { p_code: code, p_name: name })
       setLoading(false)
-      if (redeemErr) { Alert.alert('Setup Failed', redeemErr.message); return }
+      if (redeemErr) { showAlert('Setup Failed', redeemErr.message); return }
       router.replace('/(main)/home')
     } else {
-      // Email confirmation required — store the invite code so it can be
-      // redeemed automatically after the user confirms and signs in.
       await AsyncStorage.setItem(`pending_invite_${email.trim().toLowerCase()}`, code)
       setLoading(false)
-      Alert.alert(
+      showAlert(
         'Confirm your email',
         'Check your inbox and click the confirmation link, then sign in. Your account will be set up automatically.',
       )
@@ -71,16 +77,19 @@ export default function RegisterScreen() {
   return (
     <ScrollView style={s.bg} contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
       <View style={s.hero}>
-        <View style={s.iconBox}>
-          <Ionicons name="airplane-outline" size={30} color="#fff" />
+        <View style={s.logoContainer}>
+          <Image
+            source={require('../../assets/icon.png')}
+            style={s.logo}
+            resizeMode="contain"
+          />
         </View>
-        <Text style={s.wordmark}>Connect</Text>
+        <Text style={s.brandName}>WhiteRock Connect</Text>
         <Text style={s.title}>Create Account</Text>
         <Text style={s.subtitle}>Invite-only access · University Placement</Text>
       </View>
 
       <View style={s.card}>
-        {/* Invite code */}
         <Text style={s.label}>INVITE CODE</Text>
         <View style={s.codeRow}>
           <View style={s.codeInputWrap}>
@@ -106,7 +115,7 @@ export default function RegisterScreen() {
         </View>
         {codeRole
           ? <Text style={s.codeOk}>✓ You&apos;ll join as: <Text style={{ textTransform: 'capitalize' }}>{codeRole}</Text></Text>
-          : <Text style={s.codeHint}>Don&apos;t have a code? Ask your Apply agent.</Text>}
+          : <Text style={s.codeHint}>Don&apos;t have a code? Ask your agent.</Text>}
 
         <Text style={[s.label, { marginTop: 20 }]}>FULL NAME</Text>
         <View style={s.inputWrap}>
@@ -156,30 +165,31 @@ export default function RegisterScreen() {
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
   bg:            { flex: 1, backgroundColor: C.bg },
-  container:     { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  hero:          { alignItems: 'center', marginBottom: 24 },
-  iconBox:       { width: 72, height: 72, borderRadius: 22, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', marginBottom: 16, shadowColor: C.blue, shadowOpacity: 0.4, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 8 },
-  wordmark:      { fontSize: 13, fontWeight: '700', color: C.blue, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 },
+  container:     { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24, paddingTop: 60 },
+  hero:          { alignItems: 'center', marginBottom: 28 },
+  logoContainer: { width: 80, height: 80, borderRadius: 20, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center', marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
+  logo:          { width: 50, height: 50 },
+  brandName:     { fontSize: 13, fontWeight: '700', color: C.blue, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 },
   title:         { fontSize: 28, fontWeight: '800', color: C.navy },
   subtitle:      { fontSize: 14, color: C.slate500, marginTop: 6, textAlign: 'center' },
-  card:          { width: '100%', backgroundColor: C.white, borderRadius: 24, padding: 24, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  card:          { width: '100%', maxWidth: 400, backgroundColor: C.white, borderRadius: 24, padding: 24, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
   label:         { fontSize: 10, fontWeight: '800', color: C.slate500, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 },
   codeRow:       { flexDirection: 'row', gap: 8 },
-  codeInputWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, height: 50, backgroundColor: C.bg, borderRadius: 14, paddingHorizontal: 14, borderWidth: 1, borderColor: C.slate200 },
+  codeInputWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, height: 52, backgroundColor: C.bg, borderRadius: 14, paddingHorizontal: 14, borderWidth: 1, borderColor: C.slate200 },
   codeInput:     { flex: 1, fontSize: 14, color: C.navy, letterSpacing: 2, fontWeight: '700' },
-  verifyBtn:     { height: 50, paddingHorizontal: 18, borderRadius: 14, backgroundColor: C.navy, alignItems: 'center', justifyContent: 'center' },
+  verifyBtn:     { height: 52, paddingHorizontal: 18, borderRadius: 14, backgroundColor: C.navy, alignItems: 'center', justifyContent: 'center' },
   verifyBtnOk:   { backgroundColor: C.green400 + '18', borderWidth: 1.5, borderColor: C.green400 + '40' },
   verifyText:    { color: C.white, fontWeight: '700', fontSize: 13 },
   codeOk:        { fontSize: 12, color: C.green400, fontWeight: '700', marginTop: 8 },
   codeHint:      { fontSize: 11, color: C.slate400, marginTop: 8 },
-  inputWrap:     { flexDirection: 'row', alignItems: 'center', height: 50, backgroundColor: C.bg, borderRadius: 14, borderWidth: 1, borderColor: C.slate200, marginBottom: 4 },
+  inputWrap:     { flexDirection: 'row', alignItems: 'center', height: 52, backgroundColor: C.bg, borderRadius: 14, borderWidth: 1, borderColor: C.slate200, marginBottom: 4 },
   inputIcon:     { marginLeft: 14, marginRight: 4 },
-  input:         { flex: 1, height: 50, paddingHorizontal: 10, fontSize: 14, color: C.navy },
+  input:         { flex: 1, height: 52, paddingHorizontal: 10, fontSize: 14, color: C.navy },
   eyeBtn:        { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  btn:           { height: 52, backgroundColor: C.blue, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 20, shadowColor: C.blue, shadowOpacity: 0.35, shadowRadius: 10, elevation: 5 },
+  btn:           { height: 54, backgroundColor: C.blue, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 20, shadowColor: C.blue, shadowOpacity: 0.35, shadowRadius: 10, elevation: 5 },
   btnText:       { color: C.white, fontWeight: '800', fontSize: 16 },
-  switchRow:     { marginTop: 16 },
+  switchRow:     { marginTop: 16, paddingVertical: 12 },
   loginLink:     { fontSize: 14, color: C.slate500, textAlign: 'center' },
   loginBold:     { color: C.blue, fontWeight: '700' },
-  version:       { fontSize: 10, color: C.slate400, textAlign: 'center', marginTop: 20, letterSpacing: 0.5 },
+  version:       { fontSize: 10, color: C.slate400, textAlign: 'center', marginTop: 24, letterSpacing: 0.5 },
 })

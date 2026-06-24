@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import {
   View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Modal, Platform, ActivityIndicator, Image, Alert, AppState,
-  useWindowDimensions, Vibration,
+  useWindowDimensions, Vibration, Clipboard, Share
 } from 'react-native'
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -22,6 +22,9 @@ const PAGE_SIZE = 50
 const API_BASE  = 'https://whiterock-connect.vercel.app'
 
 const MSG_URL_RE = /https?:\/\/[^\s<>"']+/g
+
+const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏']
+const STICKERS  = ['🚀', '✨', '🔥', '🎉', '👏', '🙌', '💡', '✅', '🎓', '🇬🇧']
 
 function getYouTubeId(url: string): string | null {
   const m = url.match(/(?:youtube\.com\/(?:[^/?#]*[?&]v=|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/)
@@ -176,6 +179,14 @@ export default function ChatScreen() {
   const [profileModal, setProfileModal] = useState(false)
   const [aiEnabled, setAiEnabled]   = useState(true)
   const [aiAvatar, setAiAvatar]     = useState<string | null>(null)
+
+  // Message actions
+  const [menuVisible, setMenuVisible] = useState(false)
+  const [selectedMsg, setSelectedMsg] = useState<any>(null)
+  const [forwardModal, setForwardModal] = useState(false)
+  const [conversations, setConversations] = useState<any[]>([])
+  const [stickerModal, setStickerModal] = useState(false)
+
   const aiReplyingRef = useRef(false)
   const oldestTs   = useRef<string | null>(null)
   const latestMsgTs = useRef<string | null>(null)
@@ -202,11 +213,11 @@ export default function ChatScreen() {
       .eq('conversation_id', id)
       .gt('created_at', latestMsgTs.current)
       .order('created_at', { ascending: true })
-    if (data && data.length > 0) {
+    if (data?.length) {
       setMsgs(prev => {
-        const ids = new Set(prev.map(m => m.id))
-        const fresh = data.filter((m: any) => !ids.has(m.id))
-        if (fresh.length === 0) return prev
+        const ids = new Set(prev.map((m: any) => m.id))
+        const fresh = (data as any[]).filter(m => !ids.has(m.id))
+        if (!fresh.length) return prev
         latestMsgTs.current = fresh[fresh.length - 1].created_at
         return [...prev, ...fresh]
       })
@@ -219,59 +230,61 @@ export default function ChatScreen() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       setMyId(user.id)
+      const { data: dbUser } = await supabase.from('users').select('role').eq('id', user.id).single()
+      setMyRole(dbUser?.role ?? 'student')
 
-      const [{ data: conv }, { data: dbUser }, { data: history }] = await Promise.all([
-        supabase.from('conversations')
-          .select('*, student:student_id(id,name,avatar_url,is_online), agent:agent_id(id,name,avatar_url,role,is_online), counselor:counselor_id(id,name,avatar_url,role,is_online)')
-          .eq('id', id).single(),
-        supabase.from('users').select('role').eq('id', user.id).single(),
-        supabase.from('messages').select('*').eq('conversation_id', id)
-          .order('created_at', { ascending: false }).limit(PAGE_SIZE),
-      ])
-
-      const role = dbUser?.role ?? 'student'
-      setMyRole(role)
+      const { data: conv } = await supabase.from('conversations').select('*').eq('id', id).single()
       if (conv) {
-        const other = role === 'student' ? (conv.counselor || conv.agent) : conv.student
-        setOther(other)
-        setAiEnabled(conv.ai_enabled ?? true)
+        setAiEnabled(conv.ai_enabled !== false)
+        const otherId = dbUser?.role === 'student'
+          ? (conv.counselor_id || conv.agent_id)
+          : conv.student_id
+        if (otherId) {
+          const { data: other } = await supabase.from('users').select('*').eq('id', otherId).single()
+          setOther(other)
+          if (other?.role === 'agent' || other?.role === 'counselor' || other?.role === 'admin') {
+            setAiAvatar(getAiAvatarUrl(other.name))
+          }
+        }
       }
-      const ordered = (history ?? []).reverse()
-      setMsgs(ordered)
-      if (ordered.length > 0) {
-        oldestTs.current   = ordered[0].created_at
-        latestMsgTs.current = ordered[ordered.length - 1].created_at
+
+      const { data: messages } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', id)
+        .order('created_at', { ascending: false })
+        .limit(PAGE_SIZE)
+
+      const reversed = (messages ?? []).reverse()
+      setMsgs(reversed)
+      if (reversed.length > 0) {
+        oldestTs.current = reversed[0].created_at
+        latestMsgTs.current = reversed[reversed.length - 1].created_at
       }
-      setHasMore((history ?? []).length >= PAGE_SIZE)
+      setHasMore((messages ?? []).length >= PAGE_SIZE)
       setLoading(false)
       scrollToEnd()
-      getAiAvatarUrl().then(url => { if (url) setAiAvatar(url) })
 
-      await supabase.rpc('mark_conversation_read', { conv_id: id })
-      await supabase.from('conversations')
-        .update({ [role === 'student' ? 'unread_student' : 'unread_staff']: 0 })
-        .eq('id', id)
+      const unreadField = dbUser?.role === 'student' ? 'unread_student' : 'unread_staff'
+      await supabase.from('conversations').update({ [unreadField]: 0 }).eq('id', id)
     }
     load()
 
     const subscribe = () => {
       if (channelRef.current) supabase.removeChannel(channelRef.current)
-      const ch = supabase.channel(`chat-mob-${id}`)
+      const ch = supabase.channel(`chat-${id}`)
         .on('postgres_changes', {
           event: 'INSERT', schema: 'public', table: 'messages',
           filter: `conversation_id=eq.${id}`,
-        }, async (payload) => {
-          const msg = payload.new as any
+        }, (payload) => {
+          const fresh = payload.new as any
           setMsgs(prev => {
-            if (prev.some(m => m.id === msg.id)) return prev
-            latestMsgTs.current = msg.created_at
-            return [...prev, msg]
+            if (prev.some(m => m.id === fresh.id)) return prev
+            latestMsgTs.current = fresh.created_at
+            return [...prev, fresh]
           })
+          if (fresh.sender_id !== myId) Vibration.vibrate(5)
           scrollToEnd()
-          const { data: { user } } = await supabase.auth.getUser()
-          if (user && msg.sender_id !== user.id) {
-            await supabase.rpc('mark_conversation_read', { conv_id: id })
-          }
         })
         .on('postgres_changes', {
           event: 'UPDATE', schema: 'public', table: 'messages',
@@ -293,7 +306,6 @@ export default function ChatScreen() {
 
     subscribe()
 
-    // Keep is_online fresh so AI auto-reply doesn't fire when counselor is actually online
     let otherUserId: string | null = null
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return
@@ -324,8 +336,7 @@ export default function ChatScreen() {
       if (channelRef.current) supabase.removeChannel(channelRef.current)
       supabase.removeChannel(onlineChannel)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id])
+  }, [id, fetchMissed, myId, scrollToEnd])
 
   const loadOlderMessages = useCallback(async () => {
     if (loadingMore || !oldestTs.current) return
@@ -371,7 +382,6 @@ export default function ChatScreen() {
       })
       const { reply } = await res.json()
       if (reply) {
-        // Fix inline lists before putting into the input box
         const fixed = reply
           .replace(/([^.\n!?]):\s+(\d{1,2}\.\s)/g, '$1:\n\n$2')
           .replace(/([.!?])\s+(\d{1,2}\.\s)/g, '$1\n$2')
@@ -386,11 +396,11 @@ export default function ChatScreen() {
     }
   }
 
-  const sendMessage = async () => {
-    const content = input.trim()
+  const sendMessage = async (overrideContent?: string) => {
+    const content = overrideContent ?? input.trim()
     if (!content || sending) return
     Vibration.vibrate(10)
-    setInput('')
+    if (!overrideContent) setInput('')
     setSending(true)
     const replyId = replyTo?.id ?? null
     setReplyTo(null)
@@ -399,7 +409,6 @@ export default function ChatScreen() {
       reply_to_id: replyId,
     }).select().single()
     if (saved) setMsgs(prev => [...prev, saved])
-    // Fetch current counts first so we increment rather than reset to 1
     const { data: convData } = await supabase.from('conversations').select('unread_staff, unread_student').eq('id', id).maybeSingle()
     await supabase.from('conversations').update({
       last_message: content, last_message_at: new Date().toISOString(),
@@ -409,8 +418,7 @@ export default function ChatScreen() {
     scrollToEnd()
     setSending(false)
 
-    // AI auto-reply: only for students when their counselor is offline AND AI is enabled
-    if (myRole === 'student' && saved && !otherUser?.is_online && !aiReplyingRef.current && aiEnabled) {
+    if (myRole === 'student' && saved && !otherUser?.is_online && !aiReplyingRef.current && aiEnabled && !overrideContent) {
       aiReplyingRef.current = true
       setIsTyping(true)
       scrollToEnd()
@@ -435,7 +443,7 @@ export default function ChatScreen() {
             scrollToEnd()
           }
         }
-      } catch { /* silent — AI reply is best-effort */ }
+      } catch { /* silent */ }
       finally { setIsTyping(false); aiReplyingRef.current = false }
     }
   }
@@ -450,15 +458,10 @@ export default function ChatScreen() {
     let picked: DocumentPicker.DocumentPickerResult
     try {
       picked = await DocumentPicker.getDocumentAsync({
-        type: ['image/*', 'video/*', 'application/pdf',
-               'application/msword',
-               'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        type: ['image/*', 'video/*', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
         copyToCacheDirectory: true,
       })
-    } catch {
-      Alert.alert('Picker error', 'Could not open file picker. Try again.')
-      return
-    }
+    } catch { return }
     if (picked.canceled || !picked.assets?.[0]) return
 
     const asset    = picked.assets[0]
@@ -503,9 +506,6 @@ export default function ChatScreen() {
         is_ai: false,
       }).select().single()
       if (saved) setMsgs(prev => [...prev, saved])
-      await supabase.from('conversations').update({
-        last_message: caption, last_message_at: new Date().toISOString(),
-      }).eq('id', id)
       scrollToEnd()
     } catch (err) {
       Alert.alert('Upload failed', (err as Error).message)
@@ -513,6 +513,68 @@ export default function ChatScreen() {
       setUploading(false)
       setUploadPct(0)
     }
+  }
+
+  // --- Message Actions ---
+  const deleteMessage = async () => {
+    if (!selectedMsg) return
+    Alert.alert('Delete Message', 'Delete this message for everyone?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+          setMenuVisible(false)
+          await supabase.from('messages').update({ deleted_at: new Date().toISOString(), content: 'This message was deleted' }).eq('id', selectedMsg.id)
+        }
+      }
+    ])
+  }
+
+  const copyText = () => {
+    if (!selectedMsg?.content) return
+    Clipboard.setString(selectedMsg.content)
+    setMenuVisible(false)
+    Vibration.vibrate(5)
+  }
+
+  const shareMessage = async () => {
+    if (!selectedMsg?.content) return
+    try {
+      await Share.share({ message: selectedMsg.content })
+    } catch {}
+    setMenuVisible(false)
+  }
+
+  const addReaction = async (emoji: string) => {
+    if (!selectedMsg) return
+    setMenuVisible(false)
+    const existing = selectedMsg.reactions || {}
+    const counts = existing[emoji] || 0
+    const next = { ...existing, [emoji]: counts + 1 }
+    await supabase.from('messages').update({ reactions: next }).eq('id', selectedMsg.id)
+  }
+
+  const openForward = async () => {
+    setMenuVisible(false)
+    const { data } = await supabase.from('conversations').select('id, student:student_id(name), agent:agent_id(name), counselor:counselor_id(name)').order('last_message_at', { ascending: false })
+    setConversations(data || [])
+    setForwardModal(true)
+  }
+
+  const forwardTo = async (convId: string) => {
+    if (!selectedMsg) return
+    setForwardModal(false)
+    const { error } = await supabase.from('messages').insert({
+      conversation_id: convId, sender_id: myId,
+      content: selectedMsg.content, type: selectedMsg.type,
+      file_url: selectedMsg.file_url, file_name: selectedMsg.file_name,
+      file_size: selectedMsg.file_size, forwarded: true
+    })
+    if (error) Alert.alert('Forward Failed', error.message)
+    else Alert.alert('Sent', 'Message forwarded successfully.')
+  }
+
+  const sendSticker = (sticker: string) => {
+    setStickerModal(false)
+    sendMessage(sticker)
   }
 
   const withSeparators = useMemo(() => {
@@ -542,11 +604,12 @@ export default function ChatScreen() {
     const isMe      = item.sender_id === myId && !item.is_ai
     const isDeleted = !!item.deleted_at
     const repliedMsg = item.reply_to_id ? msgsMap.get(item.reply_to_id) : null
+    const reactions = Object.entries(item.reactions || {}) as [string, any][]
 
     return (
       <TouchableOpacity
         activeOpacity={0.85}
-        onLongPress={() => { if (!isDeleted) { Vibration.vibrate(20); setReplyTo(item) } }}
+        onLongPress={() => { if (!isDeleted) { Vibration.vibrate(20); setSelectedMsg(item); setMenuVisible(true) } }}
         delayLongPress={400}
       >
         <View style={[ms.row, isMe ? ms.rowMe : ms.rowThem]}>
@@ -595,34 +658,14 @@ export default function ChatScreen() {
               const url: string = item.file_url
               const isPdf = /\.(pdf)(\?|$)/i.test(url) || item.file_name?.toLowerCase().endsWith('.pdf')
               const isDoc = /\.(doc|docx|xls|xlsx|ppt|pptx)(\?|$)/i.test(url)
-              WebBrowser.openBrowserAsync(
-                (isPdf || isDoc)
-                  ? `https://docs.google.com/viewer?url=${encodeURIComponent(url)}`
-                  : url
-              )
-            }}
-              style={ms.fileRow} activeOpacity={0.8}>
+              WebBrowser.openBrowserAsync((isPdf || isDoc) ? `https://docs.google.com/viewer?url=${encodeURIComponent(url)}` : url)
+            }} style={ms.fileRow} activeOpacity={0.8}>
               <View style={[ms.fileIcon, isMe && ms.fileIconMe]}>
-                <Ionicons
-                  name={
-                    /\.(pdf)(\?|$)/i.test(item.file_url) || item.file_name?.toLowerCase().endsWith('.pdf')
-                      ? 'document-text-outline'
-                      : 'attach-outline'
-                  }
-                  size={16}
-                  color={isMe ? C.white : C.blue}
-                />
+                <Ionicons name={/\.(pdf)(\?|$)/i.test(item.file_url) || item.file_name?.toLowerCase().endsWith('.pdf') ? 'document-text-outline' : 'attach-outline'} size={16} color={isMe ? C.white : C.blue} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[ms.fileName, isMe && ms.textMe]} numberOfLines={1}>{item.file_name ?? 'File'}</Text>
-                {item.file_size && (
-                  <Text style={[ms.fileSize, isMe && { color: 'rgba(255,255,255,0.65)' }]}>
-                    {formatFileSize(item.file_size)}
-                  </Text>
-                )}
-                <Text style={[ms.fileSize, isMe && { color: 'rgba(255,255,255,0.5)' }]}>
-                  Tap to open
-                </Text>
+                {item.file_size && <Text style={[ms.fileSize, isMe && { color: 'rgba(255,255,255,0.65)' }]}>{formatFileSize(item.file_size)}</Text>}
               </View>
               <Ionicons name="open-outline" size={13} color={isMe ? 'rgba(255,255,255,0.5)' : C.slate400} />
             </TouchableOpacity>
@@ -641,6 +684,16 @@ export default function ChatScreen() {
                 : <Ionicons name="checkmark" size={13} color="rgba(255,255,255,0.55)" style={ms.tick} />
             )}
           </View>
+
+          {reactions.length > 0 && (
+            <View style={[ms.reactionsRow, isMe && { justifyContent: 'flex-end' }]}>
+              {reactions.map(([emoji, count]) => (
+                <View key={emoji} style={ms.reaction}>
+                  <Text style={ms.reactionText}>{emoji} {count > 1 ? count : ''}</Text>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
         </View>
       </TouchableOpacity>
@@ -648,7 +701,6 @@ export default function ChatScreen() {
   }
 
   useFocusEffect(useCallback(() => { fetchMissed() }, [fetchMissed]))
-
   useFocusEffect(useCallback(() => {
     setActiveConvId(id)
     return () => setActiveConvId(null)
@@ -663,21 +715,96 @@ export default function ChatScreen() {
     <>
     <ImageModal uri={previewImg} onClose={() => setPreviewImg(null)} />
 
+    {/* Message Actions Menu */}
+    <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
+      <TouchableOpacity style={g.menuOverlay} activeOpacity={1} onPress={() => setMenuVisible(false)}>
+        <View style={g.menu}>
+          <View style={g.reactionStrip}>
+            {REACTIONS.map(emoji => (
+              <TouchableOpacity key={emoji} style={g.reactionBtn} onPress={() => addReaction(emoji)}>
+                <Text style={{ fontSize: 24 }}>{emoji}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View style={g.menuContent}>
+            <TouchableOpacity style={g.menuItem} onPress={() => { setReplyTo(selectedMsg); setMenuVisible(false) }}>
+              <Ionicons name="arrow-undo-outline" size={20} color={C.navy} />
+              <Text style={g.menuItemText}>Reply</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={g.menuItem} onPress={openForward}>
+              <Ionicons name="arrow-redo-outline" size={20} color={C.navy} />
+              <Text style={g.menuItemText}>Forward</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={g.menuItem} onPress={copyText}>
+              <Ionicons name="copy-outline" size={20} color={C.navy} />
+              <Text style={g.menuItemText}>Copy Text</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={g.menuItem} onPress={shareMessage}>
+              <Ionicons name="share-outline" size={20} color={C.navy} />
+              <Text style={g.menuItemText}>Share</Text>
+            </TouchableOpacity>
+            {selectedMsg?.sender_id === myId && (
+              <TouchableOpacity style={g.menuItem} onPress={deleteMessage}>
+                <Ionicons name="trash-outline" size={20} color={C.red500} />
+                <Text style={[g.menuItemText, { color: C.red500 }]}>Delete</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+
+    {/* Forward Modal */}
+    <Modal visible={forwardModal} transparent animationType="slide" onRequestClose={() => setForwardModal(false)}>
+      <View style={g.modalOverlay}>
+        <View style={g.forwardSheet}>
+          <View style={g.modalHeader}>
+            <Text style={g.modalTitle}>Forward to...</Text>
+            <TouchableOpacity onPress={() => setForwardModal(false)}><Ionicons name="close" size={24} color={C.slate400} /></TouchableOpacity>
+          </View>
+          <FlatList
+            data={conversations}
+            keyExtractor={item => item.id}
+            renderItem={({ item }) => {
+              const other = myRole === 'student' ? (item.agent || item.counselor) : item.student
+              return (
+                <TouchableOpacity style={g.forwardRow} onPress={() => forwardTo(item.id)}>
+                  <View style={g.avatarSmall}><Text style={g.avatarSmallText}>{getInitials(other?.name ?? '')}</Text></View>
+                  <Text style={g.forwardName}>{other?.name ?? 'Contact'}</Text>
+                  <Ionicons name="send" size={16} color={C.blue} />
+                </TouchableOpacity>
+              )
+            }}
+          />
+        </View>
+      </View>
+    </Modal>
+
+    {/* Sticker Modal */}
+    <Modal visible={stickerModal} transparent animationType="slide" onRequestClose={() => setStickerModal(false)}>
+      <TouchableOpacity style={g.modalOverlay} activeOpacity={1} onPress={() => setStickerModal(false)}>
+        <View style={g.stickerSheet}>
+          <Text style={g.stickerTitle}>Send a Sticker</Text>
+          <View style={g.stickerGrid}>
+            {STICKERS.map(s => (
+              <TouchableOpacity key={s} style={g.stickerBtn} onPress={() => sendSticker(s)}>
+                <Text style={{ fontSize: 40 }}>{s}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+
     {/* Contact info bottom sheet */}
     <Modal transparent animationType="slide" visible={profileModal} onRequestClose={() => setProfileModal(false)}>
       <TouchableOpacity style={g.modalOverlay} activeOpacity={1} onPress={() => setProfileModal(false)}>
         <View style={[g.infoSheet, { paddingBottom: insets.bottom + 24 }]}>
           <View style={g.infoHandle} />
           {otherUser?.avatar_url ? (
-            <TouchableOpacity
-              style={g.infoAvatarWrap}
-              activeOpacity={0.85}
-              onPress={() => setPreviewImg(otherUser.avatar_url)}
-            >
+            <TouchableOpacity style={g.infoAvatarWrap} activeOpacity={0.85} onPress={() => setPreviewImg(otherUser.avatar_url)}>
               <Image source={{ uri: otherUser.avatar_url }} style={g.infoAvatarImg} />
-              <View style={g.infoAvatarHint}>
-                <Ionicons name="expand-outline" size={11} color={C.white} />
-              </View>
+              <View style={g.infoAvatarHint}><Ionicons name="expand-outline" size={11} color={C.white} /></View>
             </TouchableOpacity>
           ) : (
             <View style={g.infoAvatarWrap}>
@@ -695,7 +822,6 @@ export default function ChatScreen() {
     </Modal>
 
     <KeyboardAvoidingView style={g.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 0}>
-      {/* Header */}
       <View style={[g.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => router.back()} style={g.backBtn}>
           <Ionicons name="arrow-back" size={22} color={C.navy} />
@@ -707,34 +833,20 @@ export default function ChatScreen() {
               : <Text style={g.headerAvatarText}>{getInitials(otherUser?.name ?? 'WR')}</Text>}
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={g.headerName} numberOfLines={1}>
-              {myRole === 'student' ? (otherUser?.name ?? 'Apply Support') : (otherUser?.name ?? 'Student')}
-            </Text>
+            <Text style={g.headerName} numberOfLines={1}>{myRole === 'student' ? (otherUser?.name ?? 'Apply Support') : (otherUser?.name ?? 'Student')}</Text>
             <View style={g.onlineRow}>
               {otherUser?.is_online && <View style={g.onlineDot} />}
-              <Text style={g.onlineTxt}>
-                {otherUser?.is_online ? 'Online' : (otherRoleCap || 'Tap for info')}
-              </Text>
+              <Text style={g.onlineTxt}>{otherUser?.is_online ? 'Online' : (otherRoleCap || 'Tap for info')}</Text>
             </View>
           </View>
         </TouchableOpacity>
-        {/* AI toggle — counselors can pause/resume AI for this conversation */}
         {myRole !== 'student' && (
-          <TouchableOpacity
-            onPress={toggleAiEnabled}
-            style={[g.headerAiBtn, !aiEnabled && g.headerAiBtnOff]}
-            activeOpacity={0.75}
-          >
-            <Ionicons
-              name={aiEnabled ? 'hardware-chip' : 'hardware-chip-outline'}
-              size={17}
-              color={aiEnabled ? C.blue : C.slate400}
-            />
+          <TouchableOpacity onPress={toggleAiEnabled} style={[g.headerAiBtn, !aiEnabled && g.headerAiBtnOff]} activeOpacity={0.75}>
+            <Ionicons name={aiEnabled ? 'hardware-chip' : 'hardware-chip-outline'} size={17} color={aiEnabled ? C.blue : C.slate400} />
           </TouchableOpacity>
         )}
       </View>
 
-      {/* AI paused banner — visible to both parties */}
       {!aiEnabled && (
         <View style={g.aiPausedBanner}>
           <Ionicons name="pause-circle-outline" size={13} color="#B45309" />
@@ -742,7 +854,6 @@ export default function ChatScreen() {
         </View>
       )}
 
-      {/* Messages — wallpaper-aware */}
       <View style={{ flex: 1 }}>
         {resolvedWallpaper && 'uri' in resolvedWallpaper && (
           <Image source={{ uri: resolvedWallpaper.uri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
@@ -751,91 +862,69 @@ export default function ChatScreen() {
           ref={listRef}
           data={withSeparators}
           keyExtractor={m => m._id ?? m.id}
-          style={{
-            flex: 1,
-            backgroundColor: resolvedWallpaper
-              ? ('color' in resolvedWallpaper ? resolvedWallpaper.color : 'transparent')
-              : C.bg,
-          }}
+          style={{ flex: 1, backgroundColor: resolvedWallpaper ? ('color' in resolvedWallpaper ? resolvedWallpaper.color : 'transparent') : C.bg }}
           contentContainerStyle={{ padding: 12, paddingBottom: 8 }}
           renderItem={renderMessage}
           onContentSizeChange={scrollToEnd}
           ListHeaderComponent={hasMore ? (
-            <TouchableOpacity onPress={loadOlderMessages} disabled={loadingMore}
-              style={g.loadMoreBtn}>
-              {loadingMore
-                ? <ActivityIndicator size="small" color={C.blue} />
-                : <Text style={g.loadMoreTxt}>↑ Load older messages</Text>}
+            <TouchableOpacity onPress={loadOlderMessages} disabled={loadingMore} style={g.loadMoreBtn}>
+              {loadingMore ? <ActivityIndicator size="small" color={C.blue} /> : <Text style={g.loadMoreTxt}>↑ Load older messages</Text>}
             </TouchableOpacity>
           ) : null}
         />
       </View>
 
-      {/* AI typing indicator — shown while AI is composing a reply for students */}
       {isTyping && (
         <View style={g.typingBar}>
-          {aiAvatar
-            ? <Image source={{ uri: aiAvatar }} style={g.headerAvatarImg} />
-            : <View style={g.headerAvatar}><Ionicons name="hardware-chip-outline" size={16} color={C.white} /></View>}
-
           <View style={g.typingBubble}>
             <View style={g.typingDots}>
-              <View style={[g.typingDot, { opacity: 0.4 }]} />
-              <View style={[g.typingDot, { opacity: 0.7 }]} />
-              <View style={g.typingDot} />
+              <View style={g.typingDot} /><View style={g.typingDot} /><View style={g.typingDot} />
             </View>
           </View>
+          <Text style={g.onlineTxt}>AI is typing...</Text>
         </View>
       )}
 
-      {/* Upload progress */}
       {uploading && (
         <View style={g.progressBar}>
           <View style={[g.progressFill, { width: `${uploadPct}%` }]} />
-          <Text style={g.progressTxt}>{uploadPct}%</Text>
+          <Text style={g.progressTxt}>Uploading... {uploadPct}%</Text>
         </View>
       )}
 
-      {/* Reply preview */}
       {replyTo && (
         <View style={g.replyPreviewBar}>
-          <Ionicons name="return-down-forward-outline" size={14} color={C.blue} />
-          <Text style={g.replyPreviewText} numberOfLines={1}>{replyTo.content}</Text>
+          <Ionicons name="arrow-undo" size={14} color={C.blue} />
+          <Text style={g.replyPreviewText} numberOfLines={1}>
+            Replying to: {replyTo.content}
+          </Text>
           <TouchableOpacity onPress={() => setReplyTo(null)}>
-            <Ionicons name="close" size={16} color={C.slate400} />
+            <Ionicons name="close-circle" size={18} color={C.slate400} />
           </TouchableOpacity>
         </View>
       )}
 
-      {/* AI Assist toggle — staff only */}
       {myRole !== 'student' && (
         <View style={g.aiBar}>
-          <TouchableOpacity
-            style={[g.aiToggle, aiAssist && g.aiToggleOn]}
-            onPress={() => setAiAssist(v => !v)}
-          >
-            <Ionicons name="hardware-chip-outline" size={14} color={aiAssist ? C.white : C.blue} />
-            <Text style={[g.aiToggleText, aiAssist && { color: C.white }]}>{aiAssist ? 'Assist ON' : 'Assist OFF'}</Text>
+          <TouchableOpacity style={[g.aiToggle, aiAssist && g.aiToggleOn]} onPress={() => setAiAssist(!aiAssist)}>
+            <Ionicons name="sparkles" size={13} color={aiAssist ? C.white : C.blue} />
+            <Text style={[g.aiToggleText, aiAssist && { color: C.white }]}>AI Assist</Text>
           </TouchableOpacity>
           {aiAssist && (
-            <TouchableOpacity
-              style={[g.aiDraftBtn, aiDrafting && { opacity: 0.6 }]}
-              onPress={draftWithAI}
-              disabled={aiDrafting}
-            >
-              {aiDrafting
-                ? <ActivityIndicator size="small" color={C.blue} />
-                : <>
-                    <Ionicons name="create-outline" size={14} color={C.blue} />
-                    <Text style={g.aiDraftText}>Draft Reply</Text>
-                  </>}
+            <TouchableOpacity style={g.aiDraftBtn} onPress={draftWithAI} disabled={aiDrafting}>
+              {aiDrafting ? <ActivityIndicator size="small" color={C.blue} /> : <>
+                <Ionicons name="create-outline" size={14} color={C.blue} />
+                <Text style={g.aiDraftText}>Draft Reply</Text>
+              </>}
             </TouchableOpacity>
           )}
         </View>
       )}
 
-      {/* Input */}
       <View style={[g.bar, { paddingBottom: insets.bottom + 10 }]}>
+        <TouchableOpacity onPress={() => setStickerModal(true)} style={g.attach}>
+           <Ionicons name="happy-outline" size={20} color={C.slate500} />
+        </TouchableOpacity>
         <TouchableOpacity onPress={pickAndSendMedia} disabled={uploading} style={g.attach}>
           <Ionicons name="attach-outline" size={20} color={uploading ? C.slate300 : C.slate500} />
         </TouchableOpacity>
@@ -844,13 +933,8 @@ export default function ChatScreen() {
           placeholder="Type a message…" placeholderTextColor={C.slate400}
           multiline maxLength={2000}
         />
-        <TouchableOpacity
-          style={[g.sendBtn, (!input.trim() || sending) && g.sendBtnOff]}
-          onPress={sendMessage}
-          disabled={!input.trim() || sending}>
-          {sending
-            ? <ActivityIndicator color={C.white} size="small" />
-            : <Ionicons name="send-outline" size={18} color={C.white} />}
+        <TouchableOpacity style={[g.sendBtn, (!input.trim() || sending) && g.sendBtnOff]} onPress={() => sendMessage()} disabled={!input.trim() || sending}>
+          {sending ? <ActivityIndicator color={C.white} size="small" /> : <Ionicons name="send-outline" size={18} color={C.white} />}
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -858,49 +942,45 @@ export default function ChatScreen() {
   )
 }
 
-// ─── Message bubble styles ────────────────────────────────────────────────────
 const mkMS = (C: ColorPalette) => StyleSheet.create({
-  row:           { flexDirection: 'row', marginBottom: 10, alignItems: 'flex-end' },
+  row:           { flexDirection: 'row', marginBottom: 12, alignItems: 'flex-end' },
   rowMe:         { justifyContent: 'flex-end' },
   rowThem:       { justifyContent: 'flex-start' },
   avatar:        { width: 28, height: 28, borderRadius: 14, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', marginRight: 6, flexShrink: 0 },
   avatarImg:     { width: 28, height: 28, borderRadius: 14 },
   avatarText:    { fontSize: 10, fontWeight: '700', color: C.white },
-  bubbleWrap:    { maxWidth: '78%', borderRadius: 18, overflow: 'hidden' },
+  bubbleWrap:    { maxWidth: '78%', borderRadius: 20, overflow: 'hidden' },
   bubbleWrapMe:  { backgroundColor: C.blue, borderBottomRightRadius: 4 },
-  bubbleWrapThem:{ backgroundColor: C.white, borderBottomLeftRadius: 4, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
-  replyBar:      { borderLeftWidth: 3, borderColor: 'rgba(255,255,255,0.5)', backgroundColor: 'rgba(0,0,0,0.1)', paddingHorizontal: 8, paddingVertical: 4, marginBottom: 4 },
-  replyBarThem:  { borderColor: C.blue, backgroundColor: C.blue + '18' },
+  bubbleWrapThem:{ backgroundColor: C.white, borderBottomLeftRadius: 4, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
+  replyBar:      { borderLeftWidth: 3, borderColor: 'rgba(255,255,255,0.5)', backgroundColor: 'rgba(0,0,0,0.1)', paddingHorizontal: 10, paddingVertical: 6, marginBottom: 2 },
+  replyBarThem:  { borderColor: C.blue, backgroundColor: C.blue + '10' },
   replyBarMe:    {},
   replyLabel:    { fontSize: 11, color: C.white, fontStyle: 'italic' },
-  forwardedLabel:{ fontSize: 11, color: 'rgba(255,255,255,0.65)', fontStyle: 'italic', paddingHorizontal: 12, paddingTop: 8 },
+  forwardedLabel:{ fontSize: 11, color: 'rgba(255,255,255,0.65)', fontStyle: 'italic', paddingHorizontal: 14, paddingTop: 10 },
   text:          { fontSize: 14, color: C.navy, lineHeight: 20, paddingHorizontal: 14, paddingVertical: 10 },
   textMe:        { color: C.white },
   deletedRow:    { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 10 },
   deletedText:   { fontSize: 13, color: C.slate400, fontStyle: 'italic' },
   deletedTextMe: { color: 'rgba(255,255,255,0.55)' },
   mediaImg:      { width: 220, height: 180, borderRadius: 14 },
-  audioRow:      { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 10 },
-  audioIcon:     { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
-  audioLabel:    { fontSize: 13, color: C.navy },
-  fileRow:       { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 10 },
-  fileIcon:      { width: 36, height: 36, borderRadius: 10, backgroundColor: C.blue + '18', alignItems: 'center', justifyContent: 'center' },
-  fileIconMe:    { backgroundColor: 'rgba(255,255,255,0.2)' },
-  fileName:      { fontSize: 13, fontWeight: '600', color: C.navy },
-  fileSize:      { fontSize: 11, color: C.slate400 },
-  meta:          { flexDirection: 'row', alignItems: 'center', gap: 3, paddingBottom: 6 },
+  meta:          { flexDirection: 'row', alignItems: 'center', gap: 4, paddingBottom: 6 },
   metaMe:        { justifyContent: 'flex-end', paddingRight: 10 },
   metaThem:      { paddingLeft: 12 },
   time:          { fontSize: 10, color: C.slate400 },
   timeMe:        { color: 'rgba(255,255,255,0.6)' },
   tick:          { marginLeft: 2 },
+  fileRow:       { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12 },
+  fileIcon:      { width: 36, height: 36, borderRadius: 10, backgroundColor: C.blue + '18', alignItems: 'center', justifyContent: 'center' },
+  fileIconMe:    { backgroundColor: 'rgba(255,255,255,0.2)' },
+  fileName:      { fontSize: 13, fontWeight: '600', color: C.navy },
+  fileSize:      { fontSize: 11, color: C.slate400 },
+  reactionsRow:  { flexDirection: 'row', flexWrap: 'wrap', gap: 4, paddingHorizontal: 12, paddingBottom: 8 },
+  reaction:      { backgroundColor: 'rgba(0,0,0,0.05)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 },
+  reactionText:  { fontSize: 12 },
 })
 
-// ─── Global / header styles ───────────────────────────────────────────────────
 const mkG = (C: ColorPalette) => StyleSheet.create({
   flex:           { flex: 1, backgroundColor: C.bg },
-  loadMoreBtn:    { alignSelf: 'center', marginBottom: 12, paddingHorizontal: 16, paddingVertical: 7, backgroundColor: C.white, borderRadius: 20, borderWidth: 1, borderColor: C.slate200, minWidth: 48, alignItems: 'center' },
-  loadMoreTxt:    { fontSize: 12, color: C.blue, fontWeight: '600' },
   center:         { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg },
   header:         { flexDirection: 'row', alignItems: 'center', backgroundColor: C.white, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderColor: C.slate100 },
   backBtn:        { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', marginRight: 6 },
@@ -911,43 +991,61 @@ const mkG = (C: ColorPalette) => StyleSheet.create({
   onlineRow:      { flexDirection: 'row', alignItems: 'center', marginTop: 2, gap: 4 },
   onlineDot:      { width: 6, height: 6, borderRadius: 3, backgroundColor: '#22C55E' },
   onlineTxt:      { fontSize: 11, color: C.slate500 },
-  typingBar:      { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: C.bg },
-  typingBubble:   { backgroundColor: C.white, borderRadius: 16, borderBottomLeftRadius: 4, paddingHorizontal: 14, paddingVertical: 10, elevation: 1 },
-  typingDots:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  typingDot:      { width: 6, height: 6, borderRadius: 3, backgroundColor: C.slate400 },
-  progressBar:    { height: 4, backgroundColor: C.slate100, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12 },
-  progressFill:   { height: 4, backgroundColor: C.blue, borderRadius: 2, position: 'absolute', left: 0, top: 0 },
-  progressTxt:    { fontSize: 10, color: C.slate400, marginLeft: 'auto' },
-  replyPreviewBar:{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.blue + '18', paddingHorizontal: 16, paddingVertical: 8, borderTopWidth: 1, borderColor: C.blue + '35' },
-  replyPreviewText:{ flex: 1, fontSize: 12, color: C.blue, fontStyle: 'italic' },
-  headerAiBtn:    { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: C.blue + '14', marginLeft: 4 },
-  headerAiBtnOff: { backgroundColor: C.slate100 },
-  aiPausedBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 7, backgroundColor: '#FEF3C7', borderBottomWidth: 1, borderColor: '#FDE68A' },
-  aiPausedText:   { fontSize: 12, fontWeight: '600', color: '#B45309', flex: 1 },
-  aiBar:          { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: C.white, borderTopWidth: 1, borderColor: C.slate100 },
-  aiToggle:       { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, borderWidth: 1, borderColor: C.blue, backgroundColor: C.white },
-  aiToggleOn:     { backgroundColor: C.blue },
-  aiToggleText:   { fontSize: 11, fontWeight: '700', color: C.blue },
-  aiDraftBtn:     { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 14, backgroundColor: C.blue + '18', borderWidth: 1, borderColor: C.blue + '35' },
-  aiDraftText:    { fontSize: 11, fontWeight: '700', color: C.blue },
-  bar:            { flexDirection: 'row', alignItems: 'flex-end', padding: 10, backgroundColor: C.white, borderTopWidth: 1, borderColor: C.slate100, gap: 8 },
-  attach:         { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: C.slate100, borderRadius: 12 },
-  input:          { flex: 1, backgroundColor: C.bg, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: C.navy, maxHeight: 100 },
-  sendBtn:        { width: 44, height: 44, borderRadius: 14, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
-  sendBtnOff:     { opacity: 0.4 },
-  dateSep:        { flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 10, paddingHorizontal: 4 },
+  loadMoreBtn:    { alignSelf: 'center', marginVertical: 12, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: C.white, borderRadius: 20, borderWidth: 1, borderColor: C.slate200 },
+  loadMoreTxt:    { fontSize: 12, color: C.blue, fontWeight: '600' },
+  dateSep:        { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 16, paddingHorizontal: 8 },
   dateSepLine:    { flex: 1, height: 1, backgroundColor: C.slate200 },
-  dateSepText:    { fontSize: 11, fontWeight: '700', color: C.slate400, paddingHorizontal: 6 },
-  // Header info tap area
+  dateSepText:    { fontSize: 11, fontWeight: '700', color: C.slate400 },
+  typingBar:      { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 8 },
+  typingBubble:   { backgroundColor: C.white, borderRadius: 16, borderBottomLeftRadius: 4, paddingHorizontal: 12, paddingVertical: 8, elevation: 1 },
+  typingDots:     { flexDirection: 'row', gap: 3 },
+  typingDot:      { width: 5, height: 5, borderRadius: 2.5, backgroundColor: C.slate400 },
+  progressBar:    { height: 4, backgroundColor: C.slate100, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12 },
+  progressFill:   { height: 4, backgroundColor: C.blue, position: 'absolute', left: 0, top: 0 },
+  progressTxt:    { fontSize: 10, color: C.slate400, marginLeft: 'auto' },
+  replyPreviewBar:{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.white, paddingHorizontal: 16, paddingVertical: 10, borderTopWidth: 1, borderColor: C.slate100 },
+  replyPreviewText:{ flex: 1, fontSize: 13, color: C.slate500, fontStyle: 'italic' },
+  aiBar:          { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: C.white, borderTopWidth: 1, borderColor: C.slate100 },
+  aiToggle:       { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 18, borderWidth: 1, borderColor: C.blue },
+  aiToggleOn:     { backgroundColor: C.blue },
+  aiToggleText:   { fontSize: 12, fontWeight: '700', color: C.blue },
+  aiDraftBtn:     { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 18, backgroundColor: C.blue + '15' },
+  aiDraftText:    { fontSize: 12, fontWeight: '700', color: C.blue },
+  bar:            { flexDirection: 'row', alignItems: 'center', padding: 12, backgroundColor: C.white, gap: 10 },
+  attach:         { width: 42, height: 42, borderRadius: 21, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  input:          { flex: 1, backgroundColor: C.bg, borderRadius: 21, paddingHorizontal: 16, paddingVertical: 10, fontSize: 15, color: C.navy, maxHeight: 120 },
+  sendBtn:        { width: 42, height: 42, borderRadius: 21, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
+  sendBtnOff:     { opacity: 0.5 },
   headerInfo:     { flex: 1, flexDirection: 'row', alignItems: 'center' },
-  // Contact info bottom sheet
-  modalOverlay:   { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
-  infoSheet:      { backgroundColor: C.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, alignItems: 'center' },
-  infoHandle:     { width: 36, height: 4, borderRadius: 2, backgroundColor: C.slate200, marginBottom: 20 },
-  infoAvatarWrap: { width: 80, height: 80, borderRadius: 40, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', marginBottom: 12, overflow: 'hidden' },
-  infoAvatarHint: { position: 'absolute', bottom: 4, right: 4, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 8, padding: 3 },
-  infoAvatarImg:  { width: 80, height: 80, borderRadius: 40 },
-  infoAvatarText: { fontSize: 28, fontWeight: '800', color: C.white },
-  infoName:       { fontSize: 20, fontWeight: '800', color: C.navy, marginBottom: 2 },
-  infoRole:       { fontSize: 13, color: C.slate500, fontWeight: '600' },
+  headerAiBtn:    { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: C.blue + '15' },
+  headerAiBtnOff: { backgroundColor: C.slate100 },
+  aiPausedBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6, paddingHorizontal: 16, backgroundColor: '#FEF3C7' },
+  aiPausedText:   { fontSize: 12, color: '#92400E', fontWeight: '600' },
+  modalOverlay:   { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end', alignItems: 'center' },
+  infoSheet:      { backgroundColor: C.white, borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 24, alignItems: 'center', width: '100%' },
+  infoHandle:     { width: 40, height: 5, borderRadius: 3, backgroundColor: C.slate200, marginBottom: 20 },
+  infoAvatarWrap: { width: 90, height: 90, borderRadius: 45, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  infoAvatarImg:  { width: 90, height: 90, borderRadius: 45 },
+  infoAvatarText: { fontSize: 32, fontWeight: '800', color: C.white },
+  infoAvatarHint: { position: 'absolute', bottom: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 12, padding: 4 },
+  infoName:       { fontSize: 22, fontWeight: '800', color: C.navy },
+  infoRole:       { fontSize: 14, color: C.slate500, marginTop: 4 },
+  menuOverlay:    { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' },
+  menu:           { width: '80%', backgroundColor: C.white, borderRadius: 24, overflow: 'hidden', elevation: 10, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 20 },
+  reactionStrip:  { flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderColor: C.slate100 },
+  reactionBtn:    { padding: 4 },
+  menuContent:    { padding: 8 },
+  menuItem:       { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 14 },
+  menuItemText:   { fontSize: 15, fontWeight: '600', color: C.navy },
+  forwardSheet:   { backgroundColor: C.white, borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 20, width: '100%', maxHeight: '80%' },
+  modalHeader:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  modalTitle:     { fontSize: 18, fontWeight: '800', color: C.navy },
+  forwardRow:     { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderColor: C.slate100, gap: 12 },
+  avatarSmall:    { width: 36, height: 36, borderRadius: 18, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
+  avatarSmallText:{ fontSize: 12, fontWeight: '800', color: C.white },
+  forwardName:    { flex: 1, fontSize: 15, fontWeight: '600', color: C.navy },
+  stickerSheet:   { backgroundColor: C.white, borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 24, width: '100%' },
+  stickerTitle:   { fontSize: 18, fontWeight: '800', color: C.navy, marginBottom: 20, textAlign: 'center' },
+  stickerGrid:    { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 20 },
+  stickerBtn:     { padding: 10 },
 })

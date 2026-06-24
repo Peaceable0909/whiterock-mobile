@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
@@ -12,16 +12,17 @@ interface Props {
 }
 
 export function AppHeader({ title, onBack, right, noBorder }: Props) {
-  const { top } = useSafeAreaInsets()
+  const insets  = useSafeAreaInsets()
   const router  = useRouter()
   const C       = useColors()
 
   const handleBack = onBack ?? (() => router.back())
+  const topPadding = Platform.OS === 'web' ? 16 : insets.top + 10
 
   return (
     <View style={[
       s.base,
-      { paddingTop: top + 10, backgroundColor: C.white, borderColor: C.slate100 },
+      { paddingTop: topPadding, backgroundColor: C.white, borderColor: C.slate100 },
       noBorder && { borderBottomWidth: 0 },
     ]}>
       {onBack !== null && (
