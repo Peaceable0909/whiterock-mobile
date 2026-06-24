@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Alert, Modal,
+  ActivityIndicator, Alert, Modal, Platform
 } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -18,6 +18,11 @@ const STAGE_LABEL: Record<string,string> = {
   lead:'Lead', application_submitted:'Applied', offer_received:'Offer Received',
   deposit_paid:'Deposit Paid', cas_requested:'CAS Requested', cas_issued:'CAS Issued',
   visa_submitted:'Visa Submitted', visa_decision:'Visa Decision',
+}
+
+const showAlert = (title: string, msg: string) => {
+  if (Platform.OS === 'web') alert(`${title}: ${msg}`)
+  else Alert.alert(title, msg)
 }
 
 export default function AdminUserDetailScreen() {
@@ -52,17 +57,30 @@ export default function AdminUserDetailScreen() {
     setRoleModal(false)
   }
 
-  const deactivateUser = () => {
+  const toggleDeactivation = () => {
+    const action = user?.is_deactivated ? 'Reactivate' : 'Deactivate'
+
+    if (Platform.OS === 'web') {
+      if (confirm(`${action} ${user?.name}?`)) {
+        supabase.from('users').update({ is_deactivated: !user?.is_deactivated }).eq('id', id).then(() => {
+          setUser((prev: any) => ({ ...prev, is_deactivated: !prev.is_deactivated }))
+          showAlert('Done', `${user?.name} has been ${action.toLowerCase()}d.`)
+        })
+      }
+      return
+    }
+
     Alert.alert(
-      'Deactivate User',
-      `Remove ${user?.name}'s access? They will not be able to log in until reactivated.`,
+      `${action} User`,
+      `${action} ${user?.name}'s access?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Deactivate', style: 'destructive',
+          text: action, style: user?.is_deactivated ? 'default' : 'destructive',
           onPress: async () => {
-            await supabase.from('users').update({ badge_color: 'deactivated' }).eq('id', id)
-            Alert.alert('Done', `${user?.name} has been deactivated.`)
+            await supabase.from('users').update({ is_deactivated: !user?.is_deactivated }).eq('id', id)
+            setUser((prev: any) => ({ ...prev, is_deactivated: !prev.is_deactivated }))
+            showAlert('Done', `${user?.name} has been ${action.toLowerCase()}d.`)
           },
         },
       ]
@@ -85,8 +103,7 @@ export default function AdminUserDetailScreen() {
         <Text style={s.headerTitle}>User Detail</Text>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48 }}>
-        {/* Avatar card */}
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48, alignItems: 'center' }}>
         <View style={s.profileCard}>
           <View style={[s.avatar, { backgroundColor: roleColor + '22' }]}>
             <Text style={[s.avatarText, { color: roleColor }]}>{initials}</Text>
@@ -97,10 +114,14 @@ export default function AdminUserDetailScreen() {
           <View style={[s.roleBadge, { backgroundColor: roleColor + '18' }]}>
             <Text style={[s.roleText, { color: roleColor }]}>{user.role}</Text>
           </View>
+          {user.is_deactivated && (
+            <View style={[s.roleBadge, { backgroundColor: C.red500 + '18', marginTop: 6 }]}>
+              <Text style={[s.roleText, { color: C.red500 }]}>DEACTIVATED</Text>
+            </View>
+          )}
           <Text style={s.meta}>Joined {new Date(user.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</Text>
         </View>
 
-        {/* Student profile */}
         {profile && (
           <View style={s.card}>
             <Text style={s.cardTitle}>Student Profile</Text>
@@ -120,7 +141,6 @@ export default function AdminUserDetailScreen() {
           </View>
         )}
 
-        {/* Admin actions */}
         <View style={s.card}>
           <Text style={s.cardTitle}>Admin Actions</Text>
           <TouchableOpacity style={s.actionRow} onPress={() => setRoleModal(true)}>
@@ -129,15 +149,16 @@ export default function AdminUserDetailScreen() {
             <Ionicons name="chevron-forward" size={14} color={C.slate400} />
           </TouchableOpacity>
           <View style={s.divider} />
-          <TouchableOpacity style={s.actionRow} onPress={deactivateUser}>
-            <Ionicons name="ban-outline" size={18} color={C.red500} />
-            <Text style={[s.actionText, { color: C.red500 }]}>Deactivate Account</Text>
+          <TouchableOpacity style={s.actionRow} onPress={toggleDeactivation}>
+            <Ionicons name={user.is_deactivated ? "checkmark-circle-outline" : "ban-outline"} size={18} color={user.is_deactivated ? C.green400 : C.red500} />
+            <Text style={[s.actionText, { color: user.is_deactivated ? C.green400 : C.red500 }]}>
+              {user.is_deactivated ? 'Reactivate Account' : 'Deactivate Account'}
+            </Text>
             <Ionicons name="chevron-forward" size={14} color={C.slate400} />
           </TouchableOpacity>
         </View>
       </ScrollView>
 
-      {/* Role modal */}
       <Modal visible={roleModal} transparent animationType="slide" onRequestClose={() => setRoleModal(false)}>
         <View style={s.modalBg}>
           <View style={s.modal}>
@@ -175,7 +196,7 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   header:         { flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: 56, backgroundColor: C.white, borderBottomWidth: 1, borderColor: C.slate100 },
   backBtn:        { marginRight: 12 },
   headerTitle:    { fontSize: 18, fontWeight: '800', color: C.navy },
-  profileCard:    { backgroundColor: C.white, borderRadius: 20, padding: 24, alignItems: 'center', marginBottom: 14, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
+  profileCard:    { width: '100%', maxWidth: 500, backgroundColor: C.white, borderRadius: 20, padding: 24, alignItems: 'center', marginBottom: 14, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
   avatar:         { width: 72, height: 72, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   avatarText:     { fontSize: 26, fontWeight: '900' },
   name:           { fontSize: 18, fontWeight: '800', color: C.navy },
@@ -183,7 +204,7 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   meta:           { fontSize: 12, color: C.slate400, marginTop: 4 },
   roleBadge:      { marginTop: 10, paddingHorizontal: 14, paddingVertical: 5, borderRadius: 20 },
   roleText:       { fontSize: 12, fontWeight: '700', textTransform: 'capitalize' },
-  card:           { backgroundColor: C.white, borderRadius: 16, padding: 16, marginBottom: 14, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 },
+  card:           { width: '100%', maxWidth: 500, backgroundColor: C.white, borderRadius: 16, padding: 16, marginBottom: 14, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 },
   cardTitle:      { fontSize: 11, fontWeight: '700', color: C.slate400, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 },
   infoRow:        { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderColor: C.slate100 },
   infoLabel:      { fontSize: 12, color: C.slate400, fontWeight: '600' },
@@ -191,8 +212,8 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   actionRow:      { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   actionText:     { flex: 1, fontSize: 14, fontWeight: '600', color: C.navy },
   divider:        { height: 1, backgroundColor: C.slate100 },
-  modalBg:        { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  modal:          { backgroundColor: C.white, borderRadius: 24, padding: 24, margin: 12 },
+  modalBg:        { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end', alignItems: 'center' },
+  modal:          { width: '100%', maxWidth: 400, backgroundColor: C.white, borderRadius: 24, padding: 24, margin: 12 },
   modalTitle:     { fontSize: 16, fontWeight: '800', color: C.navy, marginBottom: 16 },
   roleOption:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, borderRadius: 12, backgroundColor: C.slate100, borderWidth: 1, borderColor: C.slate100, marginBottom: 8 },
   roleOptionText: { fontSize: 14, fontWeight: '600', color: C.navy, textTransform: 'capitalize' },

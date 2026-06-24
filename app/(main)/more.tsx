@@ -1,303 +1,178 @@
 import { useEffect, useState } from 'react'
 import {
-  View, Text, TouchableOpacity, StyleSheet, ScrollView,
-  Image, ActivityIndicator, Alert, TextInput, Switch,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  ActivityIndicator, Alert, Switch, Image, TextInput
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
 import Constants from 'expo-constants'
+import { supabase } from '@/lib/supabase'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { supabase, SUPABASE_URL, SUPABASE_ANON } from '@/lib/supabase'
 import { unregisterForPush } from '@/lib/notifications'
 import { useColors, useTheme } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
-import type { ThemeMode } from '@/lib/theme'
 
+const APPEARANCE_OPTIONS = [
+  { key: 'light',  label: 'Light',  icon: 'sunny-outline' },
+  { key: 'dark',   label: 'Dark',   icon: 'moon-outline' },
+  { key: 'system', label: 'System', icon: 'settings-outline' },
+] as const
 
 export default function MoreScreen() {
-  const C = useColors()
-  const s = mkS(C)
+  const C      = useColors()
   const { mode, setMode } = useTheme()
-  const router  = useRouter()
-  const insets  = useSafeAreaInsets()
-  const [user, setUser]               = useState<any>(null)
-  const [loading, setLoading]         = useState(true)
-  const [uploading, setUploading]     = useState(false)
-  const [editingName, setEditingName] = useState(false)
-  const [nameInput, setNameInput]     = useState('')
-  const [savingName, setSavingName]   = useState(false)
+  const router = useRouter()
+  const insets = useSafeAreaInsets()
+  const s      = mkS(C)
+
+  const [user, setUser]       = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [uploading, setUploading] = useState(false)
   const [editingPhone, setEditingPhone] = useState(false)
-  const [phoneInput, setPhoneInput]     = useState('')
-  const [savingPhone, setSavingPhone]   = useState(false)
-  const [notifPush, setNotifPush]     = useState(true)
-  const [notifEmail, setNotifEmail]   = useState(true)
+  const [phoneInput, setPhoneInput] = useState('')
+  const [savingPhone, setSavingPhone] = useState(false)
 
-  const load = async () => {
-    const { data: { user: au } } = await supabase.auth.getUser()
-    if (!au) return
-    const { data } = await supabase.from('users').select('*').eq('id', au.id).single()
-    setUser(data)
-    setNameInput(data?.name ?? '')
-    setPhoneInput(data?.phone ?? '')
-    setNotifPush(data?.preferences?.push_enabled !== false)
-    setNotifEmail(data?.preferences?.email_digest !== false)
-    setLoading(false)
-  }
+  // Preferences
+  const [notifPush, setNotifPush]   = useState(true)
+  const [notifEmail, setNotifEmail] = useState(false)
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    const load = async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (!authUser) return
+      const { data } = await supabase.from('users').select('*').eq('id', authUser.id).single()
+      setUser(data)
+      setPhoneInput(data?.phone ?? '')
+      const p = (data?.preferences ?? {}) as any
+      setNotifPush(p.push_enabled !== false)
+      setNotifEmail(!!p.email_digest)
+      setLoading(false)
+    }
+    load()
+  }, [])
 
-  const changeAvatar = async () => {
+  const pickImage = async () => {
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+    })
+    if (res.canceled) return
+    const asset = res.assets[0]
+
+    setUploading(true)
     try {
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
-      if (!perm.granted) {
-        Alert.alert('Permission needed', 'Allow photo access in Settings to change your profile photo.')
-        return
-      }
+      const ext = asset.uri.split('.').pop()
+      const path = `${user.id}/${Date.now()}.${ext}`
+      const formData = new FormData()
+      formData.append('file', {
+        uri: asset.uri,
+        name: `avatar.${ext}`,
+        type: `image/${ext}`,
+      } as any)
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.85,
-      })
-      if (result.canceled || !result.assets?.[0]) return
+      const { data, error } = await supabase.storage.from('avatars').upload(path, formData)
+      if (error) throw error
 
-      const asset = result.assets[0]
-      const ext  = (asset.uri.split('.').pop() ?? 'jpg').toLowerCase()
-      const mime = asset.mimeType ?? (ext === 'png' ? 'image/png' : 'image/jpeg')
-      const ts   = Date.now()
-      const path = `${user.id}/avatar-${ts}.${ext}`
-
-      setUploading(true)
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) throw new Error('Not signed in — please log out and back in.')
-
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest()
-        xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/avatars/${path}`)
-        xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`)
-        xhr.setRequestHeader('apikey', SUPABASE_ANON)
-        xhr.onload = () => {
-          if (xhr.status < 300) resolve()
-          else reject(new Error(`Storage error ${xhr.status}: ${xhr.responseText}`))
-        }
-        xhr.onerror = () => reject(new Error('Network error — check your connection.'))
-        const fd = new FormData()
-        fd.append('file', { uri: asset.uri, name: `avatar-${ts}.${ext}`, type: mime } as any)
-        xhr.send(fd)
-      })
-
-      const url = `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}?t=${Date.now()}`
-      const { error: updateErr } = await supabase.from('users').update({ avatar_url: url }).eq('id', user.id)
-      if (updateErr) throw new Error(`DB error: ${updateErr.message}`)
-
-      setUser((u: any) => ({ ...u, avatar_url: url }))
-      Alert.alert('Done!', 'Your profile photo has been updated.')
-    } catch (e: any) {
-      Alert.alert('Could not update photo', e.message ?? 'An unknown error occurred.')
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+      await supabase.from('users').update({ avatar_url: publicUrl }).eq('id', user.id)
+      setUser({ ...user, avatar_url: publicUrl })
+    } catch (err: any) {
+      Alert.alert('Upload Failed', err.message)
     } finally {
       setUploading(false)
     }
   }
 
-  const saveName = async () => {
-    if (!nameInput.trim()) return
-    setSavingName(true)
-    const { error } = await supabase.from('users').update({ name: nameInput.trim() }).eq('id', user.id)
-    setSavingName(false)
-    if (error) { Alert.alert('Could not save name', error.message); return }
-    setUser((u: any) => ({ ...u, name: nameInput.trim() }))
-    setEditingName(false)
+  const togglePref = async (key: string, val: boolean) => {
+    if (key === 'push_enabled') setNotifPush(val)
+    else if (key === 'email_digest') setNotifEmail(val)
+
+    const prefs = { ...(user?.preferences ?? {}), [key]: val }
+    await supabase.from('users').update({ preferences: prefs }).eq('id', user.id)
+    setUser({ ...user, preferences: prefs })
   }
 
   const savePhone = async () => {
     setSavingPhone(true)
-    const { error } = await supabase.from('users').update({ phone: phoneInput.trim() }).eq('id', user.id)
-    setSavingPhone(false)
-    if (error) { Alert.alert('Could not save phone', error.message); return }
-    setUser((u: any) => ({ ...u, phone: phoneInput.trim() }))
+    await supabase.from('users').update({ phone: phoneInput }).eq('id', user.id)
+    setUser({ ...user, phone: phoneInput })
     setEditingPhone(false)
+    setSavingPhone(false)
   }
 
-  const togglePref = async (key: 'push_enabled' | 'email_digest', val: boolean) => {
-    if (key === 'push_enabled') setNotifPush(val)
-    else setNotifEmail(val)
-    const newPrefs = { ...(user?.preferences ?? {}), [key]: val }
-    await supabase.from('users').update({ preferences: newPrefs }).eq('id', user.id)
-    setUser((u: any) => ({ ...u, preferences: newPrefs }))
-  }
-
-  const handleChangePassword = () => {
-    Alert.alert(
-      'Change Password',
-      `A reset link will be sent to ${user?.email}.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Send Link',
-          onPress: async () => {
-            const { error } = await supabase.auth.resetPasswordForEmail(user?.email)
-            if (error) Alert.alert('Error', error.message)
-            else Alert.alert('Sent!', 'Check your inbox for the password reset link.')
-          },
-        },
-      ]
-    )
+  const handleChangePassword = async () => {
+    const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+      redirectTo: 'whiterock://reset-password',
+    })
+    if (error) Alert.alert('Error', error.message)
+    else Alert.alert('Link Sent', 'Check your email for a password reset link.')
   }
 
   const handleDeleteAccount = () => {
     Alert.alert(
       'Delete Account',
-      'This permanently deletes your account and all data. This cannot be undone.',
+      'This is permanent. All your data will be deleted immediately. Are you absolutely sure?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Delete Forever', style: 'destructive',
+          text: 'Delete Everything',
+          style: 'destructive',
           onPress: async () => {
-            const { data: { session } } = await supabase.auth.getSession()
-            if (!session) return
-            try {
-              const res = await fetch(`${SUPABASE_URL}/functions/v1/delete-own-account`, {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-              })
-              if (res.ok) {
-                await unregisterForPush()
-                await supabase.auth.signOut()
-              } else {
-                const body = await res.json().catch(() => ({}))
-                Alert.alert('Error', body.error ?? 'Deletion failed. Contact support.')
-              }
-            } catch {
-              Alert.alert('Error', 'Could not reach the server. Try again later.')
-            }
+            const { error } = await supabase.functions.invoke('delete-own-account')
+            if (error) Alert.alert('Error', error.message)
+            else await supabase.auth.signOut()
           },
         },
       ]
     )
   }
 
-  const initials = (user?.name ?? 'U').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
-  const roleCap = ((user?.role ?? 'student') as string).charAt(0).toUpperCase() + ((user?.role ?? 'student') as string).slice(1)
-  const canGoBack = router.canGoBack()
+  if (loading) return (
+    <View style={s.center}>
+      <ActivityIndicator color={C.blue} size="large" />
+    </View>
+  )
 
-  if (loading) return <View style={s.center}><ActivityIndicator color={C.blue} size="large" /></View>
-
-  const APPEARANCE_OPTIONS: { key: ThemeMode; label: string; icon: string }[] = [
-    { key: 'light',  label: 'Light',  icon: 'sunny-outline'       },
-    { key: 'dark',   label: 'Dark',   icon: 'moon-outline'        },
-    { key: 'system', label: 'System', icon: 'phone-portrait-outline' },
-  ]
+  const initials = user?.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() ?? 'U'
 
   return (
-    <ScrollView style={s.bg} contentContainerStyle={[s.content, { paddingTop: insets.top, paddingBottom: 40 + insets.bottom }]} showsVerticalScrollIndicator={false}>
-
-      {/* ── Header ── */}
+    <ScrollView style={s.bg} contentContainerStyle={[s.content, { paddingTop: insets.top + 10 }]}>
       <View style={s.pageHeader}>
-        {canGoBack ? (
-          <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={22} color={C.navy} />
-          </TouchableOpacity>
-        ) : (
-          <View style={{ width: 40 }} />
-        )}
         <Text style={s.pageTitle}>Profile & Settings</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity style={s.logoContainer} onPress={() => router.push('/(admin)/dashboard' as any)}>
+           <Image source={require('../../assets/icon.png')} style={s.logoSmall} resizeMode="contain" />
+        </TouchableOpacity>
       </View>
 
-      {/* ── Profile hero ── */}
+      {/* ── Profile Card ── */}
       <View style={s.profileCard}>
-        <TouchableOpacity style={s.avatarWrap} onPress={changeAvatar} disabled={uploading} accessibilityLabel="Change profile photo">
-          {user?.avatar_url ? (
-            <Image
-              source={{ uri: user.avatar_url }}
-              style={s.avatarImg}
-              onError={() => setUser((u: any) => ({ ...u, avatar_url: null }))}
-            />
+        <TouchableOpacity onPress={pickImage} disabled={uploading} style={s.avatarWrap}>
+          {user.avatar_url ? (
+            <Image source={{ uri: user.avatar_url }} style={s.avatarImg} />
           ) : (
             <View style={s.avatarFallback}>
               <Text style={s.avatarInitials}>{initials}</Text>
             </View>
           )}
           <View style={s.cameraBadge}>
-            {uploading
-              ? <ActivityIndicator size="small" color={C.white} />
-              : <Ionicons name="camera-outline" size={13} color={C.white} />}
+            {uploading ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="camera" size={12} color="#fff" />}
           </View>
         </TouchableOpacity>
         <View style={s.profileInfo}>
-          <Text style={s.profileName}>{user?.name ?? 'User'}</Text>
-          <Text style={s.profileEmail} numberOfLines={1}>{user?.email ?? ''}</Text>
+          <Text style={s.profileName}>{user.name}</Text>
+          <Text style={s.profileEmail}>{user.email}</Text>
           <View style={s.roleBadge}>
-            <Text style={s.roleText}>{roleCap}</Text>
+            <Text style={s.roleText}>{user.role}</Text>
           </View>
         </View>
       </View>
 
-      {/* ── Quick access ── */}
-      <Text style={s.sectionLabel}>QUICK ACCESS</Text>
+      {/* ── Contact info ── */}
+      <Text style={s.sectionLabel}>CONTACT INFO</Text>
       <View style={s.card}>
-        {([
-          { label: 'AI Assistant',  icon: 'hardware-chip-outline',    color: '#6366F1', route: '/(main)/ai'            },
-          { label: 'Updates',       icon: 'newspaper-outline',        color: C.blue,    route: '/(main)/updates'       },
-          { label: 'Notifications', icon: 'notifications-outline',    color: '#F59E0B', route: '/(main)/notifications' },
-          { label: 'Appointments',  icon: 'calendar-outline',         color: '#16A34A', route: '/(main)/appointments'  },
-          { label: 'Documents',     icon: 'folder-open-outline',      color: '#7C3AED', route: '/(main)/documents'     },
-          { label: 'Tasks',         icon: 'checkbox-outline',         color: '#8B5CF6', route: '/(main)/tasks'         },
-          { label: 'Calendar',      icon: 'calendar-clear-outline',   color: '#0EA5E9', route: '/(main)/calendar'      },
-          { label: 'Groups',        icon: 'people-circle-outline',    color: '#F59E0B', route: '/(main)/groups'        },
-          { label: 'My Profile',    icon: 'person-circle-outline',    color: '#EC4899', route: '/(main)/my-profile'    },
-          { label: 'Appearance',    icon: 'color-palette-outline',    color: '#0D9488', route: '/(main)/settings'      },
-        ] as const).map((item, i, arr) => (
-          <TouchableOpacity
-            key={item.label}
-            style={[s.row, i < arr.length - 1 && s.border]}
-            onPress={() => router.push(item.route as any)}
-          >
-            <View style={[s.iconBox, { backgroundColor: item.color + '18' }]}>
-              <Ionicons name={item.icon as any} size={18} color={item.color} />
-            </View>
-            <Text style={s.rowLabel}>{item.label}</Text>
-            <Ionicons name="chevron-forward" size={15} color={C.slate300} />
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* ── Profile editing ── */}
-      <Text style={s.sectionLabel}>PROFILE</Text>
-      <View style={s.card}>
-        {/* Display name */}
-        <View style={[s.row, s.border]}>
-          <View style={[s.iconBox, { backgroundColor: C.blue + '18' }]}>
-            <Ionicons name="person-outline" size={18} color={C.blue} />
-          </View>
-          {editingName ? (
-            <TextInput
-              style={[s.rowLabel, s.inlineInput]}
-              value={nameInput}
-              onChangeText={setNameInput}
-              autoFocus
-              onSubmitEditing={saveName}
-              returnKeyType="done"
-              placeholder="Full name"
-              placeholderTextColor={C.slate400}
-            />
-          ) : (
-            <Text style={s.rowLabel} numberOfLines={1}>{user?.name ?? 'User'}</Text>
-          )}
-          <TouchableOpacity
-            onPress={editingName ? saveName : () => setEditingName(true)}
-            disabled={savingName}
-            style={s.editAction}
-          >
-            {savingName
-              ? <ActivityIndicator size="small" color={C.blue} />
-              : <Ionicons name={editingName ? 'checkmark-circle' : 'pencil-outline'} size={20} color={editingName ? C.blue : C.slate400} />}
-          </TouchableOpacity>
-        </View>
-
-        {/* Phone */}
         <View style={[s.row, s.border]}>
           <View style={[s.iconBox, { backgroundColor: C.green400 + '18' }]}>
             <Ionicons name="call-outline" size={18} color={C.green400} />
@@ -330,7 +205,6 @@ export default function MoreScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Email (read-only) */}
         <View style={[s.row, s.border]}>
           <View style={[s.iconBox, { backgroundColor: C.orange500 + '20' }]}>
             <Ionicons name="mail-outline" size={18} color={C.orange500} />
@@ -339,7 +213,6 @@ export default function MoreScreen() {
           <Text style={s.readOnlyTag}>via auth</Text>
         </View>
 
-        {/* Change password */}
         <View style={s.row}>
           <View style={[s.iconBox, { backgroundColor: C.orange500 + '25' }]}>
             <Ionicons name="key-outline" size={18} color={C.orange500} />
@@ -418,8 +291,8 @@ export default function MoreScreen() {
           <View style={[s.iconBox, { backgroundColor: C.slate100 }]}>
             <Ionicons name="shield-checkmark-outline" size={18} color={C.slate500} />
           </View>
-          <Text style={s.rowLabel}>Apply Connect</Text>
-          <Text style={s.rowValue}>University Placement</Text>
+          <Text style={s.rowLabel}>Connect</Text>
+          <Text style={s.rowValue}>Premium UK Student Placement</Text>
         </View>
       </View>
 
@@ -466,35 +339,36 @@ export default function MoreScreen() {
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
   bg:             { flex: 1, backgroundColor: C.bg },
-  center:         { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  content:        { padding: 16, paddingBottom: 40 },
-  pageHeader:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, marginBottom: 8 },
-  backBtn:        { width: 40, height: 40, borderRadius: 12, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
-  pageTitle:      { fontSize: 17, fontWeight: '800', color: C.navy },
+  center:         { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg },
+  content:        { padding: 20, paddingBottom: 40 },
+  pageHeader:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16, marginBottom: 8 },
+  pageTitle:      { fontSize: 20, fontWeight: '800', color: C.navy },
+  logoContainer:  { width: 40, height: 40, borderRadius: 12, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
+  logoSmall:      { width: 24, height: 24 },
 
-  profileCard:    { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: C.white, borderRadius: 22, padding: 18, marginBottom: 24, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 },
+  profileCard:    { flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: C.white, borderRadius: 24, padding: 20, marginBottom: 24, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 },
   avatarWrap:     { position: 'relative', width: 64, height: 64 },
   avatarImg:      { width: 64, height: 64, borderRadius: 32 },
   avatarFallback: { width: 64, height: 64, borderRadius: 32, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
   avatarInitials: { fontSize: 22, fontWeight: '800', color: C.white },
   cameraBadge:    { position: 'absolute', bottom: 0, right: 0, width: 22, height: 22, borderRadius: 11, backgroundColor: C.navy, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.white },
   profileInfo:    { flex: 1 },
-  profileName:    { fontSize: 17, fontWeight: '800', color: C.navy },
-  profileEmail:   { fontSize: 12, color: C.slate500, marginTop: 2 },
-  roleBadge:      { marginTop: 6, backgroundColor: '#EFF6FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, alignSelf: 'flex-start' },
-  roleText:       { fontSize: 10, fontWeight: '700', color: C.blue, textTransform: 'uppercase', letterSpacing: 0.5 },
+  profileName:    { fontSize: 18, fontWeight: '800', color: C.navy },
+  profileEmail:   { fontSize: 13, color: C.slate500, marginTop: 2 },
+  roleBadge:      { marginTop: 8, backgroundColor: C.blue + '14', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, alignSelf: 'flex-start' },
+  roleText:       { fontSize: 10, fontWeight: '800', color: C.blue, textTransform: 'uppercase', letterSpacing: 0.5 },
 
-  sectionLabel:   { fontSize: 10, fontWeight: '800', color: C.slate400, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8, marginTop: 4, paddingHorizontal: 4 },
-  card:           { backgroundColor: C.white, borderRadius: 18, marginBottom: 20, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2, overflow: 'hidden' },
-  row:            { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 13 },
+  sectionLabel:   { fontSize: 10, fontWeight: '800', color: C.slate400, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12, marginTop: 4, paddingHorizontal: 4 },
+  card:           { backgroundColor: C.white, borderRadius: 22, marginBottom: 24, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2, overflow: 'hidden' },
+  row:            { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 14 },
   border:         { borderBottomWidth: 1, borderColor: C.slate100 },
-  iconBox:        { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  iconBox:        { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   rowLabel:       { flex: 1, fontSize: 14, fontWeight: '600', color: C.navy },
-  rowSub:         { fontSize: 11, color: C.slate400, marginTop: 1 },
+  rowSub:         { fontSize: 11, color: C.slate400, marginTop: 2 },
   rowValue:       { fontSize: 12, color: C.slate400 },
   editAction:     { padding: 4 },
-  inlineInput:    { borderBottomWidth: 1.5, borderColor: C.blue, paddingVertical: 2, paddingHorizontal: 0, minWidth: 80 },
-  readOnlyTag:    { fontSize: 10, color: C.slate400, backgroundColor: C.slate100, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
-  sendLinkBtn:    { backgroundColor: '#EFF6FF', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+  inlineInput:    { borderBottomWidth: 1.5, borderColor: C.blue, paddingVertical: 2, paddingHorizontal: 0, minWidth: 100 },
+  readOnlyTag:    { fontSize: 10, color: C.slate400, backgroundColor: C.bg, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  sendLinkBtn:    { backgroundColor: C.blue + '14', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
   sendLinkText:   { fontSize: 12, fontWeight: '700', color: C.blue },
 })

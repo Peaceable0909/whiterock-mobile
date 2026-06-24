@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { View, ActivityIndicator } from 'react-native'
+import { View, ActivityIndicator, Platform } from 'react-native'
 import { useRouter } from 'expo-router'
 import { supabase } from '@/lib/supabase'
 import { useColors } from '@/lib/theme'
@@ -14,6 +14,12 @@ export default function Index() {
         router.replace('/(auth)/login')
         return
       }
+
+      // On web, if we just returned from OAuth, we might need a moment for the session to settle
+      if (Platform.OS === 'web' && window.location.hash.includes('access_token')) {
+        return
+      }
+
       const { data: dbUser } = await supabase
         .from('users').select('role').eq('id', data.session.user.id).single()
       const role = dbUser?.role ?? 'student'
