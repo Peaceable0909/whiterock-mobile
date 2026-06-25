@@ -42,6 +42,19 @@ export default function LoginScreen() {
 
   const s = mkS(C)
 
+  useEffect(() => {
+    if (Platform.OS !== 'web') {
+      try {
+        GoogleSignin.GoogleSignin.configure({
+          webClientId: '149816206182-anl9ku2qei82mbgu1kih5s54nh09k59p.apps.googleusercontent.com',
+          offlineAccess: true,
+        })
+      } catch (e) {
+        console.error('GoogleSignin configure error:', e)
+      }
+    }
+  }, [])
+
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
       showAlert('Required', 'Please enter both email and password.')
