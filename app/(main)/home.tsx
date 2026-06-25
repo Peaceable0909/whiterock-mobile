@@ -69,7 +69,7 @@ export default function HomeScreen() {
     supabase.auth.getUser().then(({ data: { user: u } }) => { uid = u?.id ?? null })
     const sub = supabase.channel('home-notifs')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' },
-        payload => { if (uid && (payload.new).user_id === uid) setNotifUnread(n => n + 1) })
+        payload => { if (uid && (payload.new as any).user_id === uid) setNotifUnread(n => n + 1) })
       .subscribe()
     return () => { supabase.removeChannel(sub) }
   }, [])
@@ -147,7 +147,7 @@ export default function HomeScreen() {
                 </View>
                 <Text style={s.bigPct}>{Math.round(progress)}%</Text>
               </View>
-              <View style={s.barBg}><View style={[s.barFg, { width: \`\${progress}%\` }]} /></View>
+              <View style={s.barBg}><View style={[s.barFg, { width: progress + '%' }]} /></View>
               <Text style={s.nextStep}>Next: <Text style={s.nextStepBold}>{JOURNEY_STAGES[stageIdx + 1] ? STAGE_LABEL[JOURNEY_STAGES[stageIdx + 1]] : 'Final Decision'}</Text></Text>
               <TouchableOpacity style={s.btn} onPress={() => router.push('/(main)/my-profile')}>
                 <Text style={s.btnText}>View Journey Details</Text>
@@ -174,7 +174,7 @@ export default function HomeScreen() {
                   <Text style={s.onlineText}>ONLINE</Text>
                 </View>
               </View>
-              <TouchableOpacity style={s.btn} onPress={() => convId && router.push(\`/(main)/messages/\${convId}\`)}>
+              <TouchableOpacity style={s.btn} onPress={() => convId && router.push(`/(main)/messages/${convId}`)}>
                 <Ionicons name="chatbubble-ellipses-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
                 <Text style={s.btnText}>Message Agent</Text>
               </TouchableOpacity>
@@ -240,10 +240,10 @@ function AiBriefing({ userId, firstName }: { userId?: string, firstName?: string
 
       const h = new Date().getHours()
       const g = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening'
-      let t = \`Good \${g}, \${firstName}. \`
-      if (total)               t += \`\${total} student\${total !== 1 ? 's' : ''} in your pipeline. \`
-      if (activeConvs?.length) t += \`\${activeConvs.length} active conversation\${activeConvs.length !== 1 ? 's' : ''} this week. \`
-      if ((pending ?? 0) > 0)  t += \`⚠ \${pending} document\${pending !== 1 ? 's' : ''} pending review.\`
+      let t = "Good " + g + ", " + firstName + ". "
+      if (total)               t += total + " student" + (total !== 1 ? "s" : "") + " in your pipeline. "
+      if (activeConvs?.length) t += activeConvs.length + " active conversation" + (activeConvs.length !== 1 ? "s" : "") + " this week. "
+      if ((pending ?? 0) > 0)  t += "⚠ " + pending + " document" + (pending !== 1 ? "s" : "") + " pending review."
       else                     t += 'All documents are up to date.'
       setBrief(t)
     }
