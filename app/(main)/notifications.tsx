@@ -68,7 +68,7 @@ export default function NotificationsScreen() {
     const sub = supabase.channel('notif-screen')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' },
         payload => {
-          const n = payload.new as any
+          const n = payload.new
           if (uid && n.user_id === uid) setItems(prev => [n, ...prev])
         })
       .subscribe()
@@ -123,11 +123,11 @@ export default function NotificationsScreen() {
           const handleTap = () => {
             const d = item.data ?? {}
             if (item.type === 'message' && d.convId) {
-              router.push(`/(main)/messages/${d.convId}` as any)
+              router.push(`/(main)/messages/${d.convId}`)
             } else if ((item.type === 'document' || item.type === 'visa') && d.studentId) {
-              router.push(`/(main)/students/${d.studentId}` as any)
+              router.push(`/(main)/students/${d.studentId}`)
             } else if (item.type === 'document') {
-              router.push('/(main)/documents' as any)
+              router.push('/(main)/documents')
             }
           }
           return (
@@ -137,7 +137,7 @@ export default function NotificationsScreen() {
               activeOpacity={0.75}
             >
               <View style={[s.iconWrap, { backgroundColor: color + '1A' }]}>
-                <Ionicons name={iconName as any} size={18} color={color} />
+                <Ionicons name={iconName} size={18} color={color} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.title}>{item.title}</Text>

@@ -111,9 +111,9 @@ export default function AdminDashboard() {
         <Text style={s.sectionTitle}>Admin Actions</Text>
         <View style={s.actionsGrid}>
           {ACTIONS.map(a => (
-            <TouchableOpacity key={a.label} style={s.actionCard} onPress={() => router.push(a.route as any)}>
+            <TouchableOpacity key={a.label} style={s.actionCard} onPress={() => router.push(a.route)}>
               <View style={[s.actionIcon, { backgroundColor: a.color + '18' }]}>
-                <Ionicons name={a.icon as any} size={22} color={a.color} />
+                <Ionicons name={a.icon} size={22} color={a.color} />
               </View>
               <Text style={s.actionLabel}>{a.label}</Text>
             </TouchableOpacity>
@@ -128,7 +128,7 @@ export default function AdminDashboard() {
               <Text style={s.stageName}>{STAGE_LABEL[stage]}</Text>
               <View style={s.stageBarBg}>
                 <View style={[s.stageBarFg, {
-                  width: `${Math.max((stats.stageCounts[stage] / maxStage) * 100, stats.stageCounts[stage] > 0 ? 5 : 0)}%` as any,
+                  width: `${Math.max((stats.stageCounts[stage] / maxStage) * 100, stats.stageCounts[stage] > 0 ? 5 : 0)}%`,
                 }]} />
               </View>
               <Text style={s.stageCount}>{stats.stageCounts[stage]}</Text>

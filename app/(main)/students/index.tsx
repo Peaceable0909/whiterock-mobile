@@ -134,7 +134,7 @@ export default function StudentsScreen() {
                 </View>
                 {item.profile?.school && <Text style={s.school} numberOfLines={1}>{item.profile.school}</Text>}
                 <View style={s.progressRow}>
-                  <View style={s.barBg}><View style={[s.barFg, { width: `${Math.max(pct, 4)}%` as any }]} /></View>
+                  <View style={s.barBg}><View style={[s.barFg, { width: `${Math.max(pct, 4)}%` }]} /></View>
                   <Text style={s.pctText}>{pct}%</Text>
                 </View>
               </View>
@@ -153,7 +153,7 @@ export default function StudentsScreen() {
       />
 
       {role === 'admin' && (
-        <TouchableOpacity style={[s.fab, { bottom: 20 + insets.bottom }]} onPress={() => router.push('/(admin)/invites' as any)}>
+        <TouchableOpacity style={[s.fab, { bottom: 20 + insets.bottom }]} onPress={() => router.push('/(admin)/invites')}>
           <Ionicons name="person-add-outline" size={20} color={C.white} />
         </TouchableOpacity>
       )}

@@ -69,7 +69,7 @@ export default function HomeScreen() {
     supabase.auth.getUser().then(({ data: { user: u } }) => { uid = u?.id ?? null })
     const sub = supabase.channel('home-notifs')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' },
-        payload => { if (uid && (payload.new as any).user_id === uid) setNotifUnread(n => n + 1) })
+        payload => { if (uid && (payload.new).user_id === uid) setNotifUnread(n => n + 1) })
       .subscribe()
     return () => { supabase.removeChannel(sub) }
   }, [])
@@ -106,7 +106,7 @@ export default function HomeScreen() {
           <Text style={s.heading}>Welcome, {user?.name?.split(' ')[0] ?? 'User'}</Text>
         </View>
         <View style={s.headerActions}>
-          <TouchableOpacity style={s.bellBtn} onPress={() => { setNotifUnread(0); router.push('/(main)/notifications' as any) }}>
+          <TouchableOpacity style={s.bellBtn} onPress={() => { setNotifUnread(0); router.push('/(main)/notifications') }}>
             <Ionicons name="notifications-outline" size={20} color={C.slate500} />
             {notifUnread > 0 && (
               <View style={s.bellBadge}>
@@ -114,7 +114,7 @@ export default function HomeScreen() {
               </View>
             )}
           </TouchableOpacity>
-          <TouchableOpacity style={s.avatarBtn} onPress={() => router.push('/(main)/more' as any)}>
+          <TouchableOpacity style={s.avatarBtn} onPress={() => router.push('/(main)/more')}>
             {user?.avatar_url
               ? <Image source={{ uri: user.avatar_url }} style={s.headerAvatar} />
               : <View style={s.headerAvatarFallback}>
@@ -149,7 +149,7 @@ export default function HomeScreen() {
               </View>
               <View style={s.barBg}><View style={[s.barFg, { width: \`\${progress}%\` }]} /></View>
               <Text style={s.nextStep}>Next: <Text style={s.nextStepBold}>{JOURNEY_STAGES[stageIdx + 1] ? STAGE_LABEL[JOURNEY_STAGES[stageIdx + 1]] : 'Final Decision'}</Text></Text>
-              <TouchableOpacity style={s.btn} onPress={() => router.push('/(main)/my-profile' as any)}>
+              <TouchableOpacity style={s.btn} onPress={() => router.push('/(main)/my-profile')}>
                 <Text style={s.btnText}>View Journey Details</Text>
                 <Ionicons name="chevron-forward" size={16} color="#fff" style={{ marginLeft: 4 }} />
               </TouchableOpacity>
@@ -174,7 +174,7 @@ export default function HomeScreen() {
                   <Text style={s.onlineText}>ONLINE</Text>
                 </View>
               </View>
-              <TouchableOpacity style={s.btn} onPress={() => convId && router.push(\`/(main)/messages/\${convId}\` as any)}>
+              <TouchableOpacity style={s.btn} onPress={() => convId && router.push(\`/(main)/messages/\${convId}\`)}>
                 <Ionicons name="chatbubble-ellipses-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
                 <Text style={s.btnText}>Message Agent</Text>
               </TouchableOpacity>
@@ -184,14 +184,14 @@ export default function HomeScreen() {
 
         <Text style={s.sectionLabel}>QUICK ACCESS</Text>
         <View style={s.grid}>
-          <TouchableOpacity style={s.gridCard} onPress={() => router.push('/(main)/resources' as any)}>
+          <TouchableOpacity style={s.gridCard} onPress={() => router.push('/(main)/resources')}>
             <View style={[s.iconCircle, { backgroundColor: '#F0F9FF' }]}>
               <Ionicons name="library-outline" size={18} color="#0369A1" />
             </View>
             <Text style={s.gridLabel}>LIBRARY</Text>
             <Text style={s.gridTitle}>Resources</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={s.gridCard} onPress={() => router.push('/(main)/documents' as any)}>
+          <TouchableOpacity style={s.gridCard} onPress={() => router.push('/(main)/documents')}>
             <View style={[s.iconCircle, { backgroundColor: '#F0FDF4' }]}>
               <Ionicons name="document-text-outline" size={18} color="#15803D" />
             </View>
@@ -204,7 +204,7 @@ export default function HomeScreen() {
         <View style={s.card}>
           {recentUpdates.length > 0 ? (
             recentUpdates.map((u, i) => (
-              <TouchableOpacity key={u.id} style={[s.updateRow, i < recentUpdates.length - 1 && { marginBottom: 16 }]} onPress={() => router.push('/(main)/updates' as any)}>
+              <TouchableOpacity key={u.id} style={[s.updateRow, i < recentUpdates.length - 1 && { marginBottom: 16 }]} onPress={() => router.push('/(main)/updates')}>
                 <View style={[s.updateBar, { backgroundColor: u.category === 'visa' ? C.green400 : C.blue }]} />
                 <View>
                   <Text style={s.updateTitle} numberOfLines={1}>{u.title}</Text>
@@ -215,7 +215,7 @@ export default function HomeScreen() {
           ) : (
             <Text style={s.updateSub}>No recent updates</Text>
           )}
-          <TouchableOpacity style={s.viewAll} onPress={() => router.push('/(main)/updates' as any)}>
+          <TouchableOpacity style={s.viewAll} onPress={() => router.push('/(main)/updates')}>
             <Text style={s.viewAllText}>View All Updates</Text>
             <Ionicons name="arrow-forward" size={14} color={C.blue} />
           </TouchableOpacity>

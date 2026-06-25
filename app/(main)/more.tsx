@@ -44,7 +44,7 @@ export default function MoreScreen() {
       const { data } = await supabase.from('users').select('*').eq('id', authUser.id).single()
       setUser(data)
       setPhoneInput(data?.phone ?? '')
-      const p = (data?.preferences ?? {}) as any
+      const p = (data?.preferences ?? {})
       setNotifPush(p.push_enabled !== false)
       setNotifEmail(!!p.email_digest)
       setLoading(false)
@@ -71,7 +71,7 @@ export default function MoreScreen() {
         uri: asset.uri,
         name: `avatar.${ext}`,
         type: `image/${ext}`,
-      } as any)
+      })
 
       const { data, error } = await supabase.storage.from('avatars').upload(path, formData)
       if (error) throw error
@@ -142,7 +142,7 @@ export default function MoreScreen() {
     <ScrollView style={s.bg} contentContainerStyle={[s.content, { paddingTop: insets.top + 10 }]}>
       <View style={s.pageHeader}>
         <Text style={s.pageTitle}>Profile & Settings</Text>
-        <TouchableOpacity style={s.logoContainer} onPress={() => router.push('/(admin)/dashboard' as any)}>
+        <TouchableOpacity style={s.logoContainer} onPress={() => router.push('/(admin)/dashboard')}>
            <Image source={require('../../assets/icon.png')} style={s.logoSmall} resizeMode="contain" />
         </TouchableOpacity>
       </View>
@@ -234,7 +234,7 @@ export default function MoreScreen() {
             onPress={() => setMode(opt.key)}
           >
             <View style={[s.iconBox, { backgroundColor: C.blue + '18' }]}>
-              <Ionicons name={opt.icon as any} size={18} color={C.blue} />
+              <Ionicons name={opt.icon} size={18} color={C.blue} />
             </View>
             <Text style={s.rowLabel}>{opt.label}</Text>
             {mode === opt.key && <Ionicons name="checkmark" size={18} color={C.blue} />}

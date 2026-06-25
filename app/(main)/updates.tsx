@@ -239,7 +239,7 @@ export default function UpdatesScreen() {
               <Text style={c.authorTime}>{formatRelativeTime(item.created_at)}</Text>
             </View>
             <View style={[c.catBadge, { backgroundColor: catColor.bg }]}>
-              <Ionicons name={catIconName as any} size={10} color={catColor.text} />
+              <Ionicons name={catIconName} size={10} color={catColor.text} />
               <Text style={[c.catText, { color: catColor.text }]}>
                 {(item.category ?? 'update').replace('_', ' ')}
               </Text>
@@ -373,7 +373,7 @@ export default function UpdatesScreen() {
       {canPost && (
         <TouchableOpacity
           style={[g.fab, { bottom: 20 + insets.bottom }]}
-          onPress={() => router.push('/(main)/update-compose' as any)}
+          onPress={() => router.push('/(main)/update-compose')}
           accessibilityLabel="Create update"
         >
           <Ionicons name="add" size={26} color={C.white} />
