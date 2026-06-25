@@ -28,11 +28,11 @@ export default function MainLayout() {
 
     registerForPush()
     const sub = Notifications.addNotificationResponseReceivedListener(response => {
-      const data = response.notification.request.content.data as any
+      const data = response.notification.request.content.data
       if (data?.screen === 'messages' && data?.convId) {
-        router.push(`/(main)/messages/${data.convId}` as any)
+        router.push(`/(main)/messages/${data.convId}`)
       } else if (data?.screen === 'students' && data?.studentId) {
-        router.push(`/(main)/students/${data.studentId}` as any)
+        router.push(`/(main)/students/${data.studentId}`)
       } else {
         router.push('/(main)/notifications')
       }

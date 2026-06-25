@@ -104,7 +104,7 @@ export default function AdminUsersScreen() {
           const initials = item.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
           const roleColor = ROLE_COLOR[item.role] ?? C.slate400
           return (
-            <TouchableOpacity style={s.userCard} onPress={() => router.push(`/(admin)/users/${item.id}` as any)}>
+            <TouchableOpacity style={s.userCard} onPress={() => router.push(`/(admin)/users/${item.id}`)}>
               <View style={[s.avatar, { backgroundColor: roleColor + '22' }]}>
                 <Text style={[s.avatarText, { color: roleColor }]}>{initials}</Text>
               </View>

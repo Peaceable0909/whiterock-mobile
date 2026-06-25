@@ -94,7 +94,7 @@ export default function GroupsScreen() {
                 style={s.card}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-                  router.push(`/(main)/groups/${item.id}` as any)
+                  router.push(`/(main)/groups/${item.id}`)
                 }}
                 activeOpacity={0.82}
               >
