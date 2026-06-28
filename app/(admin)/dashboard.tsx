@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+mport { useEffect, useState, useCallback } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   ActivityIndicator, RefreshControl, Image
@@ -136,9 +136,9 @@ export default function AdminDashboard() {
           ))}
         </View>
 
-        <TouchableOpacity style={s.logoutBtn} onPress={() => supabase.auth.signOut()}>
-          <Ionicons name="log-out-outline" size={18} color={C.red500} />
-          <Text style={s.logoutText}>Sign Out of Console</Text>
+        <TouchableOpacity style={s.logoutBtn} onPress={() => router.replace('/(main)/home')}>
+          <Ionicons name="arrow-back-outline" size={18} color={C.blue} />
+          <Text style={s.logoutText}>Back to App</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -168,6 +168,7 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   stageBarBg:  { flex: 1, height: 8, backgroundColor: C.slate100, borderRadius: 4, overflow: 'hidden' },
   stageBarFg:  { height: 8, backgroundColor: C.blue, borderRadius: 4 },
   stageCount:  { fontSize: 11, fontWeight: '700', color: C.navy, width: 24, textAlign: 'right' },
-  logoutBtn:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 40, padding: 16, backgroundColor: C.white, borderRadius: 18, borderWidth: 1, borderColor: C.red500 + '33' },
-  logoutText:  { fontSize: 14, fontWeight: '700', color: C.red500 },
+  logoutBtn:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 40, padding: 16, backgroundColor: C.white, borderRadius: 18, borderWidth: 1, borderColor: C.blue + '33' },
+  logoutText:  { fontSize: 14, fontWeight: '700', color: C.blue },
 })
+

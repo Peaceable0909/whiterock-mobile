@@ -8,6 +8,7 @@
     "@react-native-google-signin/google-signin": "^14.0.2",
     "@supabase/supabase-js": "^2.49.4",
     "expo": "~56.0.9",
+    "expo-audio": "^56.0.12",
     "expo-constants": "~56.0.17",
     "expo-device": "~56.0.4",
     "expo-document-picker": "~56.0.0",

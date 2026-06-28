@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
+mport React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import {
   View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Modal, Platform, ActivityIndicator, Image, Alert, AppState,
@@ -7,6 +7,7 @@ import {
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { VideoView, useVideoPlayer } from 'expo-video'
+import { useAudioRecorder, AudioModule, RecordingPresets } from 'expo-audio'
 import * as DocumentPicker from 'expo-document-picker'
 import * as WebBrowser from 'expo-web-browser'
 import { ImageModal } from '@/components/ImageModal'
@@ -23,8 +24,8 @@ const API_BASE  = 'https://whiterock-connect.vercel.app'
 
 const MSG_URL_RE = /https?:\/\/[^\s<>"']+/g
 
-const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏']
-const STICKERS  = ['🚀', '✨', '🔥', '🎉', '👏', '🙌', '💡', '✅', '🎓', '🇬🇧']
+const REACTIONS = ['ðŸ‘', 'â¤ï¸', 'ðŸ˜‚', 'ðŸ˜®', 'ðŸ˜¢', 'ðŸ™']
+const STICKERS  = ['ðŸš€', 'âœ¨', 'ðŸ”¥', 'ðŸŽ‰', 'ðŸ‘', 'ðŸ™Œ', 'ðŸ’¡', 'âœ…', 'ðŸŽ“', 'ðŸ‡¬ðŸ‡§']
 
 function getYouTubeId(url: string): string | null {
   const m = url.match(/(?:youtube\.com\/(?:[^/?#]*[?&]v=|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/)
@@ -122,7 +123,7 @@ function AudioMsg({ uri, isMe, C }: { uri: string; isMe: boolean; C: ColorPalett
       </View>
       <View style={{ flex: 1 }}>
         <Text style={{ fontSize: 13, fontWeight: '600', color: isMe ? C.white : C.navy }}>
-          {playing ? 'Playing…' : 'Voice note'}
+          {playing ? 'Playingâ€¦' : 'Voice note'}
         </Text>
         <Text style={{ fontSize: 11, marginTop: 2, color: isMe ? 'rgba(255,255,255,0.6)' : C.slate400 }}>
           {playing ? 'Tap to pause' : 'Tap to play'}
@@ -186,6 +187,11 @@ export default function ChatScreen() {
   const [forwardModal, setForwardModal] = useState(false)
   const [conversations, setConversations] = useState<any[]>([])
   const [stickerModal, setStickerModal] = useState(false)
+
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordSecs, setRecordSecs]   = useState(0)
+  const recTimerRef   = useRef<ReturnType<typeof setInterval> | null>(null)
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY)
 
   const aiReplyingRef = useRef(false)
   const oldestTs   = useRef<string | null>(null)
@@ -375,7 +381,7 @@ export default function ChatScreen() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: [
-            { role: 'system', content: 'You are a WhiteRock Connect counselor drafting a reply to a student viewing it on a mobile phone. Apply mobile-friendly formatting: short paragraphs separated by blank lines, **bold** for key values (fees, statuses, document names), bullet points with • for unordered lists, and numbered steps for sequences. Keep the reply professional, warm, and concise. Never send walls of text.' },
+            { role: 'system', content: 'You are a WhiteRock Connect counselor drafting a reply to a student viewing it on a mobile phone. Apply mobile-friendly formatting: short paragraphs separated by blank lines, **bold** for key values (fees, statuses, document names), bullet points with â€¢ for unordered lists, and numbered steps for sequences. Keep the reply professional, warm, and concise. Never send walls of text.' },
             ...apiMessages,
           ],
         }),
@@ -498,7 +504,7 @@ export default function ChatScreen() {
         publicUrl = supabase.storage.from('chat-media').getPublicUrl(path).data.publicUrl
       }
 
-      const caption = isVideo ? '🎬 Video' : isImage ? '📷 Photo' : `📎 ${rawName}`
+      const caption = isVideo ? 'ðŸŽ¬ Video' : isImage ? 'ðŸ“· Photo' : `ðŸ“Ž ${rawName}`
       const { data: saved } = await supabase.from('messages').insert({
         conversation_id: id, sender_id: myId,
         content: caption, type: kind, file_url: publicUrl,
@@ -631,13 +637,13 @@ export default function ChatScreen() {
           {item.reply_to_id && !isDeleted && (
             <View style={[ms.replyBar, isMe ? ms.replyBarMe : ms.replyBarThem]}>
               <Text style={[ms.replyLabel, isMe && { color: 'rgba(255,255,255,0.7)' }]} numberOfLines={1}>
-                {repliedMsg?.content ?? '↩ Replied to a message'}
+                {repliedMsg?.content ?? 'â†© Replied to a message'}
               </Text>
             </View>
           )}
 
           {item.forwarded && !isDeleted && (
-            <Text style={[ms.forwardedLabel, !isMe && { color: C.slate400 }]}>↪ Forwarded</Text>
+            <Text style={[ms.forwardedLabel, !isMe && { color: C.slate400 }]}>â†ª Forwarded</Text>
           )}
 
           {isDeleted ? (
@@ -676,7 +682,7 @@ export default function ChatScreen() {
           <View style={[ms.meta, isMe ? ms.metaMe : ms.metaThem]}>
             <Text style={[ms.time, isMe && ms.timeMe]}>
               {formatTime(item.created_at)}
-              {item.edited_at && !isDeleted ? '  · edited' : ''}
+              {item.edited_at && !isDeleted ? '  Â· edited' : ''}
             </Text>
             {isMe && !isDeleted && (
               item.is_read
@@ -705,6 +711,47 @@ export default function ChatScreen() {
     setActiveConvId(id)
     return () => setActiveConvId(null)
   }, [id]))
+
+
+  const formatDuration = (secs: number) => {
+    const m = Math.floor(secs / 60); const s = secs % 60
+    return String(m) + ':' + s.toString().padStart(2, '0')
+  }
+
+  const startRecording = async () => {
+    const { granted } = await AudioModule.requestRecordingPermissionsAsync()
+    if (!granted) { Alert.alert('Microphone Access Needed', 'Please allow microphone access in Settings.'); return }
+    try {
+      await audioRecorder.prepareToRecordAsync()
+      audioRecorder.record()
+      setIsRecording(true); setRecordSecs(0)
+      recTimerRef.current = setInterval(() => setRecordSecs(s => s + 1), 1000)
+    } catch (err: any) { Alert.alert('Recording failed', err.message) }
+  }
+
+  const stopAndSendVoice = async () => {
+    if (recTimerRef.current) { clearInterval(recTimerRef.current); recTimerRef.current = null }
+    setIsRecording(false); setRecordSecs(0)
+    await audioRecorder.stop()
+    const uri = audioRecorder.uri
+    if (!uri) return
+    setUploading(true); setUploadPct(0)
+    try {
+      const fileName = 'voice-' + Date.now() + '.m4a'
+      const publicUrl = await uploadVideo(uri, 'audio/m4a', fileName, pct => setUploadPct(pct))
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      await supabase.from('messages').insert({ conversation_id: id, sender_id: user.id, content: '🎤', type: 'voice', file_url: publicUrl, file_name: fileName, is_ai: false })
+      await supabase.from('conversations').update({ last_message: '🎤 Voice note', last_message_at: new Date().toISOString() }).eq('id', id)
+    } catch (err: any) { Alert.alert('Upload failed', err.message) }
+    finally { setUploading(false) }
+  }
+
+  const cancelRecording = async () => {
+    if (recTimerRef.current) { clearInterval(recTimerRef.current); recTimerRef.current = null }
+    setIsRecording(false); setRecordSecs(0)
+    try { await audioRecorder.stop() } catch {}
+  }
 
   if (loading) return <View style={g.center}><ActivityIndicator color={C.blue} size="large" /></View>
 
@@ -821,7 +868,7 @@ export default function ChatScreen() {
       </TouchableOpacity>
     </Modal>
 
-    <KeyboardAvoidingView style={g.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 0}>
+    <KeyboardAvoidingView style={g.flex} behavior="padding" keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 80}>
       <View style={[g.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => router.back()} style={g.backBtn}>
           <Ionicons name="arrow-back" size={22} color={C.navy} />
@@ -850,7 +897,7 @@ export default function ChatScreen() {
       {!aiEnabled && (
         <View style={g.aiPausedBanner}>
           <Ionicons name="pause-circle-outline" size={13} color="#B45309" />
-          <Text style={g.aiPausedText}>AI paused · you are talking directly</Text>
+          <Text style={g.aiPausedText}>AI paused Â· you are talking directly</Text>
         </View>
       )}
 
@@ -865,10 +912,9 @@ export default function ChatScreen() {
           style={{ flex: 1, backgroundColor: resolvedWallpaper ? ('color' in resolvedWallpaper ? resolvedWallpaper.color : 'transparent') : C.bg }}
           contentContainerStyle={{ padding: 12, paddingBottom: 8 }}
           renderItem={renderMessage}
-          onContentSizeChange={scrollToEnd}
           ListHeaderComponent={hasMore ? (
             <TouchableOpacity onPress={loadOlderMessages} disabled={loadingMore} style={g.loadMoreBtn}>
-              {loadingMore ? <ActivityIndicator size="small" color={C.blue} /> : <Text style={g.loadMoreTxt}>↑ Load older messages</Text>}
+              {loadingMore ? <ActivityIndicator size="small" color={C.blue} /> : <Text style={g.loadMoreTxt}>â†‘ Load older messages</Text>}
             </TouchableOpacity>
           ) : null}
         />
@@ -921,22 +967,40 @@ export default function ChatScreen() {
         </View>
       )}
 
-      <View style={[g.bar, { paddingBottom: insets.bottom + 10 }]}>
-        <TouchableOpacity onPress={() => setStickerModal(true)} style={g.attach}>
-           <Ionicons name="happy-outline" size={20} color={C.slate500} />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={pickAndSendMedia} disabled={uploading} style={g.attach}>
-          <Ionicons name="attach-outline" size={20} color={uploading ? C.slate300 : C.slate500} />
-        </TouchableOpacity>
-        <TextInput
-          style={g.input} value={input} onChangeText={setInput}
-          placeholder="Type a message…" placeholderTextColor={C.slate400}
-          multiline maxLength={2000}
-        />
-        <TouchableOpacity style={[g.sendBtn, (!input.trim() || sending) && g.sendBtnOff]} onPress={() => sendMessage()} disabled={!input.trim() || sending}>
-          {sending ? <ActivityIndicator color={C.white} size="small" /> : <Ionicons name="send-outline" size={18} color={C.white} />}
-        </TouchableOpacity>
-      </View>
+      {isRecording ? (
+        <View style={[g.bar, { paddingBottom: insets.bottom + 10 }]}>
+          <TouchableOpacity onPress={cancelRecording} style={g.attach}>
+            <Ionicons name="close-circle-outline" size={22} color={C.red500} />
+          </TouchableOpacity>
+          <View style={g.recordingWave}>
+            <View style={g.recDot} />
+            <Text style={g.recDurationText}>{formatDuration(recordSecs)}</Text>
+            <Text style={g.recHint}>Tap send to finish</Text>
+          </View>
+          <TouchableOpacity style={[g.sendBtn, { backgroundColor: C.red500 }]} onPress={stopAndSendVoice}>
+            <Ionicons name="send-outline" size={18} color={C.white} />
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={[g.bar, { paddingBottom: insets.bottom + 10 }]}>
+          <TouchableOpacity onPress={() => setStickerModal(true)} style={g.attach}>
+            <Ionicons name="happy-outline" size={20} color={C.slate500} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={pickAndSendMedia} disabled={uploading} style={g.attach}>
+            <Ionicons name="attach-outline" size={20} color={uploading ? C.slate300 : C.slate500} />
+          </TouchableOpacity>
+          <TextInput style={g.input} value={input} onChangeText={setInput} placeholder="Type a message..." placeholderTextColor={C.slate400} multiline maxLength={2000} />
+          {input.trim() || sending ? (
+            <TouchableOpacity style={[g.sendBtn, sending && g.sendBtnOff]} onPress={() => sendMessage()} disabled={sending}>
+              {sending ? <ActivityIndicator color={C.white} size="small" /> : <Ionicons name="send-outline" size={18} color={C.white} />}
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={g.sendBtn} onPress={startRecording}>
+              <Ionicons name="mic-outline" size={18} color={C.white} />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
     </KeyboardAvoidingView>
     </>
   )
@@ -1014,6 +1078,10 @@ const mkG = (C: ColorPalette) => StyleSheet.create({
   bar:            { flexDirection: 'row', alignItems: 'center', padding: 12, backgroundColor: C.white, gap: 10 },
   attach:         { width: 42, height: 42, borderRadius: 21, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
   input:          { flex: 1, backgroundColor: C.bg, borderRadius: 21, paddingHorizontal: 16, paddingVertical: 10, fontSize: 15, color: C.navy, maxHeight: 120 },
+  recordingWave:  { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12 },
+  recDot:         { width: 8, height: 8, borderRadius: 4, backgroundColor: C.red500 },
+  recDurationText:{ fontSize: 16, fontWeight: '700', color: C.navy },
+  recHint:        { fontSize: 11, color: C.slate400 },
   sendBtn:        { width: 42, height: 42, borderRadius: 21, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
   sendBtnOff:     { opacity: 0.5 },
   headerInfo:     { flex: 1, flexDirection: 'row', alignItems: 'center' },
@@ -1049,3 +1117,5 @@ const mkG = (C: ColorPalette) => StyleSheet.create({
   stickerGrid:    { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 20 },
   stickerBtn:     { padding: 10 },
 })
+
+

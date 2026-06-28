@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+mport { useEffect, useState, useRef } from 'react'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated, Image, RefreshControl } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -167,16 +167,22 @@ export default function HomeScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.agentName}>{agent.name}</Text>
-                  <Text style={s.agentRole}>Senior Educational Consultant</Text>
+                  <Text style={s.agentRole}>{agent?.role ? (agent.role.charAt(0).toUpperCase() + agent.role.slice(1)) : 'Educational Consultant'}</Text>
                 </View>
-                <View style={s.onlineBadge}>
-                  <View style={s.dot} />
-                  <Text style={s.onlineText}>ONLINE</Text>
-                </View>
+                {agent?.is_online && (
+                  <View style={s.onlineBadge}>
+                    <View style={s.dot} />
+                    <Text style={s.onlineText}>ONLINE</Text>
+                  </View>
+                )}
               </View>
-              <TouchableOpacity style={s.btn} onPress={() => convId && router.push(`/(main)/messages/${convId}`)}>
+              <TouchableOpacity
+                style={[s.btn, !convId && { opacity: 0.5 }]}
+                onPress={() => { if (convId) router.push(`/(main)/messages/${convId}`) }}
+                disabled={!convId}
+              >
                 <Ionicons name="chatbubble-ellipses-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
-                <Text style={s.btnText}>Message Agent</Text>
+                <Text style={s.btnText}>{convId ? 'Message Agent' : 'Setting up chat…'}</Text>
               </TouchableOpacity>
             </View>
           </>
@@ -208,7 +214,7 @@ export default function HomeScreen() {
                 <View style={[s.updateBar, { backgroundColor: u.category === 'visa' ? C.green400 : C.blue }]} />
                 <View>
                   <Text style={s.updateTitle} numberOfLines={1}>{u.title}</Text>
-                  <Text style={s.updateSub}>{new Date(u.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} · {u.category}</Text>
+                  <Text style={s.updateSub}>{new Date(u.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} Â· {u.category}</Text>
                 </View>
               </TouchableOpacity>
             ))
@@ -243,7 +249,7 @@ function AiBriefing({ userId, firstName }: { userId?: string, firstName?: string
       let t = "Good " + g + ", " + firstName + ". "
       if (total)               t += total + " student" + (total !== 1 ? "s" : "") + " in your pipeline. "
       if (activeConvs?.length) t += activeConvs.length + " active conversation" + (activeConvs.length !== 1 ? "s" : "") + " this week. "
-      if ((pending ?? 0) > 0)  t += "⚠ " + pending + " document" + (pending !== 1 ? "s" : "") + " pending review."
+      if ((pending ?? 0) > 0)  t += "âš  " + pending + " document" + (pending !== 1 ? "s" : "") + " pending review."
       else                     t += 'All documents are up to date.'
       setBrief(t)
     }
@@ -277,7 +283,7 @@ function AiBriefing({ userId, firstName }: { userId?: string, firstName?: string
         )}
       </View>
       <Text style={{ fontSize: 14, color: C.white, lineHeight: 22, fontWeight: '500' }}>
-        {displayed}<Text style={{ color: typing ? 'rgba(255,255,255,0.6)' : 'transparent' }}>▌</Text>
+        {displayed}<Text style={{ color: typing ? 'rgba(255,255,255,0.6)' : 'transparent' }}>â–Œ</Text>
       </Text>
     </View>
   )
@@ -379,3 +385,4 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   viewAll:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 20, borderTopWidth: 1, borderColor: C.slate100, paddingTop: 16 },
   viewAllText:      { fontSize: 13, fontWeight: '700', color: C.blue, marginRight: 4 },
 })
+
