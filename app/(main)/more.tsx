@@ -1,4 +1,4 @@
-mport { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   ActivityIndicator, Alert, Switch, Image, TextInput

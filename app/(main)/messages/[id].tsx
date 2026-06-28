@@ -1,4 +1,4 @@
-mport React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import {
   View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Modal, Platform, ActivityIndicator, Image, Alert, AppState,

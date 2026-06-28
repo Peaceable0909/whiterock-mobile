@@ -1,4 +1,4 @@
-mport { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated, Image, RefreshControl } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
