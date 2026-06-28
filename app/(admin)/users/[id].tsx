@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+mport { useEffect, useState } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   ActivityIndicator, Alert, Modal, Platform
@@ -34,10 +34,13 @@ export default function AdminUserDetailScreen() {
   const [profile, setProfile]     = useState<any>(null)
   const [loading, setLoading]     = useState(true)
   const [roleModal, setRoleModal] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [saving, setSaving]       = useState(false)
 
   useEffect(() => {
     const load = async () => {
+      const { data: { user: me } } = await supabase.auth.getUser()
+      setCurrentUserId(me?.id ?? null)
       const [{ data: u }, { data: p }] = await Promise.all([
         supabase.from('users').select('*').eq('id', id).single(),
         supabase.from('student_profiles').select('*').eq('user_id', id).maybeSingle(),
@@ -49,12 +52,25 @@ export default function AdminUserDetailScreen() {
     load()
   }, [id])
 
-  const changeRole = async (newRole: string) => {
-    setSaving(true)
-    await supabase.from('users').update({ role: newRole }).eq('id', id)
-    setUser((prev: any) => ({ ...prev, role: newRole }))
-    setSaving(false)
-    setRoleModal(false)
+  const changeRole = (newRole: string) => {
+    if (newRole === user?.role) { setRoleModal(false); return }
+    if (id === currentUserId && newRole !== 'admin') {
+      Alert.alert('Not Allowed', 'You cannot demote your own admin account.')
+      return
+    }
+    const confirmMsg =     Alert.alert('Confirm Role Change', confirmMsg, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Change Role', style: 'destructive',
+        onPress: async () => {
+          setSaving(true)
+          await supabase.from('users').update({ role: newRole }).eq('id', id)
+          setUser((prev: any) => ({ ...prev, role: newRole }))
+          setSaving(false)
+          setRoleModal(false)
+        },
+      },
+    ])
   }
 
   const toggleDeactivation = () => {

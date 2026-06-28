@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+mport { useState, useRef, useEffect, useCallback } from 'react'
 import {
   View, Text, TextInput, FlatList, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator,
@@ -298,7 +298,7 @@ WhiteRock information always overrides training data. Never present training dat
   }
 
   return (
-    <KeyboardAvoidingView style={s.bg} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
+    <KeyboardAvoidingView style={s.bg} behavior="padding" keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 80}>
       {/* Header */}
       <View style={[s.header, { paddingTop: insets.top + 8 }]}>
         {aiAvatar

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+mport { useEffect, useState } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   ActivityIndicator, Alert, Switch, Image, TextInput
@@ -137,17 +137,20 @@ export default function MoreScreen() {
   )
 
   const initials = user?.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() ?? 'U'
+  const isAdmin  = user?.role === 'admin'
 
   return (
     <ScrollView style={s.bg} contentContainerStyle={[s.content, { paddingTop: insets.top + 10 }]}>
       <View style={s.pageHeader}>
         <Text style={s.pageTitle}>Profile & Settings</Text>
-        <TouchableOpacity style={s.logoContainer} onPress={() => router.push('/(admin)/dashboard')}>
-           <Image source={require('../../assets/icon.png')} style={s.logoSmall} resizeMode="contain" />
-        </TouchableOpacity>
+        {isAdmin && (
+          <TouchableOpacity style={s.logoContainer} onPress={() => router.push('/(admin)/dashboard')}>
+            <Image source={require('../../assets/icon.png')} style={s.logoSmall} resizeMode="contain" />
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* ── Profile Card ── */}
+      {/* â”€â”€ Profile Card â”€â”€ */}
       <View style={s.profileCard}>
         <TouchableOpacity onPress={pickImage} disabled={uploading} style={s.avatarWrap}>
           {user.avatar_url ? (
@@ -170,7 +173,7 @@ export default function MoreScreen() {
         </View>
       </View>
 
-      {/* ── Contact info ── */}
+      {/* â”€â”€ Contact info â”€â”€ */}
       <Text style={s.sectionLabel}>CONTACT INFO</Text>
       <View style={s.card}>
         <View style={[s.row, s.border]}>
@@ -224,7 +227,7 @@ export default function MoreScreen() {
         </View>
       </View>
 
-      {/* ── Appearance ── */}
+      {/* â”€â”€ Appearance â”€â”€ */}
       <Text style={s.sectionLabel}>APPEARANCE</Text>
       <View style={s.card}>
         {APPEARANCE_OPTIONS.map((opt, i) => (
@@ -242,7 +245,7 @@ export default function MoreScreen() {
         ))}
       </View>
 
-      {/* ── Notifications ── */}
+      {/* â”€â”€ Notifications â”€â”€ */}
       <Text style={s.sectionLabel}>NOTIFICATIONS</Text>
       <View style={s.card}>
         <View style={[s.row, s.border]}>
@@ -277,7 +280,7 @@ export default function MoreScreen() {
         </View>
       </View>
 
-      {/* ── App info ── */}
+      {/* â”€â”€ App info â”€â”€ */}
       <Text style={s.sectionLabel}>APP</Text>
       <View style={s.card}>
         <View style={[s.row, s.border]}>
@@ -296,7 +299,7 @@ export default function MoreScreen() {
         </View>
       </View>
 
-      {/* ── Account / danger ── */}
+      {/* â”€â”€ Account / danger â”€â”€ */}
       <Text style={s.sectionLabel}>ACCOUNT</Text>
       <View style={s.card}>
         <TouchableOpacity
@@ -372,3 +375,4 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   sendLinkBtn:    { backgroundColor: C.blue + '14', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
   sendLinkText:   { fontSize: 12, fontWeight: '700', color: C.blue },
 })
+
