@@ -766,10 +766,13 @@ export default function ChatScreen() {
     } catch (err: any) { Alert.alert('Recording failed', err.message) }
   }
 
-  const stopAndSendVoice = async () => {
+  const stopAndSendVoice = async (durationSecs: number) => {
     if (recTimerRef.current) { clearInterval(recTimerRef.current); recTimerRef.current = null }
-    setIsRecording(false); setRecordSecs(0)
+    setIsRecording(false)
+    const held = durationSecs
+    setRecordSecs(0)
     await audioRecorder.stop()
+    if (held < 1) { Alert.alert('Too short', 'Hold the mic longer to record a voice note.'); return }
     const uri = audioRecorder.uri
     if (!uri) return
     setUploading(true); setUploadPct(0)
@@ -1088,17 +1091,20 @@ export default function ChatScreen() {
       )}
 
       {isRecording ? (
-        <View style={[g.bar, { paddingBottom: insets.bottom + 10 }]}>
+        <View style={[g.bar, { paddingBottom: insets.bottom + 10, backgroundColor: C.white }]}>
           <TouchableOpacity onPress={cancelRecording} style={g.attach}>
-            <Ionicons name="close-circle-outline" size={22} color={C.red500} />
+            <Ionicons name="trash-outline" size={22} color={C.red500} />
           </TouchableOpacity>
           <View style={g.recordingWave}>
             <View style={g.recDot} />
             <Text style={g.recDurationText}>{formatDuration(recordSecs)}</Text>
-            <Text style={g.recHint}>Tap send to finish</Text>
+            <Text style={g.recHint}>Release to send</Text>
           </View>
-          <TouchableOpacity style={[g.sendBtn, { backgroundColor: C.red500 }]} onPress={stopAndSendVoice}>
-            <Ionicons name="send-outline" size={18} color={C.white} />
+          <TouchableOpacity
+            style={[g.sendBtn, { backgroundColor: C.red500 }]}
+            onPressOut={() => stopAndSendVoice(recordSecs)}
+          >
+            <Ionicons name="mic" size={18} color={C.white} />
           </TouchableOpacity>
         </View>
       ) : (
@@ -1115,7 +1121,12 @@ export default function ChatScreen() {
               {sending ? <ActivityIndicator color={C.white} size="small" /> : <Ionicons name="send-outline" size={18} color={C.white} />}
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity style={g.sendBtn} onPress={startRecording}>
+            <TouchableOpacity
+              style={g.sendBtn}
+              onPressIn={startRecording}
+              onPressOut={() => stopAndSendVoice(recordSecs)}
+              delayLongPress={100}
+            >
               <Ionicons name="mic-outline" size={18} color={C.white} />
             </TouchableOpacity>
           )}
