@@ -187,6 +187,8 @@ export default function ChatScreen() {
   const [forwardModal, setForwardModal] = useState(false)
   const [conversations, setConversations] = useState<any[]>([])
   const [stickerModal, setStickerModal] = useState(false)
+  const [editingMsgId, setEditingMsgId] = useState<string | null>(null)
+  const [editInput, setEditInput] = useState('')
 
   const [isRecording, setIsRecording] = useState(false)
   const [recordSecs, setRecordSecs]   = useState(0)
@@ -578,6 +580,27 @@ export default function ChatScreen() {
     else Alert.alert('Sent', 'Message forwarded successfully.')
   }
 
+  const startEdit = () => {
+    if (!selectedMsg || selectedMsg.type !== 'text') return
+    setEditInput(selectedMsg.content ?? '')
+    setEditingMsgId(selectedMsg.id)
+    setMenuVisible(false)
+  }
+
+  const saveEdit = async () => {
+    if (!editingMsgId || !editInput.trim()) return
+    await supabase.from('messages')
+      .update({ content: editInput.trim(), edited_at: new Date().toISOString() })
+      .eq('id', editingMsgId)
+    setEditingMsgId(null)
+    setEditInput('')
+  }
+
+  const cancelEdit = () => {
+    setEditingMsgId(null)
+    setEditInput('')
+  }
+
   const sendSticker = (sticker: string) => {
     setStickerModal(false)
     sendMessage(sticker)
@@ -790,6 +813,12 @@ export default function ChatScreen() {
               <Ionicons name="share-outline" size={20} color={C.navy} />
               <Text style={g.menuItemText}>Share</Text>
             </TouchableOpacity>
+            {selectedMsg?.sender_id === myId && selectedMsg?.type === 'text' && !selectedMsg?.deleted_at && (
+              <TouchableOpacity style={g.menuItem} onPress={startEdit}>
+                <Ionicons name="pencil-outline" size={20} color={C.blue} />
+                <Text style={[g.menuItemText, { color: C.blue }]}>Edit</Text>
+              </TouchableOpacity>
+            )}
             {selectedMsg?.sender_id === myId && (
               <TouchableOpacity style={g.menuItem} onPress={deleteMessage}>
                 <Ionicons name="trash-outline" size={20} color={C.red500} />
@@ -950,6 +979,28 @@ export default function ChatScreen() {
         </View>
       )}
 
+      {editingMsgId && (
+        <View style={g.editBar}>
+          <Ionicons name="pencil-outline" size={14} color={C.blue} />
+          <TextInput
+            style={g.editInput}
+            value={editInput}
+            onChangeText={setEditInput}
+            autoFocus
+            multiline
+            maxLength={2000}
+            placeholder="Edit message…"
+            placeholderTextColor={C.slate400}
+          />
+          <TouchableOpacity onPress={saveEdit} style={g.editSaveBtn}>
+            <Ionicons name="checkmark-circle" size={26} color={C.blue} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={cancelEdit}>
+            <Ionicons name="close-circle" size={26} color={C.slate400} />
+          </TouchableOpacity>
+        </View>
+      )}
+
       {myRole !== 'student' && (
         <View style={g.aiBar}>
           <TouchableOpacity style={[g.aiToggle, aiAssist && g.aiToggleOn]} onPress={() => setAiAssist(!aiAssist)}>
@@ -1069,6 +1120,9 @@ const mkG = (C: ColorPalette) => StyleSheet.create({
   progressTxt:    { fontSize: 10, color: C.slate400, marginLeft: 'auto' },
   replyPreviewBar:{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.white, paddingHorizontal: 16, paddingVertical: 10, borderTopWidth: 1, borderColor: C.slate100 },
   replyPreviewText:{ flex: 1, fontSize: 13, color: C.slate500, fontStyle: 'italic' },
+  editBar:        { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.blue + '12', paddingHorizontal: 14, paddingVertical: 8, borderTopWidth: 1, borderColor: C.blue + '30' },
+  editInput:      { flex: 1, fontSize: 14, color: C.navy, paddingVertical: 4, maxHeight: 80 },
+  editSaveBtn:    { padding: 2 },
   aiBar:          { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: C.white, borderTopWidth: 1, borderColor: C.slate100 },
   aiToggle:       { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 18, borderWidth: 1, borderColor: C.blue },
   aiToggleOn:     { backgroundColor: C.blue },
