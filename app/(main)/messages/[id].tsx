@@ -249,7 +249,7 @@ export default function ChatScreen() {
           const { data: other } = await supabase.from('users').select('*').eq('id', otherId).single()
           setOther(other)
           if (other?.role === 'agent' || other?.role === 'counselor' || other?.role === 'admin') {
-            setAiAvatar(getAiAvatarUrl(other.name))
+            getAiAvatarUrl().then(url => { if (url) setAiAvatar(url) })
           }
         }
       }
