@@ -98,13 +98,34 @@ export default function StudentProfileScreen() {
 
   // ─── Document approve/reject ────────────────────────────────────
   const reviewDoc = async (docId: string, status: 'approved' | 'rejected') => {
-    await supabase.from('documents').update({ status }).eq('id', docId)
+    await supabase.from('documents').update({ status, reviewed_by: myId }).eq('id', docId)
     setDocs(prev => prev.map(d => d.id === docId ? { ...d, status } : d))
     await supabase.from('notifications').insert({
       user_id: id, type: 'info', is_read: false,
       title: `Document ${status === 'approved' ? 'Approved' : 'Rejected'}`,
       body: `Your document has been ${status}.`,
     })
+    // Trigger AI extraction after approval so document_facts are populated
+    if (status === 'approved') {
+      const doc = docs.find(d => d.id === docId)
+      if (doc?.url) {
+        const { data: { session } } = await supabase.auth.getSession()
+        // Fire-and-forget — does not block the UI
+        fetch(`${API_BASE}/api/analyze-doc-image`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          },
+          body: JSON.stringify({
+            documentId: doc.id,
+            studentId: id,
+            category: doc.category,
+            imageUrl: doc.url,
+          }),
+        }).catch(() => {})
+      }
+    }
   }
 
   // ─── Message ────────────────────────────────────────────────────

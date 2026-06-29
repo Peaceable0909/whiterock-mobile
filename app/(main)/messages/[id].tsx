@@ -379,35 +379,20 @@ export default function ChatScreen() {
     if (aiDrafting) return
     setAiDrafting(true)
     try {
-      const { data: history } = await supabase
-        .from('messages').select('sender_id, content, is_ai')
-        .eq('conversation_id', id)
-        .order('created_at', { ascending: false })
-        .limit(10)
-      const reversed = (history ?? []).reverse()
-      const apiMessages = reversed.map(m => ({
-        role: m.sender_id === myId ? 'assistant' : 'user',
-        content: m.content,
-      }))
-      const res = await fetch('https://whiterock-connect.vercel.app/api/ai-chat', {
+      const { data: { session } } = await supabase.auth.getSession()
+      // other is the student when current user is staff
+      const studentId = myRole !== 'student' ? other?.id : null
+      const res = await fetch('https://whiterock-connect.vercel.app/api/ai-draft', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [
-            { role: 'system', content: 'You are a WhiteRock Connect counselor drafting a reply to a student viewing it on a mobile phone. Apply mobile-friendly formatting: short paragraphs separated by blank lines, **bold** for key values (fees, statuses, document names), bullet points with â€¢ for unordered lists, and numbered steps for sequences. Keep the reply professional, warm, and concise. Never send walls of text.' },
-            ...apiMessages,
-          ],
-        }),
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ conversationId: id, studentId }),
       })
-      const { reply } = await res.json()
-      if (reply) {
-        const fixed = reply
-          .replace(/([^.\n!?]):\s+(\d{1,2}\.\s)/g, '$1:\n\n$2')
-          .replace(/([.!?])\s+(\d{1,2}\.\s)/g, '$1\n$2')
-          .replace(/\n{3,}/g, '\n\n')
-          .trim()
-        setInput(fixed)
-      }
+      const json = await res.json()
+      if (json.draft) setInput(json.draft.trim())
+      else Alert.alert('AI Draft', 'Could not generate a draft. Try again.')
     } catch {
       Alert.alert('AI Draft', 'Could not generate a draft. Try again.')
     } finally {
