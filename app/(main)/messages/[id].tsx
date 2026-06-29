@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import {
-  View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet,
+  View, Text, TextInput, FlatList, ScrollView, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Modal, Platform, ActivityIndicator, Image, Alert, AppState,
   useWindowDimensions, Vibration, Clipboard, Share
 } from 'react-native'
@@ -23,8 +23,14 @@ const PAGE_SIZE = 50
 const API_BASE  = 'https://whiterock-connect.vercel.app'
 
 const MSG_URL_RE = /https?:\/\/[^\s<>"']+/g
-
-const REACTIONS = ['ðŸ‘', 'â¤ï¸', 'ðŸ˜‚', 'ðŸ˜®', 'ðŸ˜¢', 'ðŸ™']
+const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏']
+const STICKER_CATS = [
+  { name: '⭐ Popular', items: ['🚀', '✨', '🔥', '🎉', '👍', '🙌', '💡', '✅', '🎓', '🇬🇧', '❤️', '😊', '💯', '🫶', '👏'] },
+  { name: '😂 Mood',   items: ['😂', '🤣', '😅', '😎', '🤓', '😏', '🙃', '😬', '🤦', '🤷', '👀', '🥹', '😭', '😤', '🫠'] },
+  { name: '🎉 Hype',   items: ['🥳', '🏆', '🥇', '🎁', '🎈', '🎆', '🌈', '⭐', '🤩', '💥', '✊', '🙏', '🎊', '💪', '🫡'] },
+  { name: '📚 Study',  items: ['📚', '📖', '✏️', '📝', '💻', '🧠', '🏫', '📋', '🔍', '⏰', '📊', '🖊️', '🧪', '🔬', '📐'] },
+  { name: '🇬🇧 UK',    items: ['🇬🇧', '🏰', '☕', '🌧️', '🎡', '🚌', '📮', '🦁', '🍵', '🐑', '🎭', '⚽', '🚂', '🎪', '🌺'] },
+]
 const STICKERS  = ['ðŸš€', 'âœ¨', 'ðŸ”¥', 'ðŸŽ‰', 'ðŸ‘', 'ðŸ™Œ', 'ðŸ’¡', 'âœ…', 'ðŸŽ“', 'ðŸ‡¬ðŸ‡§']
 
 function getYouTubeId(url: string): string | null {
@@ -186,6 +192,7 @@ export default function ChatScreen() {
   const [selectedMsg, setSelectedMsg] = useState<any>(null)
   const [forwardModal, setForwardModal] = useState(false)
   const [conversations, setConversations] = useState<any[]>([])
+  const [stickerCat, setStickerCat] = useState(0)
   const [stickerModal, setStickerModal] = useState(false)
   const [editingMsgId, setEditingMsgId] = useState<string | null>(null)
   const [editInput, setEditInput] = useState('')
@@ -932,11 +939,25 @@ export default function ChatScreen() {
     <Modal visible={stickerModal} transparent animationType="slide" onRequestClose={() => setStickerModal(false)}>
       <TouchableOpacity style={g.modalOverlay} activeOpacity={1} onPress={() => setStickerModal(false)}>
         <View style={g.stickerSheet}>
-          <Text style={g.stickerTitle}>Send a Sticker</Text>
+          <View style={g.stickerHandle} />
+          <Text style={g.stickerTitle}>Stickers</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={g.stickerCatRow} contentContainerStyle={{ gap: 8, paddingHorizontal: 4 }}>
+            {STICKER_CATS.map((cat, i) => (
+              <TouchableOpacity
+                key={cat.name}
+                style={[g.stickerCatTab, stickerCat === i && g.stickerCatTabActive]}
+                onPress={() => setStickerCat(i)}
+              >
+                <Text style={[g.stickerCatLabel, stickerCat === i && g.stickerCatLabelActive]}>{cat.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
           <View style={g.stickerGrid}>
-            {STICKERS.map(s => (
+            {STICKER_CATS[stickerCat].items.map(s => (
               <TouchableOpacity key={s} style={g.stickerBtn} onPress={() => sendSticker(s)}>
-                <Text style={{ fontSize: 40 }}>{s}</Text>
+                <View style={g.stickerCard}>
+                  <Text style={{ fontSize: 36 }}>{s}</Text>
+                </View>
               </TouchableOpacity>
             ))}
           </View>
@@ -969,7 +990,7 @@ export default function ChatScreen() {
       </TouchableOpacity>
     </Modal>
 
-    <KeyboardAvoidingView style={g.flex} behavior="padding" keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 80}>
+    <KeyboardAvoidingView style={g.flex} behavior="padding" keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 0}>
       <View style={[g.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => router.back()} style={g.backBtn}>
           <Ionicons name="arrow-back" size={22} color={C.navy} />
@@ -1258,10 +1279,17 @@ const mkG = (C: ColorPalette) => StyleSheet.create({
   avatarSmall:    { width: 36, height: 36, borderRadius: 18, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
   avatarSmallText:{ fontSize: 12, fontWeight: '800', color: C.white },
   forwardName:    { flex: 1, fontSize: 15, fontWeight: '600', color: C.navy },
-  stickerSheet:   { backgroundColor: C.white, borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 24, width: '100%' },
-  stickerTitle:   { fontSize: 18, fontWeight: '800', color: C.navy, marginBottom: 20, textAlign: 'center' },
-  stickerGrid:    { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 20 },
-  stickerBtn:     { padding: 10 },
+  stickerSheet:        { backgroundColor: C.white, borderTopLeftRadius: 30, borderTopRightRadius: 30, paddingTop: 12, paddingHorizontal: 20, paddingBottom: 32, width: '100%' },
+  stickerHandle:       { width: 40, height: 4, borderRadius: 2, backgroundColor: C.slate200, alignSelf: 'center', marginBottom: 14 },
+  stickerTitle:        { fontSize: 18, fontWeight: '800', color: C.navy, marginBottom: 14, textAlign: 'center' },
+  stickerCatRow:       { flexGrow: 0, marginBottom: 16 },
+  stickerCatTab:       { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: C.slate100 },
+  stickerCatTabActive: { backgroundColor: C.blue },
+  stickerCatLabel:     { fontSize: 12, fontWeight: '600', color: C.slate500 },
+  stickerCatLabelActive:{ fontSize: 12, fontWeight: '700', color: C.white },
+  stickerGrid:         { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 },
+  stickerBtn:          { padding: 4 },
+  stickerCard:         { width: 64, height: 64, borderRadius: 16, backgroundColor: C.slate100, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
 })
 
 

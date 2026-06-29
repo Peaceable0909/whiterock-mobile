@@ -7,10 +7,10 @@ import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
 import Constants from 'expo-constants'
-import { supabase } from '@/lib/supabase'
+import { supabase, SUPABASE_URL, SUPABASE_ANON } from '@/lib/supabase'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { unregisterForPush } from '@/lib/notifications'
-import { useColors, useTheme } from '@/lib/theme'
+import { useColors, useTheme, WALLPAPER_OPTIONS, ACCENT_COLORS, BUBBLE_COLORS } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 
 const APPEARANCE_OPTIONS = [
@@ -21,7 +21,7 @@ const APPEARANCE_OPTIONS = [
 
 export default function MoreScreen() {
   const C      = useColors()
-  const { mode, setMode } = useTheme()
+  const { mode, setMode, wallpaper, setWallpaper, accentColor, setAccentColor, bubbleColor, setBubbleColor } = useTheme()
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const s      = mkS(C)
@@ -64,21 +64,26 @@ export default function MoreScreen() {
 
     setUploading(true)
     try {
-      const ext = asset.uri.split('.').pop()
+      const ext = (asset.uri.split('.').pop() ?? 'jpg').toLowerCase()
       const path = `${user.id}/${Date.now()}.${ext}`
-      const formData = new FormData()
-      formData.append('file', {
-        uri: asset.uri,
-        name: `avatar.${ext}`,
-        type: `image/${ext}`,
-      })
+      const { data: { session } } = await supabase.auth.getSession()
 
-      const { data, error } = await supabase.storage.from('avatars').upload(path, formData)
-      if (error) throw error
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/avatars/${path}`)
+        xhr.setRequestHeader('Authorization', `Bearer ${session?.access_token}`)
+        xhr.setRequestHeader('apikey', SUPABASE_ANON)
+        xhr.setRequestHeader('x-upsert', 'true')
+        const fd = new FormData()
+        fd.append('file', { uri: asset.uri, name: `avatar.${ext}`, type: `image/${ext}` } as any)
+        xhr.onload = () => (xhr.status < 300 ? resolve() : reject(new Error(xhr.responseText)))
+        xhr.onerror = () => reject(new Error('Network error uploading avatar'))
+        xhr.send(fd)
+      })
 
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
       await supabase.from('users').update({ avatar_url: publicUrl }).eq('id', user.id)
-      setUser({ ...user, avatar_url: publicUrl })
+      setUser((u: any) => ({ ...u, avatar_url: publicUrl }))
     } catch (err: any) {
       Alert.alert('Upload Failed', err.message)
     } finally {
@@ -299,7 +304,50 @@ export default function MoreScreen() {
         </View>
       </View>
 
-      {/* â”€â”€ Account / danger â”€â”€ */}
+      {/* ── Chat Wallpaper ── */}
+      <Text style={s.sectionLabel}>CHAT WALLPAPER</Text>
+      <View style={s.card}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.swatchRow}>
+          {WALLPAPER_OPTIONS.map(opt => (
+            <TouchableOpacity key={opt.id} style={s.swatchWrap} onPress={() => setWallpaper(opt.id)}>
+              <View style={[
+                s.swatch,
+                opt.color ? { backgroundColor: opt.color } : s.swatchDefault,
+                wallpaper === opt.id && s.swatchActive,
+              ]} />
+              <Text style={[s.swatchLabel, wallpaper === opt.id && { color: C.blue }]}>{opt.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* ── Accent Color ── */}
+      <Text style={s.sectionLabel}>ACCENT COLOR</Text>
+      <View style={s.card}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.swatchRow}>
+          {ACCENT_COLORS.map(opt => (
+            <TouchableOpacity key={opt.id} style={s.swatchWrap} onPress={() => setAccentColor(opt.id)}>
+              <View style={[s.swatch, { backgroundColor: opt.color }, accentColor === opt.id && s.swatchActive]} />
+              <Text style={[s.swatchLabel, accentColor === opt.id && { color: C.blue }]}>{opt.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* ── Bubble Color ── */}
+      <Text style={s.sectionLabel}>BUBBLE COLOR</Text>
+      <View style={s.card}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.swatchRow}>
+          {BUBBLE_COLORS.map(opt => (
+            <TouchableOpacity key={opt.id} style={s.swatchWrap} onPress={() => setBubbleColor(opt.id)}>
+              <View style={[s.swatch, { backgroundColor: opt.color }, bubbleColor === opt.id && s.swatchActive]} />
+              <Text style={[s.swatchLabel, bubbleColor === opt.id && { color: C.blue }]}>{opt.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* ── Account / danger ── */}
       <Text style={s.sectionLabel}>ACCOUNT</Text>
       <View style={s.card}>
         <TouchableOpacity
@@ -374,5 +422,11 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   readOnlyTag:    { fontSize: 10, color: C.slate400, backgroundColor: C.bg, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   sendLinkBtn:    { backgroundColor: C.blue + '14', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
   sendLinkText:   { fontSize: 12, fontWeight: '700', color: C.blue },
+  swatchRow:      { paddingHorizontal: 16, paddingVertical: 14, gap: 16 },
+  swatchWrap:     { alignItems: 'center', gap: 6 },
+  swatch:         { width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: 'transparent' },
+  swatchDefault:  { backgroundColor: C.slate100, borderStyle: 'dashed', borderColor: C.slate300 },
+  swatchActive:   { borderColor: C.blue, shadowColor: C.blue, shadowOpacity: 0.3, shadowRadius: 6, elevation: 4 },
+  swatchLabel:    { fontSize: 10, fontWeight: '600', color: C.slate400 },
 })
 
