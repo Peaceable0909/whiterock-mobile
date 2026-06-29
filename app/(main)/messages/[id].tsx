@@ -189,6 +189,10 @@ export default function ChatScreen() {
   const [stickerModal, setStickerModal] = useState(false)
   const [editingMsgId, setEditingMsgId] = useState<string | null>(null)
   const [editInput, setEditInput] = useState('')
+  const [pendingAttachment, setPendingAttachment] = useState<{
+    uri: string; name: string; mimeType: string; size: number | null; kind: 'image' | 'video' | 'file'
+  } | null>(null)
+  const [pendingCaption, setPendingCaption] = useState('')
 
   const [isRecording, setIsRecording] = useState(false)
   const [recordSecs, setRecordSecs]   = useState(0)
@@ -475,17 +479,28 @@ export default function ChatScreen() {
     const asset    = picked.assets[0]
     const mimeType = asset.mimeType ?? 'application/octet-stream'
     const rawName  = asset.name ?? `file-${Date.now()}`
-    const ext      = rawName.includes('.') ? rawName.split('.').pop()!.toLowerCase() : 'bin'
     const isImage  = mimeType.startsWith('image/')
     const isVideo  = mimeType.startsWith('video/')
-    const kind: string = isVideo ? 'video' : isImage ? 'image' : 'file'
+    const kind: 'image' | 'video' | 'file' = isVideo ? 'video' : isImage ? 'image' : 'file'
+
+    setPendingCaption('')
+    setPendingAttachment({ uri: asset.uri, name: rawName, mimeType, size: asset.size ?? null, kind })
+  }
+
+  const sendPendingAttachment = async () => {
+    if (!pendingAttachment) return
+    const { uri, name: rawName, mimeType, size, kind } = pendingAttachment
+    const caption = pendingCaption.trim() || (kind === 'video' ? '🎬 Video' : kind === 'image' ? '📷 Photo' : `📎 ${rawName}`)
+    setPendingAttachment(null)
+    setPendingCaption('')
+    const ext = rawName.includes('.') ? rawName.split('.').pop()!.toLowerCase() : 'bin'
 
     setUploading(true)
     setUploadPct(0)
     try {
       let publicUrl: string
-      if (isVideo) {
-        publicUrl = await uploadVideo(asset.uri, mimeType, rawName, pct => setUploadPct(pct))
+      if (kind === 'video') {
+        publicUrl = await uploadVideo(uri, mimeType, rawName, pct => setUploadPct(pct))
       } else {
         const path = `${myId}/${Date.now()}.${ext}`
         const { data: { session } } = await supabase.auth.getSession()
@@ -500,17 +515,16 @@ export default function ChatScreen() {
           xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(xhr.responseText))
           xhr.onerror = () => reject(new Error('Upload failed'))
           const fd = new FormData()
-          fd.append('file', { uri: asset.uri, name: rawName, type: mimeType } as any)
+          fd.append('file', { uri, name: rawName, type: mimeType } as any)
           xhr.send(fd)
         })
         publicUrl = supabase.storage.from('chat-media').getPublicUrl(path).data.publicUrl
       }
 
-      const caption = isVideo ? 'ðŸŽ¬ Video' : isImage ? 'ðŸ“· Photo' : `ðŸ“Ž ${rawName}`
       const { data: saved } = await supabase.from('messages').insert({
         conversation_id: id, sender_id: myId,
         content: caption, type: kind, file_url: publicUrl,
-        file_name: rawName, file_size: asset.size ?? null,
+        file_name: rawName, file_size: size,
         is_ai: false,
       }).select().single()
       if (saved) setMsgs(prev => [...prev, saved])
@@ -856,6 +870,61 @@ export default function ChatScreen() {
       </View>
     </Modal>
 
+    {/* Attachment Preview Modal */}
+    <Modal visible={!!pendingAttachment} transparent animationType="slide" onRequestClose={() => setPendingAttachment(null)}>
+      <View style={g.previewOverlay}>
+        <View style={g.previewSheet}>
+          <View style={g.previewHeader}>
+            <Text style={g.previewTitle}>Send Attachment</Text>
+            <TouchableOpacity onPress={() => { setPendingAttachment(null); setPendingCaption('') }} style={g.previewCloseBtn}>
+              <Ionicons name="close" size={22} color={C.navy} />
+            </TouchableOpacity>
+          </View>
+
+          {pendingAttachment?.kind === 'image' && (
+            <Image
+              source={{ uri: pendingAttachment.uri }}
+              style={g.previewImage}
+              resizeMode="contain"
+            />
+          )}
+          {pendingAttachment?.kind === 'video' && (
+            <View style={g.previewFileBox}>
+              <Ionicons name="videocam-outline" size={48} color={C.blue} />
+              <Text style={g.previewFileName} numberOfLines={2}>{pendingAttachment.name}</Text>
+              {pendingAttachment.size != null && (
+                <Text style={g.previewFileSize}>{(pendingAttachment.size / 1024 / 1024).toFixed(1)} MB</Text>
+              )}
+            </View>
+          )}
+          {pendingAttachment?.kind === 'file' && (
+            <View style={g.previewFileBox}>
+              <Ionicons name="document-text-outline" size={48} color={C.blue} />
+              <Text style={g.previewFileName} numberOfLines={2}>{pendingAttachment.name}</Text>
+              {pendingAttachment.size != null && (
+                <Text style={g.previewFileSize}>{(pendingAttachment.size / 1024).toFixed(0)} KB</Text>
+              )}
+            </View>
+          )}
+
+          <TextInput
+            style={g.previewCaptionInput}
+            value={pendingCaption}
+            onChangeText={setPendingCaption}
+            placeholder="Add a caption (optional)…"
+            placeholderTextColor={C.slate400}
+            multiline
+            maxLength={500}
+          />
+
+          <TouchableOpacity style={g.previewSendBtn} onPress={sendPendingAttachment}>
+            <Ionicons name="send" size={18} color={C.white} style={{ marginRight: 8 }} />
+            <Text style={g.previewSendText}>Send</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+
     {/* Sticker Modal */}
     <Modal visible={stickerModal} transparent animationType="slide" onRequestClose={() => setStickerModal(false)}>
       <TouchableOpacity style={g.modalOverlay} activeOpacity={1} onPress={() => setStickerModal(false)}>
@@ -1160,6 +1229,18 @@ const mkG = (C: ColorPalette) => StyleSheet.create({
   menuItem:       { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 14 },
   menuItemText:   { fontSize: 15, fontWeight: '600', color: C.navy },
   forwardSheet:   { backgroundColor: C.white, borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 20, width: '100%', maxHeight: '80%' },
+  previewOverlay:     { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  previewSheet:       { backgroundColor: C.white, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: 36 },
+  previewHeader:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+  previewTitle:       { fontSize: 16, fontWeight: '800', color: C.navy },
+  previewCloseBtn:    { width: 34, height: 34, borderRadius: 17, backgroundColor: C.slate100, alignItems: 'center', justifyContent: 'center' },
+  previewImage:       { width: '100%', height: 280, borderRadius: 16, marginBottom: 16, backgroundColor: C.slate100 },
+  previewFileBox:     { alignItems: 'center', paddingVertical: 32, gap: 10, backgroundColor: C.slate100, borderRadius: 16, marginBottom: 16 },
+  previewFileName:    { fontSize: 14, fontWeight: '700', color: C.navy, textAlign: 'center', paddingHorizontal: 16 },
+  previewFileSize:    { fontSize: 12, color: C.slate400 },
+  previewCaptionInput:{ borderWidth: 1.5, borderColor: C.slate200, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: C.navy, minHeight: 44, maxHeight: 100, marginBottom: 14 },
+  previewSendBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: C.blue, borderRadius: 14, height: 50, shadowColor: C.blue, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
+  previewSendText:    { fontSize: 15, fontWeight: '700', color: C.white },
   modalHeader:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   modalTitle:     { fontSize: 18, fontWeight: '800', color: C.navy },
   forwardRow:     { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderColor: C.slate100, gap: 12 },
