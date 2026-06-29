@@ -1080,7 +1080,7 @@ export default function ChatScreen() {
             <Text style={[g.aiToggleText, aiAssist && { color: C.white }]}>AI Assist</Text>
           </TouchableOpacity>
           {aiAssist && (
-            <TouchableOpacity style={g.aiDraftBtn} onPress={draftWithAI} disabled={aiDrafting}>
+            <TouchableOpacity style={[g.aiDraftBtn, aiDrafting && { opacity: 0.5 }]} onPress={draftWithAI} disabled={aiDrafting}>
               {aiDrafting ? <ActivityIndicator size="small" color={C.blue} /> : <>
                 <Ionicons name="create-outline" size={14} color={C.blue} />
                 <Text style={g.aiDraftText}>Draft Reply</Text>

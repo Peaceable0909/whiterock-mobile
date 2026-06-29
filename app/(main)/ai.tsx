@@ -38,6 +38,7 @@ export default function AIScreen() {
   const [loading, setLoading]   = useState(false)
   const [initializing, setInitializing] = useState(true)
   const [myId, setMyId]         = useState('')
+  const [myRole, setMyRole]     = useState<string>('student')
   const [memory, setMemory]     = useState<{ summary?: string; facts?: any } | null>(null)
   const [profile, setProfile]   = useState<any>(null)
   const [aiAvatar, setAiAvatar] = useState<string | null>(null)
@@ -49,7 +50,8 @@ export default function AIScreen() {
     if (!user) { setInitializing(false); return }
     setMyId(user.id)
 
-    const [{ data: history }, { data: mem }, { data: prof }] = await Promise.all([
+    const [{ data: dbUser }, { data: history }, { data: mem }, { data: prof }] = await Promise.all([
+      supabase.from('users').select('role').eq('id', user.id).single(),
       supabase.from('ai_chat_messages')
         .select('id, role, content, created_at')
         .eq('user_id', user.id)
@@ -65,6 +67,7 @@ export default function AIScreen() {
         .maybeSingle(),
     ])
 
+    setMyRole(dbUser?.role ?? 'student')
     setMsgs((history ?? []) as Msg[])
     setMemory(mem)
     setProfile(prof)
@@ -251,9 +254,13 @@ WhiteRock information always overrides training data. Never present training dat
         ...next.map(m => ({ role: m.role, content: m.content })),
       ]
 
+      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch(`${API_BASE}/api/ai-chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify({ messages: apiMessages }),
       })
       const { reply } = await res.json()
@@ -279,22 +286,69 @@ WhiteRock information always overrides training data. Never present training dat
   }
 
   const clearHistory = () => {
-    Alert.alert('Clear AI History', 'This will delete all your AI conversations. Continue?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Clear', style: 'destructive',
-        onPress: async () => {
-          await supabase.from('ai_chat_messages').delete().eq('user_id', myId)
-          setMsgs([])
+    Alert.alert(
+      'Clear AI Data',
+      'Choose what to delete. Memory contains things the AI has learned about you across sessions.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Chat History Only',
+          onPress: async () => {
+            await supabase.from('ai_chat_messages').delete().eq('user_id', myId)
+            setMsgs([])
+          },
         },
-      },
-    ])
+        {
+          text: 'History + Memory',
+          style: 'destructive',
+          onPress: async () => {
+            await Promise.all([
+              supabase.from('ai_chat_messages').delete().eq('user_id', myId),
+              supabase.from('ai_student_memory').delete().eq('student_id', myId),
+            ])
+            setMsgs([])
+            setMemory(null)
+          },
+        },
+      ]
+    )
   }
 
   const isEmpty = msgs.length === 0
 
   if (initializing) {
     return <View style={s.bg}><View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator color={C.blue} size="large" /></View></View>
+  }
+
+  if (myRole !== 'student') {
+    return (
+      <View style={[s.bg, { flex: 1 }]}>
+        <View style={[s.header, { paddingTop: insets.top + 8 }]}>
+          <View style={s.botAvatar}><Ionicons name="hardware-chip-outline" size={20} color={C.white} /></View>
+          <Text style={s.headerTitle}>Apply AI</Text>
+        </View>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+          <View style={{ width: 72, height: 72, borderRadius: 22, backgroundColor: C.blue + '14', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+            <Ionicons name="people-outline" size={32} color={C.blue} />
+          </View>
+          <Text style={{ fontSize: 20, fontWeight: '800', color: C.navy, textAlign: 'center', marginBottom: 10 }}>
+            This AI is for students
+          </Text>
+          <Text style={{ fontSize: 14, color: C.slate500, textAlign: 'center', lineHeight: 22 }}>
+            As a staff member, use the AI Assist tool inside each student conversation to draft replies.
+          </Text>
+          <View style={{ marginTop: 24, backgroundColor: C.blue + '10', borderRadius: 16, padding: 16, width: '100%' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <Ionicons name="sparkles-outline" size={16} color={C.blue} />
+              <Text style={{ fontSize: 13, fontWeight: '700', color: C.blue }}>How to use AI Assist</Text>
+            </View>
+            <Text style={{ fontSize: 13, color: C.slate500, lineHeight: 20 }}>
+              Open any student conversation → tap the AI Assist toggle above the input bar → tap Draft Reply.
+            </Text>
+          </View>
+        </View>
+      </View>
+    )
   }
 
   return (
