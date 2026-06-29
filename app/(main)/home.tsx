@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated, Image, RefreshControl } from 'react-native'
+﻿import { useEffect, useState } from 'react'
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, RefreshControl } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -130,7 +130,7 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.blue} />}
       >
-        {isAgent && <AiBriefing userId={user?.id} firstName={user?.name?.split(' ')[0]} />}
+        {!isStudent && <AiBriefing userId={user?.id} firstName={user?.name?.split(' ')[0]} role={user?.role} />}
         {isAgent && <AgentPipeline userId={user?.id} />}
 
         {isStudent && profile && (
@@ -231,64 +231,73 @@ export default function HomeScreen() {
   )
 }
 
-function AiBriefing({ userId, firstName }: { userId?: string, firstName?: string }) {
-  const C = useColors()
-  const [brief, setBrief] = useState('')
-  const [displayed, setDisplayed] = useState('')
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+function AiBriefing({ userId, firstName, role }: { userId?: string, firstName?: string, role?: string }) {
+  const C      = useColors()
+  const router = useRouter()
+  const [stats, setStats] = useState<{ pending: number; total: number; waitingReplies: number } | null>(null)
 
   useEffect(() => {
     if (!userId) return
     const go = async () => {
-      const { count: total } = await supabase.from('student_profiles').select('id', { count: 'exact', head: true })
-      const { data: activeConvs } = await supabase.from('conversations').select('id').gt('updated_at', new Date(Date.now() - 7*24*60*60*1000).toISOString())
-      const { count: pending } = await supabase.from('documents').select('id', { count: 'exact', head: true }).eq('status', 'pending')
-
-      const h = new Date().getHours()
-      const g = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening'
-      let t = "Good " + g + ", " + firstName + ". "
-      if (total)               t += total + " student" + (total !== 1 ? "s" : "") + " in your pipeline. "
-      if (activeConvs?.length) t += activeConvs.length + " active conversation" + (activeConvs.length !== 1 ? "s" : "") + " this week. "
-      if ((pending ?? 0) > 0)  t += "âš  " + pending + " document" + (pending !== 1 ? "s" : "") + " pending review."
-      else                     t += 'All documents are up to date.'
-      setBrief(t)
+      const [
+        { count: total },
+        { count: pending },
+        { count: waitingReplies },
+      ] = await Promise.all([
+        supabase.from('student_profiles').select('id', { count: 'exact', head: true }),
+        supabase.from('documents').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('conversations').select('id', { count: 'exact', head: true })
+          .or(`counselor_id.eq.${userId},agent_id.eq.${userId}`)
+          .gt('unread_staff', 0),
+      ])
+      setStats({ total: total ?? 0, pending: pending ?? 0, waitingReplies: waitingReplies ?? 0 })
     }
     go()
-  }, [userId, firstName])
+  }, [userId])
 
-  useEffect(() => {
-    if (!brief) return
-    setDisplayed('')
-    let i = 0
-    timerRef.current = setInterval(() => {
-      setDisplayed(brief.slice(0, ++i))
-      if (i >= brief.length) { clearInterval(timerRef.current!); timerRef.current = null }
-    }, 18)
-    return () => { if (timerRef.current) clearInterval(timerRef.current) }
-  }, [brief])
+  const h = new Date().getHours()
+  const greeting = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
 
-  if (!brief) return null
-  const typing = displayed.length < brief.length
   return (
-    <View style={{ backgroundColor: C.navy, borderRadius: 20, padding: 18, marginBottom: 20, shadowColor: C.navy, shadowOpacity: 0.25, shadowRadius: 10, elevation: 4 }}>
+    <TouchableOpacity
+      activeOpacity={0.88}
+      onPress={() => router.push('/(main)/briefing')}
+      style={{ backgroundColor: C.navy, borderRadius: 20, padding: 18, marginBottom: 20, shadowColor: C.navy, shadowOpacity: 0.25, shadowRadius: 10, elevation: 4 }}
+    >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-        <View style={{ width: 24, height: 24, borderRadius: 7, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="sparkles-outline" size={13} color="#60A5FA" />
+        <View style={{ width: 26, height: 26, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="sparkles-outline" size={14} color="#60A5FA" />
         </View>
-        <Text style={{ fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.5)', letterSpacing: 1.5, textTransform: 'uppercase' }}>AI Briefing</Text>
-        {typing && (
-          <View style={{ backgroundColor: C.blue, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginLeft: 2 }}>
-            <Text style={{ fontSize: 9, fontWeight: '800', color: C.white, letterSpacing: 0.5 }}>LIVE</Text>
-          </View>
-        )}
+        <Text style={{ fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.5)', letterSpacing: 1.5, textTransform: 'uppercase', flex: 1 }}>
+          AI Daily Briefing
+        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }}>
+          <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.7)' }}>Open</Text>
+          <Ionicons name="chevron-forward" size={12} color="rgba(255,255,255,0.5)" />
+        </View>
       </View>
-      <Text style={{ fontSize: 14, color: C.white, lineHeight: 22, fontWeight: '500' }}>
-        {displayed}<Text style={{ color: typing ? 'rgba(255,255,255,0.6)' : 'transparent' }}>â–Œ</Text>
+      <Text style={{ fontSize: 14, color: C.white, lineHeight: 22, fontWeight: '500', marginBottom: stats ? 14 : 0 }}>
+        {greeting}, {firstName}. Tap to view your personalised AI briefing for today.
       </Text>
-    </View>
+      {stats && (
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <BriefStat label="Students" value={stats.total} />
+          {stats.waitingReplies > 0 && <BriefStat label="Need Reply" value={stats.waitingReplies} urgent />}
+          {stats.pending > 0 && <BriefStat label="Docs Pending" value={stats.pending} urgent />}
+        </View>
+      )}
+    </TouchableOpacity>
   )
 }
 
+function BriefStat({ label, value, urgent }: { label: string; value: number; urgent?: boolean }) {
+  return (
+    <View style={{ flex: 1, backgroundColor: urgent ? 'rgba(239,68,68,0.18)' : 'rgba(255,255,255,0.1)', borderRadius: 10, paddingVertical: 8, alignItems: 'center' }}>
+      <Text style={{ fontSize: 18, fontWeight: '800', color: urgent ? '#FCA5A5' : '#fff' }}>{value}</Text>
+      <Text style={{ fontSize: 10, fontWeight: '600', color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>{label}</Text>
+    </View>
+  )
+}
 function AgentPipeline({ userId }: { userId?: string }) {
   const C = useColors()
   const [stats, setStats] = useState({ leads: 0, inProgress: 0, converted: 0, total: 0 })

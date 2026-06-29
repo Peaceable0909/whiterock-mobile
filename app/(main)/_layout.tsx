@@ -116,6 +116,7 @@ export default function MainLayout() {
       <Tabs.Screen name="university-offers"     options={{ href: null }} />
       <Tabs.Screen name="resources"             options={{ href: null }} />
       <Tabs.Screen name="tasks"                 options={{ href: null }} />
+      <Tabs.Screen name="briefing"              options={{ href: null }} />
       <Tabs.Screen name="calendar"              options={{ href: null }} />
       <Tabs.Screen name="groups/index"          options={{ href: null }} />
       <Tabs.Screen name="groups/[id]"           options={{ href: null }} />
