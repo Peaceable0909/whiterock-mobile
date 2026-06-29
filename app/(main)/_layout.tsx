@@ -105,7 +105,7 @@ export default function MainLayout() {
       }} />
 
       {/* Push-only / deep-link screens */}
-      <Tabs.Screen name="messages/[id]"         options={{ href: null }} />
+      <Tabs.Screen name="messages/[id]"         options={{ href: null, tabBarStyle: { display: 'none' } }} />
       <Tabs.Screen name="students/[id]"         options={{ href: null }} />
       <Tabs.Screen name="notifications"         options={{ href: null }} />
       <Tabs.Screen name="update-compose"        options={{ href: null }} />
