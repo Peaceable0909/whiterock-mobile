@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import {
   View, Text, SectionList, TouchableOpacity,
   StyleSheet, RefreshControl,
@@ -78,6 +78,8 @@ export default function NotificationsScreen() {
   const [loading, setLoading]     = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [userId, setUserId]       = useState<string | null>(null)
+  const [userRole, setUserRole]   = useState<string>('student')
+  const uidRef = useRef<string | null>(null)
 
   const NOTIF_COLORS: Record<string, string> = {
     message:      C.blue,
@@ -103,17 +105,18 @@ export default function NotificationsScreen() {
   }, [])
 
   useEffect(() => {
-    let uid: string | null = null
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      uid = user.id
-      setUserId(uid)
-      await fetchItems(uid)
+      uidRef.current = user.id
+      setUserId(user.id)
+      const { data: meUser } = await supabase.from('users').select('role').eq('id', user.id).maybeSingle()
+      setUserRole(meUser?.role ?? 'student')
+      await fetchItems(user.id)
       setLoading(false)
       supabase.from('notifications')
         .update({ is_read: true })
-        .eq('user_id', uid)
+        .eq('user_id', user.id)
         .eq('is_read', false)
         .then(() => setItems(prev => prev.map(i => ({ ...i, is_read: true }))))
     }
@@ -122,7 +125,7 @@ export default function NotificationsScreen() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' },
         payload => {
           const n = payload.new as any
-          if (uid && n.user_id === uid) setItems(prev => [n, ...prev])
+          if (uidRef.current && n.user_id === uidRef.current) setItems(prev => [n, ...prev])
         })
       .subscribe()
     return () => { supabase.removeChannel(sub) }
@@ -158,7 +161,8 @@ export default function NotificationsScreen() {
       router.push('/(main)/briefing' as any)
     } else if (item.type === 'stage_update') {
       if (studentId) router.push(`/(main)/students/${studentId}`)
-      else router.push('/(main)/my-profile')
+      else if (userRole === 'student') router.push('/(main)/my-profile')
+      // staff with missing studentId: no-op to avoid landing on wrong screen
     } else if ((item.type === 'document' || item.type === 'visa') && studentId) {
       router.push(`/(main)/students/${studentId}`)
     } else if (item.type === 'document') {

@@ -531,7 +531,7 @@ export default function ChatScreen() {
 
   // --- Message Actions ---
   const deleteMessage = async () => {
-    if (!selectedMsg) return
+    if (!selectedMsg || !myId) return
     Alert.alert('Delete Message', 'Delete this message for everyone?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: async () => {
@@ -604,7 +604,7 @@ export default function ChatScreen() {
   }
 
   const saveEdit = async () => {
-    if (!editingMsgId || !editInput.trim()) return
+    if (!editingMsgId || !editInput.trim() || !myId) return
     await supabase.from('messages')
       .update({ content: editInput.trim(), edited_at: new Date().toISOString() })
       .eq('id', editingMsgId)
