@@ -975,7 +975,7 @@ export default function ChatScreen() {
       </TouchableOpacity>
     </Modal>
 
-    <KeyboardAvoidingView style={g.flex} behavior="padding" keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 0}>
+    <KeyboardAvoidingView style={g.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 0}>
       <View style={[g.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => router.back()} style={g.backBtn}>
           <Ionicons name="arrow-back" size={22} color={C.navy} />

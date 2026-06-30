@@ -19,9 +19,17 @@ const APPEARANCE_OPTIONS = [
   { key: 'system', label: 'System', icon: 'settings-outline' },
 ] as const
 
+const BRIGHTNESS_LEVELS = [
+  { value: 0.2, label: 'Dim',    icon: 'moon-outline' },
+  { value: 0.4, label: 'Low',    icon: 'partly-sunny-outline' },
+  { value: 0.6, label: 'Mid',    icon: 'sunny-outline' },
+  { value: 0.8, label: 'Bright', icon: 'sunny' },
+  { value: 1.0, label: 'Full',   icon: 'sunny' },
+] as const
+
 export default function MoreScreen() {
   const C      = useColors()
-  const { mode, setMode, wallpaper, setWallpaper, accentColor, setAccentColor, bubbleColor, setBubbleColor } = useTheme()
+  const { mode, setMode, wallpaper, setWallpaper, wallpaperBrightness, setWallpaperBrightness, accentColor, setAccentColor, bubbleColor, setBubbleColor } = useTheme()
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const s      = mkS(C)
@@ -29,6 +37,7 @@ export default function MoreScreen() {
   const [user, setUser]       = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [uploadingWallpaper, setUploadingWallpaper] = useState(false)
   const [editingPhone, setEditingPhone] = useState(false)
   const [phoneInput, setPhoneInput] = useState('')
   const [savingPhone, setSavingPhone] = useState(false)
@@ -88,6 +97,33 @@ export default function MoreScreen() {
       Alert.alert('Upload Failed', err.message)
     } finally {
       setUploading(false)
+    }
+  }
+
+  const pickWallpaperPhoto = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (!perm.granted) { Alert.alert('Permission needed', 'Please allow access to your photo library.'); return }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.7,
+    })
+    if (result.canceled || !result.assets[0]) return
+    setUploadingWallpaper(true)
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (!authUser) return
+      const { uri } = result.assets[0]
+      const path = `wallpapers/${authUser.id}/bg.jpg`
+      const blob = await fetch(uri).then(r => r.blob())
+      const { error } = await supabase.storage.from('documents').upload(path, blob, { contentType: 'image/jpeg', upsert: true })
+      if (error) throw error
+      const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(path)
+      setWallpaper(publicUrl)
+    } catch {
+      Alert.alert('Upload failed', 'Please try again.')
+    } finally {
+      setUploadingWallpaper(false)
     }
   }
 
@@ -304,8 +340,8 @@ export default function MoreScreen() {
         </View>
       </View>
 
-      {/* ── Chat Wallpaper ── */}
-      <Text style={s.sectionLabel}>CHAT WALLPAPER</Text>
+      {/* ── Wallpaper ── */}
+      <Text style={s.sectionLabel}>WALLPAPER</Text>
       <View style={s.card}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.swatchRow}>
           {WALLPAPER_OPTIONS.map(opt => (
@@ -313,13 +349,59 @@ export default function MoreScreen() {
               <View style={[
                 s.swatch,
                 opt.color ? { backgroundColor: opt.color } : s.swatchDefault,
-                wallpaper === opt.id && s.swatchActive,
+                (wallpaper === opt.id || (opt.id === '' && !wallpaper)) && s.swatchActive,
               ]} />
-              <Text style={[s.swatchLabel, wallpaper === opt.id && { color: C.blue }]}>{opt.name}</Text>
+              <Text style={[s.swatchLabel, (wallpaper === opt.id || (opt.id === '' && !wallpaper)) && { color: C.blue }]}>{opt.name}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
+
+        <TouchableOpacity
+          style={[s.row, { borderTopWidth: 1, borderTopColor: C.slate100 }]}
+          onPress={pickWallpaperPhoto}
+          disabled={uploadingWallpaper}
+        >
+          <View style={[s.iconBox, { backgroundColor: C.blue + '18' }]}>
+            {uploadingWallpaper
+              ? <ActivityIndicator size="small" color={C.blue} />
+              : <Ionicons name="image-outline" size={18} color={C.blue} />}
+          </View>
+          <Text style={s.rowLabel}>{uploadingWallpaper ? 'Uploading…' : 'Upload Custom Photo'}</Text>
+          {!uploadingWallpaper && <Ionicons name="chevron-forward" size={15} color={C.slate400} />}
+        </TouchableOpacity>
+
+        {wallpaper.startsWith('http') && (
+          <TouchableOpacity
+            style={[s.row, { borderTopWidth: 1, borderTopColor: C.slate100 }]}
+            onPress={() => setWallpaper('')}
+          >
+            <View style={[s.iconBox, { backgroundColor: C.red500 + '18' }]}>
+              <Ionicons name="trash-outline" size={18} color={C.red500} />
+            </View>
+            <Text style={[s.rowLabel, { color: C.red500 }]}>Remove Custom Photo</Text>
+          </TouchableOpacity>
+        )}
       </View>
+
+      {wallpaper.startsWith('http') && (
+        <>
+          <Text style={s.sectionLabel}>WALLPAPER BRIGHTNESS</Text>
+          <View style={s.card}>
+            <View style={s.brightnessRow}>
+              {BRIGHTNESS_LEVELS.map(level => (
+                <TouchableOpacity
+                  key={level.value}
+                  onPress={() => setWallpaperBrightness(level.value)}
+                  style={[s.brightnessBtn, wallpaperBrightness === level.value && s.brightnessBtnActive]}
+                >
+                  <Ionicons name={level.icon as any} size={16} color={wallpaperBrightness === level.value ? C.white : C.slate500} />
+                  <Text style={[s.brightnessLabel, wallpaperBrightness === level.value && { color: C.white }]}>{level.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </>
+      )}
 
       {/* ── Accent Color ── */}
       <Text style={s.sectionLabel}>ACCENT COLOR</Text>
@@ -422,11 +504,15 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   readOnlyTag:    { fontSize: 10, color: C.slate400, backgroundColor: C.bg, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   sendLinkBtn:    { backgroundColor: C.blue + '14', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
   sendLinkText:   { fontSize: 12, fontWeight: '700', color: C.blue },
-  swatchRow:      { paddingHorizontal: 16, paddingVertical: 14, gap: 16 },
-  swatchWrap:     { alignItems: 'center', gap: 6 },
-  swatch:         { width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: 'transparent' },
-  swatchDefault:  { backgroundColor: C.slate100, borderStyle: 'dashed', borderColor: C.slate300 },
-  swatchActive:   { borderColor: C.blue, shadowColor: C.blue, shadowOpacity: 0.3, shadowRadius: 6, elevation: 4 },
-  swatchLabel:    { fontSize: 10, fontWeight: '600', color: C.slate400 },
+  swatchRow:        { paddingHorizontal: 16, paddingVertical: 14, gap: 16 },
+  swatchWrap:       { alignItems: 'center', gap: 6 },
+  swatch:           { width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: 'transparent' },
+  swatchDefault:    { backgroundColor: C.slate100, borderStyle: 'dashed', borderColor: C.slate400 },
+  swatchActive:     { borderColor: C.blue, shadowColor: C.blue, shadowOpacity: 0.3, shadowRadius: 6, elevation: 4 },
+  swatchLabel:      { fontSize: 10, fontWeight: '600', color: C.slate400 },
+  brightnessRow:    { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 14, gap: 8 },
+  brightnessBtn:    { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 10, backgroundColor: C.slate100, gap: 4 },
+  brightnessBtnActive: { backgroundColor: C.blue },
+  brightnessLabel:  { fontSize: 10, fontWeight: '700', color: C.slate500 },
 })
 

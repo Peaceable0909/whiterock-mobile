@@ -50,6 +50,8 @@ type Ctx = {
   wallpaper: string
   setWallpaper: (w: string) => void
   resolvedWallpaper: ResolvedWallpaper | null
+  wallpaperBrightness: number
+  setWallpaperBrightness: (v: number) => void
   accentColor: string
   setAccentColor: (c: string) => void
   bubbleColor: string
@@ -60,6 +62,7 @@ const ThemeCtx = createContext<Ctx>({
   mode: 'system', isDark: false, C: LIGHT,
   setMode: () => {}, wallpaper: '', setWallpaper: () => {},
   resolvedWallpaper: null,
+  wallpaperBrightness: 1, setWallpaperBrightness: () => {},
   accentColor: 'blue', setAccentColor: () => {},
   bubbleColor: 'blue', setBubbleColor: () => {},
 })
@@ -72,11 +75,12 @@ function resolveWp(wp: string): ResolvedWallpaper | null {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [mode, setModeState]           = useState<ThemeMode>('system')
-  const [wallpaper, setWallpaperState] = useState('')
-  const [accentColor, setAccentColorState] = useState('blue')
-  const [bubbleColor, setBubbleColorState] = useState('blue')
-  const [systemDark, setSystemDark]    = useState(Appearance.getColorScheme() === 'dark')
+  const [mode, setModeState]                         = useState<ThemeMode>('system')
+  const [wallpaper, setWallpaperState]               = useState('')
+  const [wallpaperBrightness, setWallpaperBrightnessState] = useState(1)
+  const [accentColor, setAccentColorState]           = useState('blue')
+  const [bubbleColor, setBubbleColorState]           = useState('blue')
+  const [systemDark, setSystemDark]                  = useState(Appearance.getColorScheme() === 'dark')
   const isDark  = mode === 'dark' || (mode === 'system' && systemDark)
 
   useEffect(() => {
@@ -89,11 +93,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     Promise.all([
       AsyncStorage.getItem('app_theme'),
       AsyncStorage.getItem('app_wallpaper'),
+      AsyncStorage.getItem('app_wallpaper_brightness'),
       AsyncStorage.getItem('app_accent_color'),
       AsyncStorage.getItem('app_bubble_color'),
-    ]).then(([t, w, ac, bc]) => {
+    ]).then(([t, w, wb, ac, bc]) => {
       if (t === 'light' || t === 'dark' || t === 'system') setModeState(t)
       if (w !== null) setWallpaperState(w)
+      if (wb !== null) { const n = parseFloat(wb); if (!isNaN(n)) setWallpaperBrightnessState(n) }
       if (ac !== null) setAccentColorState(ac)
       if (bc !== null) setBubbleColorState(bc)
     })
@@ -110,6 +116,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       if (p.mobile_wallpaper !== undefined) {
         setWallpaperState(p.mobile_wallpaper)
         AsyncStorage.setItem('app_wallpaper', p.mobile_wallpaper)
+      }
+      if (p.mobile_wallpaper_brightness !== undefined) {
+        const n = parseFloat(p.mobile_wallpaper_brightness)
+        if (!isNaN(n)) { setWallpaperBrightnessState(n); AsyncStorage.setItem('app_wallpaper_brightness', p.mobile_wallpaper_brightness) }
       }
       if (p.mobile_accent_color !== undefined) {
         setAccentColorState(p.mobile_accent_color)
@@ -153,6 +163,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     persistPrefs('mobile_wallpaper', w)
   }
 
+  const setWallpaperBrightness = (v: number) => {
+    setWallpaperBrightnessState(v)
+    AsyncStorage.setItem('app_wallpaper_brightness', String(v))
+    persistPrefs('mobile_wallpaper_brightness', String(v))
+  }
+
   const setAccentColor = (ac: string) => {
     setAccentColorState(ac)
     AsyncStorage.setItem('app_accent_color', ac)
@@ -174,6 +190,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       mode, isDark, C,
       setMode, wallpaper, setWallpaper,
       resolvedWallpaper: resolveWp(wallpaper),
+      wallpaperBrightness, setWallpaperBrightness,
       accentColor, setAccentColor,
       bubbleColor, setBubbleColor,
     }}>
