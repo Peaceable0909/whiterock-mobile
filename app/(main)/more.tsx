@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
 import Constants from 'expo-constants'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { supabase, SUPABASE_URL, SUPABASE_ANON } from '@/lib/supabase'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { unregisterForPush } from '@/lib/notifications'
@@ -358,6 +359,7 @@ export default function MoreScreen() {
               {
                 text: 'Sign Out', style: 'destructive',
                 onPress: async () => {
+                  await AsyncStorage.removeItem('cached_role')
                   await unregisterForPush()
                   await supabase.auth.signOut()
                 },
