@@ -3,7 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView, Alert, Ac
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { supabase } from '@/lib/supabase'
+import { unregisterForPush } from '@/lib/notifications'
 import { AppHeader } from '@/components/AppHeader'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
@@ -57,21 +59,21 @@ export default function SettingsScreen() {
   }
 
   const handleSignOut = () => {
+    const doSignOut = async () => {
+      setSigningOut(true)
+      await AsyncStorage.removeItem('cached_role')
+      await unregisterForPush()
+      await supabase.auth.signOut()
+    }
+
     if (Platform.OS === 'web') {
-      if (confirm('Are you sure you want to sign out?')) {
-        setSigningOut(true)
-        supabase.auth.signOut()
-      }
+      if (confirm('Are you sure you want to sign out?')) doSignOut()
       return
     }
 
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: async () => { setSigningOut(true); await supabase.auth.signOut() },
-      },
+      { text: 'Sign Out', style: 'destructive', onPress: doSignOut },
     ])
   }
 

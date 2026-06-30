@@ -536,7 +536,10 @@ export default function ChatScreen() {
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: async () => {
           setMenuVisible(false)
-          await supabase.from('messages').update({ deleted_at: new Date().toISOString(), content: 'This message was deleted' }).eq('id', selectedMsg.id)
+          await supabase.from('messages')
+              .update({ deleted_at: new Date().toISOString(), content: 'This message was deleted' })
+              .eq('id', selectedMsg.id)
+              .eq('sender_id', myId)
         }
       }
     ])
@@ -568,7 +571,14 @@ export default function ChatScreen() {
 
   const openForward = async () => {
     setMenuVisible(false)
-    const { data } = await supabase.from('conversations').select('id, student:student_id(name), agent:agent_id(name), counselor:counselor_id(name)').order('last_message_at', { ascending: false })
+    const ownerFilter = myRole === 'student'
+      ? `student_id.eq.${myId}`
+      : `agent_id.eq.${myId},counselor_id.eq.${myId}`
+    const { data } = await supabase
+      .from('conversations')
+      .select('id, student:student_id(name), agent:agent_id(name), counselor:counselor_id(name)')
+      .or(ownerFilter)
+      .order('last_message_at', { ascending: false })
     setConversations(data || [])
     setForwardModal(true)
   }
@@ -598,6 +608,7 @@ export default function ChatScreen() {
     await supabase.from('messages')
       .update({ content: editInput.trim(), edited_at: new Date().toISOString() })
       .eq('id', editingMsgId)
+      .eq('sender_id', myId)
     setEditingMsgId(null)
     setEditInput('')
   }
