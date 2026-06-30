@@ -9,14 +9,15 @@ import { ColorPalette } from '@/constants/colors'
 import { Skeleton, SkeletonCard, EmptyState } from '@/components/Skeleton'
 
 const ICON_NAMES: Record<string, string> = {
-  message:   'chatbubble-outline',
-  document:  'document-text-outline',
-  interview: 'videocam-outline',
-  visa:      'checkmark-circle-outline',
-  success:   'checkmark-circle-outline',
-  warning:   'warning-outline',
-  error:     'warning-outline',
-  info:      'information-circle-outline',
+  message:      'chatbubble-outline',
+  document:     'document-text-outline',
+  interview:    'videocam-outline',
+  visa:         'checkmark-circle-outline',
+  success:      'checkmark-circle-outline',
+  stage_update: 'flag-outline',
+  warning:      'warning-outline',
+  error:        'warning-outline',
+  info:         'information-circle-outline',
 }
 
 function timeAgo(iso: string) {
@@ -38,7 +39,7 @@ export default function NotificationsScreen() {
 
   const COLORS: Record<string, string> = {
     message: C.blue, document: '#D97706', interview: '#9333EA',
-    visa: '#16A34A', success: '#16A34A',
+    visa: '#16A34A', success: '#16A34A', stage_update: '#0891B2',
     warning: '#EA580C', error: '#DC2626', info: '#64748B',
   }
 
@@ -61,7 +62,9 @@ export default function NotificationsScreen() {
         .update({ is_read: true })
         .eq('user_id', user.id)
         .eq('is_read', false)
-        .then(() => {})
+        .then(() => {
+          setItems(prev => prev.map(i => ({ ...i, is_read: true })))
+        })
     }
     load()
 
@@ -122,10 +125,15 @@ export default function NotificationsScreen() {
           const color = COLORS[item.type] ?? C.slate400
           const handleTap = () => {
             const d = item.data ?? {}
-            if (item.type === 'message' && d.convId) {
-              router.push(`/(main)/messages/${d.convId}`)
-            } else if ((item.type === 'document' || item.type === 'visa') && d.studentId) {
-              router.push(`/(main)/students/${d.studentId}`)
+            const convId    = d.convId    ?? d.conversation_id
+            const studentId = d.studentId ?? d.student_id
+            if (item.type === 'message' && convId) {
+              router.push(`/(main)/messages/${convId}`)
+            } else if (item.type === 'stage_update') {
+              if (studentId) router.push(`/(main)/students/${studentId}`)
+              else router.push('/(main)/my-profile')
+            } else if ((item.type === 'document' || item.type === 'visa') && studentId) {
+              router.push(`/(main)/students/${studentId}`)
             } else if (item.type === 'document') {
               router.push('/(main)/documents')
             }
