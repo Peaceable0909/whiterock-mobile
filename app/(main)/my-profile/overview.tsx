@@ -62,7 +62,10 @@ export default function OverviewTab() {
 
   const edit = (field: string) => setEditing(field)
 
+  const EDITABLE = new Set(['nationality', 'phone', 'address', 'country_of_interest', 'program_of_interest', 'intake', 'school'])
+
   const save = async (field: string) => {
+    if (!EDITABLE.has(field)) return
     if (!profile) return
     setSaving(true)
     const { error } = await supabase.from('student_profiles')

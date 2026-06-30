@@ -61,9 +61,13 @@ export default function SettingsScreen() {
   const handleSignOut = () => {
     const doSignOut = async () => {
       setSigningOut(true)
-      await AsyncStorage.removeItem('cached_role')
-      await unregisterForPush()
-      await supabase.auth.signOut()
+      try {
+        await AsyncStorage.removeItem('cached_role')
+        await unregisterForPush()
+        await supabase.auth.signOut()
+      } finally {
+        setSigningOut(false)
+      }
     }
 
     if (Platform.OS === 'web') {
