@@ -50,7 +50,11 @@ jobs:
             --json 2>&1) || EAS_EXIT=$?
           echo "$OUTPUT"
           if [ "${EAS_EXIT:-0}" -ne 0 ]; then exit "${EAS_EXIT}"; fi
-          UPDATE_ID=$(echo "$OUTPUT" | jq -r 'if type == "array" then .[0].id else .id end // empty')
+          UPDATE_ID=$(echo "$OUTPUT" | grep -E '^\[|^\{' | tail -1 | jq -r 'if type == "array" then .[0].id else .id end // empty')
+          if [ -z "$UPDATE_ID" ]; then
+            echo "::warning::Could not extract update ID from EAS response — see output above"
+            exit 0
+          fi
           echo "update_id=${UPDATE_ID}" >> "$GITHUB_OUTPUT"
 
       - name: Comment QR code on PR
