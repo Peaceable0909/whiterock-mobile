@@ -37,6 +37,7 @@ jobs:
         id: update
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          CI: "1"
         run: |
           if [ -z "$EXPO_TOKEN" ]; then
             echo "::notice::EXPO_TOKEN secret not set — add it in repo Settings → Secrets to enable QR previews."
