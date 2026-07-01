@@ -3,9 +3,6 @@ name: PR Preview (Expo Go)
 on:
   pull_request:
     types: [opened, synchronize]
-  push:
-    branches-ignore:
-      - main
 
 permissions:
   contents: read
@@ -34,48 +31,55 @@ jobs:
           expo-version: latest
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
+          packager: npm
 
       - name: Publish preview update
         id: update
         run: |
-          eas update \
+          set -e
+          # Capture both stdout and stderr so errors are visible in the log
+          OUTPUT=$(eas update \
             --channel preview \
-            --message "PR #${{ github.event.pull_request.number || 'push' }} – ${{ github.event.pull_request.title || github.ref_name }}" \
+            --message "PR ${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}" \
             --non-interactive \
-            --json > eas-update-output.json
-          echo "update_id=$(jq -r '.[0].id' eas-update-output.json)" >> $GITHUB_OUTPUT
-          echo "qr_url=$(jq -r '.[0].qr' eas-update-output.json)" >> $GITHUB_OUTPUT
+            --json 2>&1)
+          echo "$OUTPUT"
+          UPDATE_ID=$(echo "$OUTPUT" | jq -r 'if type == "array" then .[0].id else .id end // empty')
+          echo "update_id=${UPDATE_ID}" >> "$GITHUB_OUTPUT"
 
       - name: Comment QR code on PR
-        if: github.event_name == 'pull_request'
+        if: success() && steps.update.outputs.update_id != ''
         uses: actions/github-script@v7
         with:
           script: |
             const updateId = '${{ steps.update.outputs.update_id }}';
-            const qrUrl = '${{ steps.update.outputs.qr_url }}';
-            const projectId = '37b98ec1-dcbc-4e19-90d4-edcaf54e21c9';
-            const expoLink = `https://expo.dev/accounts/peaceables-organization/projects/whiterock-mobile/updates/${updateId}`;
+            const owner = 'peaceables-organization';
+            const slug = 'whiterock-mobile';
+
+            const qrUrl = `https://qr.expo.dev/eas-update?updateId=${updateId}&appScheme=exp&host=u.expo.dev`;
+            const dashboardUrl = `https://expo.dev/accounts/${owner}/projects/${slug}/updates/${updateId}`;
 
             const body = [
-              '## 📱 Preview ready',
-              '',
-              '**Scan the QR code with Expo Go** to preview this PR on your device:',
+              '## 📱 Preview ready — scan to open in Expo Go',
               '',
               `![QR Code](${qrUrl})`,
               '',
-              `Or open directly: [View on Expo]($${expoLink})`,
+              '**Android / iOS:** Install [Expo Go](https://expo.dev/go) and scan the QR code above.',
               '',
-              '> Android: Install [Expo Go](https://play.google.com/store/apps/details?id=host.exp.exponent) and scan',
-              '> iOS: Install [Expo Go](https://apps.apple.com/app/expo-go/id982107779) and scan',
+              `[Open on Expo Dashboard](${dashboardUrl})`,
+              '',
+              `> Update ID: \`${updateId}\``,
             ].join('\n');
 
-            // Find existing bot comment and update it instead of creating a new one
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
             });
-            const existing = comments.find(c => c.user.login === 'github-actions[bot]' && c.body.includes('Preview ready'));
+            const existing = comments.find(c =>
+              c.user.login === 'github-actions[bot]' &&
+              c.body.includes('Preview ready')
+            );
             if (existing) {
               await github.rest.issues.updateComment({
                 owner: context.repo.owner,
