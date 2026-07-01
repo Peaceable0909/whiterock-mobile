@@ -35,9 +35,14 @@ jobs:
 
       - name: Publish preview update
         id: update
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::notice::EXPO_TOKEN secret not set — add it in repo Settings → Secrets to enable QR previews."
+            exit 0
+          fi
           set -e
-          # Capture both stdout and stderr so errors are visible in the log
           OUTPUT=$(eas update \
             --channel preview \
             --message "PR ${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}" \
