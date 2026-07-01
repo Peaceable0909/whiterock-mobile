@@ -62,6 +62,25 @@ export default function MoreScreen() {
     load()
   }, [])
 
+  // RN's fetch(uri).blob() cannot be serialized by supabase-js on Android;
+  // XHR + FormData is the only upload path that works reliably in Expo Go.
+  const xhrUpload = async (bucket: string, path: string, uri: string, name: string, type: string) => {
+    const { data: { session } } = await supabase.auth.getSession()
+    await new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+      xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`)
+      xhr.setRequestHeader('Authorization', `Bearer ${session?.access_token}`)
+      xhr.setRequestHeader('apikey', SUPABASE_ANON)
+      xhr.setRequestHeader('x-upsert', 'true')
+      const fd = new FormData()
+      fd.append('file', { uri, name, type } as any)
+      xhr.onload = () => (xhr.status < 300 ? resolve() : reject(new Error(xhr.responseText)))
+      xhr.onerror = () => reject(new Error('Network error during upload'))
+      xhr.send(fd)
+    })
+    return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl
+  }
+
   const pickImage = async () => {
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -75,23 +94,7 @@ export default function MoreScreen() {
     setUploading(true)
     try {
       const ext = (asset.uri.split('.').pop() ?? 'jpg').toLowerCase()
-      const path = `${user.id}/${Date.now()}.${ext}`
-      const { data: { session } } = await supabase.auth.getSession()
-
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest()
-        xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/avatars/${path}`)
-        xhr.setRequestHeader('Authorization', `Bearer ${session?.access_token}`)
-        xhr.setRequestHeader('apikey', SUPABASE_ANON)
-        xhr.setRequestHeader('x-upsert', 'true')
-        const fd = new FormData()
-        fd.append('file', { uri: asset.uri, name: `avatar.${ext}`, type: `image/${ext}` } as any)
-        xhr.onload = () => (xhr.status < 300 ? resolve() : reject(new Error(xhr.responseText)))
-        xhr.onerror = () => reject(new Error('Network error uploading avatar'))
-        xhr.send(fd)
-      })
-
-      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+      const publicUrl = await xhrUpload('avatars', `${user.id}/${Date.now()}.${ext}`, asset.uri, `avatar.${ext}`, `image/${ext}`)
       await supabase.from('users').update({ avatar_url: publicUrl }).eq('id', user.id)
       setUser((u: any) => ({ ...u, avatar_url: publicUrl }))
     } catch (err: any) {
@@ -114,15 +117,21 @@ export default function MoreScreen() {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) return
-      const { uri } = result.assets[0]
-      const path = `wallpapers/${authUser.id}/bg.jpg`
-      const blob = await fetch(uri).then(r => r.blob())
-      const { error } = await supabase.storage.from('documents').upload(path, blob, { contentType: 'image/jpeg', upsert: true })
-      if (error) throw error
-      const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(path)
+      // avatars bucket: public (documents is private, so its URLs never render)
+      // and its RLS grants own-folder insert/update/delete.
+      const oldUrl = wallpaper
+      const publicUrl = await xhrUpload(
+        'avatars', `${authUser.id}/wallpaper-${Date.now()}.jpg`,
+        result.assets[0].uri, 'wallpaper.jpg', 'image/jpeg',
+      )
       setWallpaper(publicUrl)
-    } catch {
-      Alert.alert('Upload failed', 'Please try again.')
+      // Best-effort cleanup of the previous custom wallpaper file.
+      const prefix = `${SUPABASE_URL}/storage/v1/object/public/avatars/`
+      if (oldUrl.startsWith(prefix)) {
+        supabase.storage.from('avatars').remove([decodeURIComponent(oldUrl.slice(prefix.length))]).then(() => {})
+      }
+    } catch (err: any) {
+      Alert.alert('Upload failed', err?.message ?? 'Please try again.')
     } finally {
       setUploadingWallpaper(false)
     }
