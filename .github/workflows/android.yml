@@ -45,6 +45,12 @@ jobs:
       - name: Generate native Android project
         run: npx expo prebuild --platform android --no-install
 
+      - name: Increase Gradle JVM Metaspace
+        run: |
+          sed -i 's/^org\.gradle\.jvmargs=.*/org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=2g -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8/' android/gradle.properties
+          grep -q 'MaxMetaspaceSize' android/gradle.properties || \
+            echo 'org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=2g -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8' >> android/gradle.properties
+
       - name: Configure signing & print SHA-1 for Google Sign-In
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE_BASE64 }}
