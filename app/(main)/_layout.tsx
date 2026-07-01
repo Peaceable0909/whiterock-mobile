@@ -64,6 +64,8 @@ export default function MainLayout() {
       tabBarActiveTintColor: C.blue,
       tabBarInactiveTintColor: C.slate400,
       tabBarLabelStyle: { fontSize: 10, fontWeight: '600', marginTop: -2 },
+      animation: 'fade',
+      tabBarHideOnKeyboard: true,
     }}>
       <Tabs.Screen name="home" options={{
         tabBarLabel: 'Home',

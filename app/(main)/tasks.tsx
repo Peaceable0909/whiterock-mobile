@@ -1,15 +1,16 @@
 import { useEffect, useState, useRef } from 'react'
 import {
   View, Text, TouchableOpacity, FlatList, StyleSheet,
-  TextInput, Modal, ActivityIndicator, Animated, LayoutAnimation, Alert, ScrollView,
+  TextInput, Modal, ActivityIndicator, Animated, LayoutAnimation, ScrollView,
+  KeyboardAvoidingView, Platform,
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import * as Haptics from 'expo-haptics'
 import { supabase } from '@/lib/supabase'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
+import { showAlert, confirmDialog, haptic } from '@/lib/ui'
 
 type Priority  = 'low' | 'normal' | 'high' | 'urgent'
 type TStatus   = 'pending' | 'in_progress' | 'completed'
@@ -85,7 +86,7 @@ export default function TasksScreen() {
   const createTask = async () => {
     if (!ttl.trim() || saving) return
     setSaving(true)
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    haptic.light()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSaving(false); return }
     const { data: created, error } = await supabase.from('tasks').insert({
@@ -97,36 +98,39 @@ export default function TasksScreen() {
       due_date: due || null,
     }).select().single()
     setSaving(false)
-    if (error) { Alert.alert('Error', error.message); return }
+    if (error) { showAlert('Error', error.message); return }
     if (created) {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
       setTasks(prev => [created as Task, ...prev])
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+      haptic.success()
     }
     closeModal()
   }
 
   const toggleDone = async (task: Task) => {
     const next: TStatus = task.status === 'completed' ? 'pending' : 'completed'
-    Haptics.impactAsync(next === 'completed' ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light)
+    next === 'completed' ? haptic.medium() : haptic.light()
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
     setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: next } : t))
-    await supabase.from('tasks').update({ status: next }).eq('id', task.id)
+    const { error } = await supabase.from('tasks').update({ status: next }).eq('id', task.id)
+    if (error) {
+      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: task.status } : t))
+      showAlert('Could not update task', error.message)
+    }
   }
 
-  const del = (id: string) => {
-    Alert.alert('Delete task?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive',
-        onPress: async () => {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
-          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
-          setTasks(prev => prev.filter(t => t.id !== id))
-          await supabase.from('tasks').delete().eq('id', id)
-        },
-      },
-    ])
+  const del = async (id: string) => {
+    const ok = await confirmDialog('Delete task?', 'This cannot be undone.', 'Delete', true)
+    if (!ok) return
+    haptic.warning()
+    const removed = tasks.find(t => t.id === id)
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+    setTasks(prev => prev.filter(t => t.id !== id))
+    const { error } = await supabase.from('tasks').delete().eq('id', id)
+    if (error && removed) {
+      setTasks(prev => [removed, ...prev])
+      showAlert('Could not delete task', error.message)
+    }
   }
 
   const formatDue = (d: string) => {
@@ -165,7 +169,7 @@ export default function TasksScreen() {
           return (
             <TouchableOpacity key={f.key}
               style={[s.chip, active && s.chipActive]}
-              onPress={() => { setFilter(f.key); Haptics.selectionAsync() }}>
+              onPress={() => { setFilter(f.key); haptic.selection() }}>
               <Text style={[s.chipTxt, active && s.chipTxtActive]}>{f.label}</Text>
               <View style={[s.badge, active && s.badgeActive]}>
                 <Text style={[s.badgeTxt, active && s.badgeTxtActive]}>{counts[f.key]}</Text>
@@ -198,7 +202,7 @@ export default function TasksScreen() {
             return (
               <TouchableOpacity
                 style={[s.card, done && s.cardDone]}
-                onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); del(item.id) }}
+                onLongPress={() => { haptic.heavy(); del(item.id) }}
                 delayLongPress={500}
                 activeOpacity={0.85}
               >
@@ -229,6 +233,14 @@ export default function TasksScreen() {
                 {item.status === 'in_progress' && (
                   <View style={s.inProgDot} />
                 )}
+
+                <TouchableOpacity
+                  onPress={() => del(item.id)}
+                  hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+                  style={s.delBtn}
+                >
+                  <Ionicons name="trash-outline" size={15} color={C.slate400} />
+                </TouchableOpacity>
               </TouchableOpacity>
             )
           }}
@@ -244,6 +256,7 @@ export default function TasksScreen() {
 
       {/* Create modal */}
       <Modal visible={modal} transparent animationType="none" onRequestClose={closeModal}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={closeModal}>
           <Animated.View style={[s.sheet, { transform: [{ translateY: sheetAnim }], paddingBottom: insets.bottom + 20 }]}>
             <TouchableOpacity activeOpacity={1} onPress={() => {}}>
@@ -277,7 +290,7 @@ export default function TasksScreen() {
                   return (
                     <TouchableOpacity key={p}
                       style={[s.prioBtn, { borderColor: act ? pm.color : C.slate200, backgroundColor: act ? pm.bg : C.bg }]}
-                      onPress={() => { setPrio(p); Haptics.selectionAsync() }}>
+                      onPress={() => { setPrio(p); haptic.selection() }}>
                       <Ionicons name={pm.icon as any} size={14} color={act ? pm.color : C.slate400} />
                       <Text style={[s.prioBtnTxt, { color: act ? pm.color : C.slate400 }]}>{pm.label}</Text>
                     </TouchableOpacity>
@@ -307,6 +320,7 @@ export default function TasksScreen() {
             </TouchableOpacity>
           </Animated.View>
         </TouchableOpacity>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   )
@@ -341,6 +355,7 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   prioTxt:      { fontSize: 10, fontWeight: '700' },
   dueTxt:       { fontSize: 11, fontWeight: '600' },
   inProgDot:    { width: 8, height: 8, borderRadius: 4, backgroundColor: '#F59E0B', marginTop: 6, flexShrink: 0 },
+  delBtn:       { padding: 4, marginTop: 2, flexShrink: 0 },
 
   fab:          { position: 'absolute', right: 20 },
   fabInner:     { width: 56, height: 56, borderRadius: 28, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', elevation: 8, shadowColor: C.blue, shadowOpacity: 0.4, shadowRadius: 12 },

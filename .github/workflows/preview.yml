@@ -37,19 +37,27 @@ jobs:
         id: update
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          CI: "1"
         run: |
           if [ -z "$EXPO_TOKEN" ]; then
             echo "::notice::EXPO_TOKEN secret not set — add it in repo Settings → Secrets to enable QR previews."
             exit 0
           fi
-          set -e
-          OUTPUT=$(eas update \
+          EAS_OUT=$(mktemp)
+          EAS_ERR=$(mktemp)
+          eas update \
             --channel preview \
             --message "PR ${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}" \
             --non-interactive \
-            --json 2>&1)
-          echo "$OUTPUT"
-          UPDATE_ID=$(echo "$OUTPUT" | jq -r 'if type == "array" then .[0].id else .id end // empty')
+            --json >"$EAS_OUT" 2>"$EAS_ERR" || EAS_EXIT=$?
+          echo "=== stderr ===" && cat "$EAS_ERR"
+          echo "=== stdout ===" && cat "$EAS_OUT"
+          if [ "${EAS_EXIT:-0}" -ne 0 ]; then exit "${EAS_EXIT}"; fi
+          UPDATE_ID=$(jq -r 'if type == "array" then .[0].id else .id end // empty' "$EAS_OUT" 2>/dev/null)
+          if [ -z "$UPDATE_ID" ]; then
+            echo "::warning::Could not extract update ID from EAS response — see output above"
+            exit 0
+          fi
           echo "update_id=${UPDATE_ID}" >> "$GITHUB_OUTPUT"
 
       - name: Comment QR code on PR

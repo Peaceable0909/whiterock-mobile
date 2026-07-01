@@ -11,7 +11,7 @@ import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 
 const AUDIENCES = [
-  { key: 'all_students', label: 'All Students', icon: 'school-outline',   color: C.blue,   roles: ['student']             },
+  { key: 'all_students', label: 'All Students', icon: 'school-outline',   color: '#1B4FD8', roles: ['student']             },
   { key: 'all_staff',    label: 'All Staff',    icon: 'briefcase-outline', color: '#7C3AED', roles: ['counselor', 'agent'] },
   { key: 'all_users',    label: 'Everyone',     icon: 'globe-outline',    color: '#059669', roles: ['student', 'counselor', 'agent', 'admin'] },
 ] as const
@@ -36,7 +36,7 @@ export default function AdminBroadcastScreen() {
       const { data: users } = await supabase
         .from('users')
         .select('id')
-        .in('role', target.roles as string[])
+        .in('role', [...target.roles])
 
       if (!users?.length) {
         Alert.alert('No recipients', 'No users found for this audience.')

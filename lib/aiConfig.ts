@@ -7,11 +7,13 @@ let _pending: Promise<string | null> | null = null
 export async function getAiAvatarUrl(): Promise<string | null> {
   if (_cached !== null) return _cached
   if (!_pending) {
-    _pending = supabase
-      .from('ai_rules')
-      .select('value')
-      .eq('key', 'ai_avatar_url')
-      .single()
+    _pending = Promise.resolve(
+      supabase
+        .from('ai_rules')
+        .select('value')
+        .eq('key', 'ai_avatar_url')
+        .single()
+    )
       .then(({ data }) => { _cached = data?.value ?? null; return _cached })
       .catch(() => null)
   }

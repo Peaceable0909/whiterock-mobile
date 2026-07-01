@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import {
   View, Text, TextInput, FlatList, ScrollView, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Modal, Platform, ActivityIndicator, Image, Alert, AppState,
-  useWindowDimensions, Vibration, Clipboard, Share
+  useWindowDimensions, Vibration, Clipboard, Share, Animated
 } from 'react-native'
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -147,7 +147,6 @@ function VideoMsg({ uri }: { uri: string }) {
       player={player}
       style={{ width: 240, height: 160, borderRadius: 12, backgroundColor: '#000' }}
       nativeControls
-      allowsFullscreen
       contentFit="contain"
     />
   )
@@ -181,11 +180,18 @@ export default function ChatScreen() {
   const [replyTo, setReplyTo]   = useState<any>(null)
   const [previewImg, setPreviewImg] = useState<string | null>(null)
   const [isTyping, setIsTyping]   = useState(false)
-  const [aiAssist, setAiAssist] = useState(false)
   const [aiDrafting, setAiDrafting] = useState(false)
   const [profileModal, setProfileModal] = useState(false)
   const [aiEnabled, setAiEnabled]   = useState(true)
   const [aiAvatar, setAiAvatar]     = useState<string | null>(null)
+
+  // Composer: springy swap between mic and send as text appears
+  const sendScale = useRef(new Animated.Value(1)).current
+  const hasText   = !!input.trim()
+  useEffect(() => {
+    sendScale.setValue(0.5)
+    Animated.spring(sendScale, { toValue: 1, tension: 300, friction: 10, useNativeDriver: true }).start()
+  }, [hasText])
 
   // Message actions
   const [menuVisible, setMenuVisible] = useState(false)
@@ -380,8 +386,8 @@ export default function ChatScreen() {
     setAiDrafting(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      // other is the student when current user is staff
-      const studentId = myRole !== 'student' ? other?.id : null
+      // otherUser is the student when current user is staff
+      const studentId = myRole !== 'student' ? otherUser?.id : null
       const res = await fetch('https://whiterock-connect.vercel.app/api/ai-draft', {
         method: 'POST',
         headers: {
@@ -1090,26 +1096,9 @@ export default function ChatScreen() {
         </View>
       )}
 
-      {myRole !== 'student' && (
-        <View style={g.aiBar}>
-          <TouchableOpacity style={[g.aiToggle, aiAssist && g.aiToggleOn]} onPress={() => setAiAssist(!aiAssist)}>
-            <Ionicons name="sparkles" size={13} color={aiAssist ? C.white : C.blue} />
-            <Text style={[g.aiToggleText, aiAssist && { color: C.white }]}>AI Assist</Text>
-          </TouchableOpacity>
-          {aiAssist && (
-            <TouchableOpacity style={[g.aiDraftBtn, aiDrafting && { opacity: 0.5 }]} onPress={draftWithAI} disabled={aiDrafting}>
-              {aiDrafting ? <ActivityIndicator size="small" color={C.blue} /> : <>
-                <Ionicons name="create-outline" size={14} color={C.blue} />
-                <Text style={g.aiDraftText}>Draft Reply</Text>
-              </>}
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
-
       {isRecording ? (
         <View style={[g.bar, { paddingBottom: insets.bottom + 10, backgroundColor: C.white }]}>
-          <TouchableOpacity onPress={cancelRecording} style={g.attach}>
+          <TouchableOpacity onPress={cancelRecording} style={g.pillIcon}>
             <Ionicons name="trash-outline" size={22} color={C.red500} />
           </TouchableOpacity>
           <View style={g.recordingWave}>
@@ -1126,27 +1115,51 @@ export default function ChatScreen() {
         </View>
       ) : (
         <View style={[g.bar, { paddingBottom: insets.bottom + 10 }]}>
-          <TouchableOpacity onPress={() => setStickerModal(true)} style={g.attach}>
-            <Ionicons name="happy-outline" size={20} color={C.slate500} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={pickAndSendMedia} disabled={uploading} style={g.attach}>
-            <Ionicons name="attach-outline" size={20} color={uploading ? C.slate300 : C.slate500} />
-          </TouchableOpacity>
-          <TextInput style={g.input} value={input} onChangeText={setInput} placeholder="Type a message..." placeholderTextColor={C.slate400} multiline maxLength={2000} />
-          {input.trim() || sending ? (
-            <TouchableOpacity style={[g.sendBtn, sending && g.sendBtnOff]} onPress={() => sendMessage()} disabled={sending}>
-              {sending ? <ActivityIndicator color={C.white} size="small" /> : <Ionicons name="send-outline" size={18} color={C.white} />}
+          <View style={g.pill}>
+            <TouchableOpacity onPress={() => setStickerModal(true)} style={g.pillIcon}>
+              <Ionicons name="happy-outline" size={22} color={C.slate500} />
             </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              style={g.sendBtn}
-              onPressIn={startRecording}
-              onPressOut={() => stopAndSendVoice(recordSecs)}
-              delayLongPress={100}
-            >
-              <Ionicons name="mic-outline" size={18} color={C.white} />
-            </TouchableOpacity>
-          )}
+            <TextInput
+              style={g.input}
+              value={input}
+              onChangeText={setInput}
+              placeholder="Message"
+              placeholderTextColor={C.slate400}
+              multiline
+              maxLength={2000}
+            />
+            {/* Accessory icons collapse while the user is typing */}
+            {!hasText && (
+              <>
+                <TouchableOpacity onPress={pickAndSendMedia} disabled={uploading} style={g.pillIcon}>
+                  <Ionicons name="attach" size={22} color={uploading ? C.slate300 : C.slate500} style={{ transform: [{ rotate: '45deg' }] }} />
+                </TouchableOpacity>
+                {myRole !== 'student' && (
+                  <TouchableOpacity onPress={draftWithAI} disabled={aiDrafting} style={g.pillIcon}>
+                    {aiDrafting
+                      ? <ActivityIndicator size="small" color={C.blue} />
+                      : <Ionicons name="sparkles" size={20} color={C.blue} />}
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+          </View>
+          <Animated.View style={{ transform: [{ scale: sendScale }] }}>
+            {hasText || sending ? (
+              <TouchableOpacity style={[g.sendBtn, sending && g.sendBtnOff]} onPress={() => sendMessage()} disabled={sending}>
+                {sending ? <ActivityIndicator color={C.white} size="small" /> : <Ionicons name="send" size={17} color={C.white} style={{ marginLeft: 2 }} />}
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={g.sendBtn}
+                onPressIn={startRecording}
+                onPressOut={() => stopAndSendVoice(recordSecs)}
+                delayLongPress={100}
+              >
+                <Ionicons name="mic" size={19} color={C.white} />
+              </TouchableOpacity>
+            )}
+          </Animated.View>
         </View>
       )}
     </KeyboardAvoidingView>
@@ -1220,20 +1233,15 @@ const mkG = (C: ColorPalette) => StyleSheet.create({
   editBar:        { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.blue + '12', paddingHorizontal: 14, paddingVertical: 8, borderTopWidth: 1, borderColor: C.blue + '30' },
   editInput:      { flex: 1, fontSize: 14, color: C.navy, paddingVertical: 4, maxHeight: 80 },
   editSaveBtn:    { padding: 2 },
-  aiBar:          { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: C.white, borderTopWidth: 1, borderColor: C.slate100 },
-  aiToggle:       { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 18, borderWidth: 1, borderColor: C.blue },
-  aiToggleOn:     { backgroundColor: C.blue },
-  aiToggleText:   { fontSize: 12, fontWeight: '700', color: C.blue },
-  aiDraftBtn:     { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 18, backgroundColor: C.blue + '15' },
-  aiDraftText:    { fontSize: 12, fontWeight: '700', color: C.blue },
-  bar:            { flexDirection: 'row', alignItems: 'center', padding: 12, backgroundColor: C.white, gap: 10 },
-  attach:         { width: 42, height: 42, borderRadius: 21, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
-  input:          { flex: 1, backgroundColor: C.bg, borderRadius: 21, paddingHorizontal: 16, paddingVertical: 10, fontSize: 15, color: C.navy, maxHeight: 120 },
+  bar:            { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 10, paddingTop: 8, backgroundColor: C.white, gap: 8, borderTopWidth: StyleSheet.hairlineWidth, borderColor: C.slate200 },
+  pill:           { flex: 1, flexDirection: 'row', alignItems: 'flex-end', backgroundColor: C.bg, borderRadius: 24, paddingHorizontal: 4, minHeight: 44, borderWidth: 1, borderColor: C.slate100 },
+  pillIcon:       { width: 38, height: 44, alignItems: 'center', justifyContent: 'center' },
+  input:          { flex: 1, fontSize: 15, color: C.navy, maxHeight: 110, paddingVertical: Platform.OS === 'ios' ? 12 : 9, paddingHorizontal: 4 },
   recordingWave:  { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12 },
   recDot:         { width: 8, height: 8, borderRadius: 4, backgroundColor: C.red500 },
   recDurationText:{ fontSize: 16, fontWeight: '700', color: C.navy },
   recHint:        { fontSize: 11, color: C.slate400 },
-  sendBtn:        { width: 42, height: 42, borderRadius: 21, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
+  sendBtn:        { width: 44, height: 44, borderRadius: 22, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', shadowColor: C.blue, shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 4 },
   sendBtnOff:     { opacity: 0.5 },
   headerInfo:     { flex: 1, flexDirection: 'row', alignItems: 'center' },
   headerAiBtn:    { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: C.blue + '15' },

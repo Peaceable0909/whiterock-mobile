@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase'
 import { getAiAvatarUrl } from '@/lib/aiConfig'
 import { useColors, useTheme } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
+import { FadeInUp } from '@/components/Anim'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { MarkdownText } from '@/components/MarkdownText'
 
@@ -352,7 +353,7 @@ WhiteRock information always overrides training data. Never present training dat
   }
 
   return (
-    <KeyboardAvoidingView style={s.bg} behavior="padding" keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 80}>
+    <KeyboardAvoidingView style={s.bg} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
       {/* Header */}
       <View style={[s.header, { paddingTop: insets.top + 8 }]}>
         {aiAvatar
@@ -391,7 +392,7 @@ WhiteRock information always overrides training data. Never present training dat
         contentContainerStyle={s.listContent}
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
         ListHeaderComponent={isEmpty ? (
-          <View style={s.emptyState}>
+          <FadeInUp style={s.emptyState}>
             {aiAvatar
               ? <Image source={{ uri: aiAvatar }} style={s.sparkleImg} />
               : <View style={s.sparkleBox}><Ionicons name="hardware-chip-outline" size={32} color={C.white} /></View>
@@ -408,7 +409,7 @@ WhiteRock information always overrides training data. Never present training dat
                 <Text style={s.memoryText} numberOfLines={2}>{memory.summary}</Text>
               </View>
             )}
-          </View>
+          </FadeInUp>
         ) : null}
         renderItem={({ item }) => (
           <View style={[s.msgRow, item.role === 'user' ? s.msgMe : s.msgThem]}>
@@ -452,7 +453,7 @@ WhiteRock information always overrides training data. Never present training dat
         >
           {loading
             ? <ActivityIndicator color={C.white} size="small" />
-            : <Ionicons name="send-outline" size={16} color={C.white} />}
+            : <Ionicons name="send" size={17} color={C.white} style={{ marginLeft: 2 }} />}
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -488,7 +489,7 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   bubbleThem:     { backgroundColor: C.white, borderBottomLeftRadius: 4, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
   bubbleText:     { fontSize: 14, color: C.navy, lineHeight: 20 },
   bubbleTextMe:   { color: C.white },
-  inputBar:       { flexDirection: 'row', alignItems: 'flex-end', padding: 12, backgroundColor: C.white, borderTopWidth: 1, borderColor: C.slate100 },
-  input:          { flex: 1, backgroundColor: C.bg, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, fontSize: 14, color: C.navy, maxHeight: 100, marginRight: 8 },
-  sendBtn:        { width: 40, height: 40, borderRadius: 20, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
+  inputBar:       { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 10, paddingTop: 8, backgroundColor: C.white, gap: 8, borderTopWidth: StyleSheet.hairlineWidth, borderColor: C.slate200 },
+  input:          { flex: 1, backgroundColor: C.bg, borderRadius: 24, paddingHorizontal: 18, paddingVertical: Platform.OS === 'ios' ? 12 : 9, fontSize: 15, color: C.navy, maxHeight: 110, borderWidth: 1, borderColor: C.slate100, minHeight: 44 },
+  sendBtn:        { width: 44, height: 44, borderRadius: 22, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', shadowColor: C.blue, shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 4 },
 })
