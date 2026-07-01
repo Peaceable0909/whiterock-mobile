@@ -1,0 +1,93 @@
+name: PR Preview (Expo Go)
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  push:
+    branches-ignore:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  preview:
+    name: Publish EAS Update
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Publish preview update
+        id: update
+        run: |
+          eas update \
+            --channel preview \
+            --message "PR #${{ github.event.pull_request.number || 'push' }} – ${{ github.event.pull_request.title || github.ref_name }}" \
+            --non-interactive \
+            --json > eas-update-output.json
+          echo "update_id=$(jq -r '.[0].id' eas-update-output.json)" >> $GITHUB_OUTPUT
+          echo "qr_url=$(jq -r '.[0].qr' eas-update-output.json)" >> $GITHUB_OUTPUT
+
+      - name: Comment QR code on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const updateId = '${{ steps.update.outputs.update_id }}';
+            const qrUrl = '${{ steps.update.outputs.qr_url }}';
+            const projectId = '37b98ec1-dcbc-4e19-90d4-edcaf54e21c9';
+            const expoLink = `https://expo.dev/accounts/peaceables-organization/projects/whiterock-mobile/updates/${updateId}`;
+
+            const body = [
+              '## 📱 Preview ready',
+              '',
+              '**Scan the QR code with Expo Go** to preview this PR on your device:',
+              '',
+              `![QR Code](${qrUrl})`,
+              '',
+              `Or open directly: [View on Expo]($${expoLink})`,
+              '',
+              '> Android: Install [Expo Go](https://play.google.com/store/apps/details?id=host.exp.exponent) and scan',
+              '> iOS: Install [Expo Go](https://apps.apple.com/app/expo-go/id982107779) and scan',
+            ].join('\n');
+
+            // Find existing bot comment and update it instead of creating a new one
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.user.login === 'github-actions[bot]' && c.body.includes('Preview ready'));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
