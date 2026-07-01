@@ -1,0 +1,102 @@
+name: PR Preview (Expo Go)
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  preview:
+    name: Publish EAS Update
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+          packager: npm
+
+      - name: Publish preview update
+        id: update
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::notice::EXPO_TOKEN secret not set — add it in repo Settings → Secrets to enable QR previews."
+            exit 0
+          fi
+          set -e
+          OUTPUT=$(eas update \
+            --channel preview \
+            --message "PR ${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}" \
+            --non-interactive \
+            --json 2>&1)
+          echo "$OUTPUT"
+          UPDATE_ID=$(echo "$OUTPUT" | jq -r 'if type == "array" then .[0].id else .id end // empty')
+          echo "update_id=${UPDATE_ID}" >> "$GITHUB_OUTPUT"
+
+      - name: Comment QR code on PR
+        if: success() && steps.update.outputs.update_id != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const updateId = '${{ steps.update.outputs.update_id }}';
+            const owner = 'peaceables-organization';
+            const slug = 'whiterock-mobile';
+
+            const qrUrl = `https://qr.expo.dev/eas-update?updateId=${updateId}&appScheme=exp&host=u.expo.dev`;
+            const dashboardUrl = `https://expo.dev/accounts/${owner}/projects/${slug}/updates/${updateId}`;
+
+            const body = [
+              '## 📱 Preview ready — scan to open in Expo Go',
+              '',
+              `![QR Code](${qrUrl})`,
+              '',
+              '**Android / iOS:** Install [Expo Go](https://expo.dev/go) and scan the QR code above.',
+              '',
+              `[Open on Expo Dashboard](${dashboardUrl})`,
+              '',
+              `> Update ID: \`${updateId}\``,
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c =>
+              c.user.login === 'github-actions[bot]' &&
+              c.body.includes('Preview ready')
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
