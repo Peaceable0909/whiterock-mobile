@@ -45,6 +45,14 @@ jobs:
       - name: Generate native Android project
         run: npx expo prebuild --platform android --no-install
 
+      - name: Configure Gradle memory (prevent Metaspace OOM in KSP/lint)
+        run: |
+          sed -i '/^org\.gradle\.jvmargs=/d' android/gradle.properties
+          cat >> android/gradle.properties <<'EOF'
+          org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8
+          kotlin.daemon.jvm.options=-Xmx2g -XX:MaxMetaspaceSize=512m
+          EOF
+
       - name: Configure signing & print SHA-1 for Google Sign-In
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -77,7 +85,9 @@ jobs:
 
       - name: Build APK
         working-directory: android
-        run: ./gradlew assembleRelease --no-daemon
+        # lintVital* is skipped in CI — Android lint analysis is the main
+        # Metaspace consumer on 7 GB runners; lint still runs locally.
+        run: ./gradlew assembleRelease --no-daemon -x lintVitalRelease -x lintVitalAnalyzeRelease
 
       - name: Rename APK
         run: cp android/app/build/outputs/apk/release/app-release.apk whiterock-connect.apk
