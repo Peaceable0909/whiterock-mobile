@@ -42,13 +42,13 @@ jobs:
             echo "::notice::EXPO_TOKEN secret not set — add it in repo Settings → Secrets to enable QR previews."
             exit 0
           fi
-          set -e
           OUTPUT=$(eas update \
             --channel preview \
             --message "PR ${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}" \
             --non-interactive \
-            --json 2>&1)
+            --json 2>&1) || EAS_EXIT=$?
           echo "$OUTPUT"
+          if [ "${EAS_EXIT:-0}" -ne 0 ]; then exit "${EAS_EXIT}"; fi
           UPDATE_ID=$(echo "$OUTPUT" | jq -r 'if type == "array" then .[0].id else .id end // empty')
           echo "update_id=${UPDATE_ID}" >> "$GITHUB_OUTPUT"
 
