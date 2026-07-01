@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { useColors, useTheme } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 import { Skeleton, SkeletonCard } from '@/components/Skeleton'
+import { FadeInUp, ScalePress } from '@/components/Anim'
 
 const JOURNEY_STAGES = ['lead','application_submitted','offer_received','deposit_paid','cas_requested','cas_issued','visa_submitted','visa_decision']
 const STAGE_LABEL: Record<string,string> = { lead:'New Lead', application_submitted:'Applied', offer_received:'Offer', deposit_paid:'Deposit', cas_requested:'CAS Pending', cas_issued:'CAS Issued', visa_submitted:'Visa Submitted', visa_decision:'Visa Decision' }
@@ -145,7 +146,7 @@ export default function HomeScreen() {
         {isAgent && <AgentPipeline userId={user?.id} />}
 
         {isStudent && profile && (
-          <>
+          <FadeInUp delay={0}>
             <Text style={s.sectionLabel}>YOUR JOURNEY</Text>
             <View style={s.card}>
               <View style={s.row}>
@@ -160,16 +161,16 @@ export default function HomeScreen() {
               </View>
               <View style={s.barBg}><View style={[s.barFg, { width: `${progress}%` as const }]} /></View>
               <Text style={s.nextStep}>Next: <Text style={s.nextStepBold}>{JOURNEY_STAGES[stageIdx + 1] ? STAGE_LABEL[JOURNEY_STAGES[stageIdx + 1]] : 'Final Decision'}</Text></Text>
-              <TouchableOpacity style={s.btn} onPress={() => router.push('/(main)/my-profile')}>
+              <ScalePress style={s.btn} onPress={() => router.push('/(main)/my-profile')}>
                 <Text style={s.btnText}>View Journey Details</Text>
                 <Ionicons name="chevron-forward" size={16} color="#fff" style={{ marginLeft: 4 }} />
-              </TouchableOpacity>
+              </ScalePress>
             </View>
-          </>
+          </FadeInUp>
         )}
 
         {isStudent && agent && (
-          <>
+          <FadeInUp delay={60}>
             <Text style={s.sectionLabel}>ASSIGNED AGENT</Text>
             <View style={s.card}>
               <View style={s.agentRow}>
@@ -187,56 +188,60 @@ export default function HomeScreen() {
                   </View>
                 )}
               </View>
-              <TouchableOpacity
+              <ScalePress
                 style={[s.btn, !convId && { opacity: 0.5 }]}
                 onPress={() => { if (convId) router.push(`/(main)/messages/${convId}`) }}
                 disabled={!convId}
               >
                 <Ionicons name="chatbubble-ellipses-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
                 <Text style={s.btnText}>{convId ? 'Message Agent' : 'Setting up chat…'}</Text>
-              </TouchableOpacity>
+              </ScalePress>
             </View>
-          </>
+          </FadeInUp>
         )}
 
-        <Text style={s.sectionLabel}>QUICK ACCESS</Text>
-        <View style={s.grid}>
-          <TouchableOpacity style={s.gridCard} onPress={() => router.push('/(main)/resources')}>
-            <View style={[s.iconCircle, { backgroundColor: '#F0F9FF' }]}>
-              <Ionicons name="library-outline" size={18} color="#0369A1" />
-            </View>
-            <Text style={s.gridLabel}>LIBRARY</Text>
-            <Text style={s.gridTitle}>Resources</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={s.gridCard} onPress={() => router.push('/(main)/documents')}>
-            <View style={[s.iconCircle, { backgroundColor: '#F0FDF4' }]}>
-              <Ionicons name="document-text-outline" size={18} color="#15803D" />
-            </View>
-            <Text style={s.gridLabel}>FILES</Text>
-            <Text style={s.gridTitle}>Documents</Text>
-          </TouchableOpacity>
-        </View>
+        <FadeInUp delay={120}>
+          <Text style={s.sectionLabel}>QUICK ACCESS</Text>
+          <View style={s.grid}>
+            <ScalePress containerStyle={{ flex: 1 }} style={s.gridCard} onPress={() => router.push('/(main)/resources')}>
+              <View style={[s.iconCircle, { backgroundColor: '#F0F9FF' }]}>
+                <Ionicons name="library-outline" size={18} color="#0369A1" />
+              </View>
+              <Text style={s.gridLabel}>LIBRARY</Text>
+              <Text style={s.gridTitle}>Resources</Text>
+            </ScalePress>
+            <ScalePress containerStyle={{ flex: 1 }} style={s.gridCard} onPress={() => router.push('/(main)/documents')}>
+              <View style={[s.iconCircle, { backgroundColor: '#F0FDF4' }]}>
+                <Ionicons name="document-text-outline" size={18} color="#15803D" />
+              </View>
+              <Text style={s.gridLabel}>FILES</Text>
+              <Text style={s.gridTitle}>Documents</Text>
+            </ScalePress>
+          </View>
+        </FadeInUp>
 
-        <Text style={s.sectionLabel}>LATEST UPDATES</Text>
-        <View style={s.card}>
-          {recentUpdates.length > 0 ? (
-            recentUpdates.map((u, i) => (
-              <TouchableOpacity key={u.id} style={[s.updateRow, i < recentUpdates.length - 1 && { marginBottom: 16 }]} onPress={() => router.push('/(main)/updates')}>
-                <View style={[s.updateBar, { backgroundColor: u.category === 'visa' ? C.green400 : C.blue }]} />
-                <View>
-                  <Text style={s.updateTitle} numberOfLines={1}>{u.title}</Text>
-                  <Text style={s.updateSub}>{new Date(u.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} Â· {u.category}</Text>
-                </View>
-              </TouchableOpacity>
-            ))
-          ) : (
-            <Text style={s.updateSub}>No recent updates</Text>
-          )}
-          <TouchableOpacity style={s.viewAll} onPress={() => router.push('/(main)/updates')}>
-            <Text style={s.viewAllText}>View All Updates</Text>
-            <Ionicons name="arrow-forward" size={14} color={C.blue} />
-          </TouchableOpacity>
-        </View>
+        <FadeInUp delay={180}>
+          <Text style={s.sectionLabel}>LATEST UPDATES</Text>
+          <View style={s.card}>
+            {recentUpdates.length > 0 ? (
+              recentUpdates.map((u, i) => (
+                <TouchableOpacity key={u.id} activeOpacity={0.7} style={[s.updateRow, i < recentUpdates.length - 1 && { marginBottom: 16 }]} onPress={() => router.push('/(main)/updates')}>
+                  <View style={[s.updateBar, { backgroundColor: u.category === 'visa' ? C.green400 : C.blue }]} />
+                  <View>
+                    <Text style={s.updateTitle} numberOfLines={1}>{u.title}</Text>
+                    <Text style={s.updateSub}>{new Date(u.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} · {u.category}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <Text style={s.updateSub}>No recent updates</Text>
+            )}
+            <TouchableOpacity activeOpacity={0.7} style={s.viewAll} onPress={() => router.push('/(main)/updates')}>
+              <Text style={s.viewAllText}>View All Updates</Text>
+              <Ionicons name="arrow-forward" size={14} color={C.blue} />
+            </TouchableOpacity>
+          </View>
+        </FadeInUp>
       </ScrollView>
     </View>
   )

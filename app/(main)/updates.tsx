@@ -14,6 +14,7 @@ import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Skeleton, SkeletonCard, EmptyState } from '@/components/Skeleton'
+import { FadeInUp } from '@/components/Anim'
 
 const CATEGORY_FILTERS = [
   { key: 'all',          label: 'All'         },
@@ -189,7 +190,7 @@ export default function UpdatesScreen() {
     } catch { /* user cancelled */ }
   }
 
-  const renderUpdate = ({ item }: { item: any }) => {
+  const renderUpdate = ({ item, index }: { item: any; index: number }) => {
     const catIconName = CAT_ICON_NAMES[item.category] ?? 'megaphone-outline'
     const catColor = CAT_COLORS[item.category] ?? { bg: '#DBEAFE', text: '#1D4ED8' }
     const author   = item.author
@@ -197,7 +198,7 @@ export default function UpdatesScreen() {
     const isSaved  = savedIds.has(item.id)
 
     return (
-      <View style={[c.card, item.is_pinned && c.pinned]}
+      <FadeInUp delay={Math.min(index * 50, 250)} style={[c.card, item.is_pinned && c.pinned]}
         onLayout={() => trackView(item.id)}>
         {item.is_pinned && (
           <View style={c.pinnedBanner}>
@@ -296,7 +297,7 @@ export default function UpdatesScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </FadeInUp>
     )
   }
 

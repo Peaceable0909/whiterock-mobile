@@ -152,6 +152,10 @@ export default function MessagesScreen() {
 
   return (
     <View style={[s.bg, { paddingTop: insets.top }]}>
+      <View style={s.pageHeader}>
+        <Text style={s.pageTitle}>Messages</Text>
+      </View>
+
       {/* Search */}
       <View style={s.searchWrap}>
         <Ionicons name="search-outline" size={16} color={C.slate400} />
@@ -165,7 +169,7 @@ export default function MessagesScreen() {
 
       {/* AI pinned row (students only) */}
       {role === 'student' && (
-        <TouchableOpacity style={s.aiRow} onPress={() => router.push('/(main)/ai')}>
+        <TouchableOpacity activeOpacity={0.75} style={s.aiRow} onPress={() => router.push('/(main)/ai')}>
           <View style={s.aiAvatarWrap}>
             {aiAvatar
               ? <Image source={{ uri: aiAvatar }} style={s.aiAvatarImg} />
@@ -201,7 +205,7 @@ export default function MessagesScreen() {
           const unread = getUnread(item)
           const timeStr = item.last_message_at ? formatConvTime(item.last_message_at) : ''
           return (
-            <TouchableOpacity style={s.convRow} onPress={() => router.push(`/(main)/messages/${item.id}`)}>
+            <TouchableOpacity activeOpacity={0.7} style={s.convRow} onPress={() => router.push(`/(main)/messages/${item.id}`)}>
               <View style={s.avatarWrap}>
                 {other.avatar_url ? (
                   <Image source={{ uri: other.avatar_url }} style={s.avatarImg} />
@@ -300,7 +304,9 @@ export default function MessagesScreen() {
 const mkS = (C: ColorPalette) => StyleSheet.create({
   bg:             { flex: 1, backgroundColor: C.bg },
   center:         { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  searchWrap:     { flexDirection: 'row', alignItems: 'center', margin: 12, backgroundColor: C.bg, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: C.slate100 },
+  pageHeader:     { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 2 },
+  pageTitle:      { fontSize: 26, fontWeight: '800', color: C.navy, letterSpacing: -0.5 },
+  searchWrap:     { flexDirection: 'row', alignItems: 'center', margin: 12, backgroundColor: C.white, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: C.slate200, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 6, elevation: 1 },
   searchInput:    { flex: 1, fontSize: 14, color: C.navy, marginLeft: 8 },
   aiRow:          { flexDirection: 'row', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderColor: C.slate100 },
   aiAvatarWrap:   { position: 'relative', marginRight: 12 },
