@@ -80,7 +80,7 @@ export function MarkdownText({ text, C, isMe = false }: Props) {
 
     // ─── Heading: ### Title  or  **Entire Line Bold** ────────────────────────
     const hashM = line.match(/^#{1,3}\s+(.+)$/)
-    const fullBoldM = !hashM && line.match(/^\*\*([^*]+)\*\*:?$/)
+    const fullBoldM = hashM ? null : line.match(/^\*\*([^*]+)\*\*:?$/)
     if (hashM || fullBoldM) {
       const content = (hashM ?? fullBoldM)![1]
       elements.push(

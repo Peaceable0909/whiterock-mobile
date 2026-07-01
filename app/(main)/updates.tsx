@@ -60,7 +60,7 @@ const getInitials = (name: string) =>
 
 function UpdateVideoPlayer({ uri, styles }: { uri: string; styles: any }) {
   const player = useVideoPlayer(uri)
-  return <VideoView player={player} style={styles.mediaVideo} nativeControls allowsFullscreen />
+  return <VideoView player={player} style={styles.mediaVideo} nativeControls />
 }
 
 export default function UpdatesScreen() {
@@ -239,7 +239,7 @@ export default function UpdatesScreen() {
               <Text style={c.authorTime}>{formatRelativeTime(item.created_at)}</Text>
             </View>
             <View style={[c.catBadge, { backgroundColor: catColor.bg }]}>
-              <Ionicons name={catIconName} size={10} color={catColor.text} />
+              <Ionicons name={catIconName as any} size={10} color={catColor.text} />
               <Text style={[c.catText, { color: catColor.text }]}>
                 {(item.category ?? 'update').replace('_', ' ')}
               </Text>

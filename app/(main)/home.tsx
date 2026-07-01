@@ -92,9 +92,9 @@ export default function HomeScreen() {
         <Skeleton width={44} height={44} radius={14} />
       </View>
       <ScrollView contentContainerStyle={s.content}>
-        <SkeletonCard height={120} marginBottom={14} />
-        <SkeletonCard height={180} marginBottom={14} />
-        <SkeletonCard height={100} />
+        <SkeletonCard style={{ marginBottom: 14 }}><Skeleton height={88} /></SkeletonCard>
+        <SkeletonCard style={{ marginBottom: 14 }}><Skeleton height={148} /></SkeletonCard>
+        <SkeletonCard><Skeleton height={68} /></SkeletonCard>
       </ScrollView>
     </View>
   )
@@ -158,7 +158,7 @@ export default function HomeScreen() {
                 </View>
                 <Text style={s.bigPct}>{Math.round(progress)}%</Text>
               </View>
-              <View style={s.barBg}><View style={[s.barFg, { width: progress + '%' }]} /></View>
+              <View style={s.barBg}><View style={[s.barFg, { width: `${progress}%` as const }]} /></View>
               <Text style={s.nextStep}>Next: <Text style={s.nextStepBold}>{JOURNEY_STAGES[stageIdx + 1] ? STAGE_LABEL[JOURNEY_STAGES[stageIdx + 1]] : 'Final Decision'}</Text></Text>
               <TouchableOpacity style={s.btn} onPress={() => router.push('/(main)/my-profile')}>
                 <Text style={s.btnText}>View Journey Details</Text>

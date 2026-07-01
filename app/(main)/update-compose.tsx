@@ -51,7 +51,7 @@ export default function UpdateComposeScreen() {
         setAudience(roles.includes('counselor') || roles.includes('admin') ? 'all' : 'student')
         setIsPinned(!!data.is_pinned)
       })
-      .finally(() => setLoadingEdit(false))
+      .then(() => setLoadingEdit(false), () => setLoadingEdit(false))
   }, [params.editId, isEdit])
 
   const publish = async () => {

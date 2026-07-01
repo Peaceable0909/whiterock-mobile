@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
+import { showAlert, confirmDialog } from '@/lib/ui'
 
 const ROLES = ['student', 'counselor', 'agent', 'admin']
 const ROLE_COLOR: Record<string, string> = {
@@ -18,11 +19,6 @@ const STAGE_LABEL: Record<string,string> = {
   lead:'Lead', application_submitted:'Applied', offer_received:'Offer Received',
   deposit_paid:'Deposit Paid', cas_requested:'CAS Requested', cas_issued:'CAS Issued',
   visa_submitted:'Visa Submitted', visa_decision:'Visa Decision',
-}
-
-const showAlert = (title: string, msg: string) => {
-  if (Platform.OS === 'web') alert(`${title}: ${msg}`)
-  else Alert.alert(title, msg)
 }
 
 export default function AdminUserDetailScreen() {
@@ -52,25 +48,23 @@ export default function AdminUserDetailScreen() {
     load()
   }, [id])
 
-  const changeRole = (newRole: string) => {
+  const changeRole = async (newRole: string) => {
     if (newRole === user?.role) { setRoleModal(false); return }
     if (id === currentUserId && newRole !== 'admin') {
-      Alert.alert('Not Allowed', 'You cannot demote your own admin account.')
+      showAlert('Not Allowed', 'You cannot demote your own admin account.')
       return
     }
-    const confirmMsg =     Alert.alert('Confirm Role Change', confirmMsg, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Change Role', style: 'destructive',
-        onPress: async () => {
-          setSaving(true)
-          await supabase.from('users').update({ role: newRole }).eq('id', id)
-          setUser((prev: any) => ({ ...prev, role: newRole }))
-          setSaving(false)
-          setRoleModal(false)
-        },
-      },
-    ])
+    const ok = await confirmDialog(
+      'Confirm Role Change',
+      `Change ${user?.name ?? 'this user'} from ${user?.role} to ${newRole}?`,
+      'Change Role', true,
+    )
+    if (!ok) return
+    setSaving(true)
+    await supabase.from('users').update({ role: newRole }).eq('id', id)
+    setUser((prev: any) => ({ ...prev, role: newRole }))
+    setSaving(false)
+    setRoleModal(false)
   }
 
   const toggleDeactivation = () => {

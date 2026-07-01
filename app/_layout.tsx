@@ -75,7 +75,7 @@ export default function RootLayout() {
     }
     if (inAuth && !navigating.current) {
       navigating.current = true
-      supabase.from('users').select('role').eq('id', session.user.id).single()
+      Promise.resolve(supabase.from('users').select('role').eq('id', session.user.id).single())
         .then(({ data }) => {
           const r = data?.role ?? 'student'
           if (r === 'admin') router.replace('/(admin)/dashboard')
@@ -108,7 +108,7 @@ export default function RootLayout() {
 
 const s = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...(StyleSheet.absoluteFill as object),
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
