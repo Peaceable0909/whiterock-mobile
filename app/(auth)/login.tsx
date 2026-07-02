@@ -6,11 +6,17 @@ import {
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as GoogleSignin from '@react-native-google-signin/google-signin'
+import Constants from 'expo-constants'
 import { supabase } from '@/lib/supabase'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 
 const VERSION = '1.0.8'
+
+// Web OAuth client (client_type 3 in google-services.json) — required by
+// GoogleSignin.configure so Google returns an ID token Supabase can verify.
+const GOOGLE_WEB_CLIENT_ID = '149816206182-anl9ku2qei82mbgu1kih5s54nh09k59p.apps.googleusercontent.com'
+const IS_EXPO_GO = Constants.appOwnership === 'expo'
 
 const isErrorWithCode = (error: any): error is { code: string } => {
   return typeof error === 'object' && error !== null && 'code' in error
@@ -41,6 +47,16 @@ export default function LoginScreen() {
   const [resetSending, setResetSending] = useState(false)
 
   const s = mkS(C)
+
+  useEffect(() => {
+    // configure() is mandatory before signIn(); without it every attempt
+    // fails. Skipped on web (web uses Supabase OAuth) and in Expo Go
+    // (native module not present there).
+    if (Platform.OS === 'web' || IS_EXPO_GO) return
+    try {
+      GoogleSignin.GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID })
+    } catch {}
+  }, [])
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -86,6 +102,14 @@ export default function LoginScreen() {
       return
     }
 
+    if (IS_EXPO_GO) {
+      showAlert(
+        'Not available in Expo Go',
+        'Google Sign-In needs the installed app. Download the APK from the releases page, or sign in with email and password here.',
+      )
+      return
+    }
+
     try {
       setGoogleLoading(true)
       await GoogleSignin.GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true })
@@ -99,13 +123,12 @@ export default function LoginScreen() {
       })
       if (error) throw error
 
+      // Accounts are invite-only: never auto-provision a users row here.
+      // First-time Google sign-ins must redeem a counselor/admin invite
+      // code (and accept the policies) on the complete-setup gate.
       if (data.user) {
-        const meta = data.user.user_metadata
-        const name = meta?.full_name ?? meta?.name ?? data.user.email?.split('@')[0] ?? 'User'
-        await supabase.from('users').upsert(
-          { id: data.user.id, email: data.user.email ?? '', name },
-          { onConflict: 'id', ignoreDuplicates: true }
-        )
+        const { data: row } = await supabase.from('users').select('id').eq('id', data.user.id).maybeSingle()
+        if (!row) router.replace('/(auth)/complete-setup')
       }
     } catch (err: any) {
       if (isErrorWithCode(err)) {

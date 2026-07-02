@@ -73,13 +73,22 @@ export default function RootLayout() {
       }
       return
     }
+    // The gate screen manages its own navigation once setup completes.
+    const authChild = (segments as string[])[1]
+    if (authChild === 'complete-setup' || authChild === 'policy') return
     if (inAuth && !navigating.current) {
       navigating.current = true
-      Promise.resolve(supabase.from('users').select('role').eq('id', session.user.id).single())
+      Promise.resolve(supabase.from('users').select('role').eq('id', session.user.id).maybeSingle())
         .then(({ data }) => {
-          const r = data?.role ?? 'student'
-          if (r === 'admin') router.replace('/(admin)/dashboard')
-          else router.replace('/(main)/home')
+          if (!data) {
+            // Authenticated but never provisioned (Google sign-up, or email
+            // confirmed after registration) — must redeem an invite first.
+            router.replace('/(auth)/complete-setup')
+          } else if (data.role === 'admin') {
+            router.replace('/(admin)/dashboard')
+          } else {
+            router.replace('/(main)/home')
+          }
         })
         .catch(() => router.replace('/(main)/home'))
         .finally(() => { setTimeout(() => { navigating.current = false }, 1500) })
