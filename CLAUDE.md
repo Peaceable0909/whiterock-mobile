@@ -48,7 +48,7 @@ Deep-link scheme: `whiterock://`.
 
 Role values: `student`, `agent`, `counselor`, `admin`. Admins land in `/(admin)/`, everyone else in `/(main)/`.
 
-Registration is invite-only via `check_invite` / `redeem_invite` Supabase RPC functions. When email confirmation is required before the invite can be redeemed, the invite code is stored in AsyncStorage under `pending_invite_<email>` and redeemed automatically on first login.
+Registration is invite-only via `check_invite` / `redeem_invite` Supabase RPC functions, and requires accepting the Privacy & Company policies (recorded in `users.privacy_accepted_at`). Any authenticated session without a `public.users` row (Google sign-up, or email confirmed after registration) is routed by `app/_layout.tsx` to `/(auth)/complete-setup`, which requires a counselor/admin invite code + policy acceptance before calling `redeem_invite`. Codes stored in AsyncStorage under `pending_invite_<email>` are prefilled there. Google Sign-In must never upsert into `public.users` directly — that would bypass the invite requirement.
 
 ### Color / theme system
 - `constants/colors.ts` exports `LIGHT`, `DARK`, `C` (= LIGHT, for legacy imports), and `ColorPalette` type.

@@ -350,6 +350,25 @@ export default function MoreScreen() {
         </View>
       </View>
 
+      {/* ── Legal ── */}
+      <Text style={s.sectionLabel}>LEGAL</Text>
+      <View style={s.card}>
+        <TouchableOpacity style={[s.row, s.border]} onPress={() => router.push('/(main)/policy?type=privacy')}>
+          <View style={[s.iconBox, { backgroundColor: C.blue + '18' }]}>
+            <Ionicons name="lock-closed-outline" size={18} color={C.blue} />
+          </View>
+          <Text style={s.rowLabel}>Privacy Policy</Text>
+          <Ionicons name="chevron-forward" size={15} color={C.slate400} />
+        </TouchableOpacity>
+        <TouchableOpacity style={s.row} onPress={() => router.push('/(main)/policy?type=company')}>
+          <View style={[s.iconBox, { backgroundColor: C.slate100 }]}>
+            <Ionicons name="business-outline" size={18} color={C.slate500} />
+          </View>
+          <Text style={s.rowLabel}>Company Policy</Text>
+          <Ionicons name="chevron-forward" size={15} color={C.slate400} />
+        </TouchableOpacity>
+      </View>
+
       {/* ── Wallpaper ── */}
       <Text style={s.sectionLabel}>WALLPAPER</Text>
       <View style={s.card}>

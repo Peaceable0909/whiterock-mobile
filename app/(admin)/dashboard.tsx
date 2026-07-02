@@ -24,6 +24,7 @@ const ACTIONS = [
   { label: 'Broadcast', icon: 'megaphone-outline', route: '/(admin)/broadcast',     color: '#059669' },
   { label: 'Analytics', icon: 'bar-chart-outline', route: '/(admin)/analytics',     color: '#D97706' },
   { label: 'Post',      icon: 'create-outline',    route: '/(main)/update-compose', color: '#BE185D' },
+  { label: 'Policies',  icon: 'shield-checkmark-outline', route: '/(admin)/policies', color: '#475569' },
 ] as const
 
 export default function AdminDashboard() {

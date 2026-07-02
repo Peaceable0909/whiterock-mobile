@@ -33,6 +33,7 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('')
   const [showPw, setShowPw]     = useState(false)
   const [loading, setLoading]   = useState(false)
+  const [accepted, setAccepted] = useState(false)
 
   const verifyCode = async () => {
     if (!code.trim()) { showAlert('Invite Code', 'Enter your invite code first'); return }
@@ -51,6 +52,7 @@ export default function RegisterScreen() {
     if (!codeRole) { showAlert('Invite Code', 'Verify your invite code first'); return }
     if (!name || !email || !password) { showAlert('Error', 'Please fill in all fields'); return }
     if (password.length < 6) { showAlert('Error', 'Password must be at least 6 characters'); return }
+    if (!accepted) { showAlert('Policies', 'Please read and accept the Privacy Policy and Company Policy first.'); return }
     setLoading(true)
 
     const { data, error } = await supabase.auth.signUp({
@@ -60,8 +62,9 @@ export default function RegisterScreen() {
 
     if (data.session) {
       const { error: redeemErr } = await supabase.rpc('redeem_invite', { p_code: code, p_name: name })
+      if (redeemErr) { setLoading(false); showAlert('Setup Failed', redeemErr.message); return }
+      await supabase.from('users').update({ privacy_accepted_at: new Date().toISOString() }).eq('id', data.session.user.id)
       setLoading(false)
-      if (redeemErr) { showAlert('Setup Failed', redeemErr.message); return }
       router.replace('/(main)/home')
     } else {
       await AsyncStorage.setItem(`pending_invite_${email.trim().toLowerCase()}`, code)
@@ -143,10 +146,22 @@ export default function RegisterScreen() {
           </TouchableOpacity>
         </View>
 
+        <TouchableOpacity style={s.acceptRow} onPress={() => setAccepted(a => !a)} activeOpacity={0.8}>
+          <View style={[s.checkbox, accepted && s.checkboxOn]}>
+            {accepted && <Ionicons name="checkmark" size={13} color="#fff" />}
+          </View>
+          <Text style={s.acceptTxt}>
+            I have read and agree to the{' '}
+            <Text style={s.acceptLink} onPress={() => router.push('/(auth)/policy?type=privacy')}>Privacy Policy</Text>
+            {' '}and{' '}
+            <Text style={s.acceptLink} onPress={() => router.push('/(auth)/policy?type=company')}>Company Policy</Text>
+          </Text>
+        </TouchableOpacity>
+
         <TouchableOpacity
-          style={[s.btn, (!codeRole || loading) && { opacity: 0.5 }]}
+          style={[s.btn, (!codeRole || !accepted || loading) && { opacity: 0.5 }]}
           onPress={handleRegister}
-          disabled={loading || !codeRole}
+          disabled={loading || !codeRole || !accepted}
         >
           {loading
             ? <ActivityIndicator color="#fff" />
@@ -186,6 +201,11 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   inputIcon:     { marginLeft: 14, marginRight: 4 },
   input:         { flex: 1, height: 52, paddingHorizontal: 10, fontSize: 14, color: C.navy },
   eyeBtn:        { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  acceptRow:     { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 18 },
+  checkbox:      { width: 20, height: 20, borderRadius: 6, borderWidth: 2, borderColor: C.slate200, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  checkboxOn:    { backgroundColor: C.blue, borderColor: C.blue },
+  acceptTxt:     { flex: 1, fontSize: 12, color: C.slate500, lineHeight: 18 },
+  acceptLink:    { color: C.blue, fontWeight: '700' },
   btn:           { height: 54, backgroundColor: C.blue, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 20, shadowColor: C.blue, shadowOpacity: 0.35, shadowRadius: 10, elevation: 5 },
   btnText:       { color: C.white, fontWeight: '800', fontSize: 16 },
   switchRow:     { marginTop: 16, paddingVertical: 12 },
