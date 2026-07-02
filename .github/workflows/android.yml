@@ -48,10 +48,15 @@ jobs:
       - name: Configure Gradle memory (prevent Metaspace OOM in KSP/lint)
         run: |
           sed -i '/^org\.gradle\.jvmargs=/d' android/gradle.properties
+          # The generated file has no trailing newline — appending without one
+          # glues onto expo.inlineModules.watchedDirectories and breaks the
+          # expo autolinking plugin's JSON.parse of that property.
+          printf '\n' >> android/gradle.properties
           cat >> android/gradle.properties <<'EOF'
           org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8
           kotlin.daemon.jvm.options=-Xmx2g -XX:MaxMetaspaceSize=512m
           EOF
+          tail -4 android/gradle.properties
 
       - name: Configure signing & print SHA-1 for Google Sign-In
         env:
