@@ -647,9 +647,9 @@ export default function ChatScreen() {
     if (item._sep) {
       return (
         <View style={g.dateSep}>
-          <View style={g.dateSepLine} />
-          <Text style={g.dateSepText}>{formatDateSep(item.date)}</Text>
-          <View style={g.dateSepLine} />
+          <View style={g.dateSepChip}>
+            <Text style={g.dateSepText}>{formatDateSep(item.date)}</Text>
+          </View>
         </View>
       )
     }
@@ -1016,12 +1016,15 @@ export default function ChatScreen() {
             <Ionicons name={aiEnabled ? 'hardware-chip' : 'hardware-chip-outline'} size={17} color={aiEnabled ? C.blue : C.slate400} />
           </TouchableOpacity>
         )}
+        <TouchableOpacity onPress={() => setProfileModal(true)} style={g.headerMenuBtn} activeOpacity={0.7}>
+          <Ionicons name="ellipsis-vertical" size={18} color={C.slate500} />
+        </TouchableOpacity>
       </View>
 
       {!aiEnabled && (
         <View style={g.aiPausedBanner}>
           <Ionicons name="pause-circle-outline" size={13} color="#B45309" />
-          <Text style={g.aiPausedText}>AI paused Â· you are talking directly</Text>
+          <Text style={g.aiPausedText}>AI paused · you are talking directly</Text>
         </View>
       )}
 
@@ -1034,7 +1037,7 @@ export default function ChatScreen() {
           data={withSeparators}
           keyExtractor={m => m._id ?? m.id}
           style={{ flex: 1, backgroundColor: resolvedWallpaper ? ('color' in resolvedWallpaper ? resolvedWallpaper.color : 'transparent') : C.bg }}
-          contentContainerStyle={{ padding: 12, paddingBottom: 8 }}
+          contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 14, paddingBottom: 16 }}
           renderItem={renderMessage}
           ListHeaderComponent={hasMore ? (
             <TouchableOpacity onPress={loadOlderMessages} disabled={loadingMore} style={g.loadMoreBtn}>
@@ -1168,21 +1171,21 @@ export default function ChatScreen() {
 }
 
 const mkMS = (C: ColorPalette) => StyleSheet.create({
-  row:           { flexDirection: 'row', marginBottom: 12, alignItems: 'flex-end' },
+  row:           { flexDirection: 'row', marginBottom: 10, alignItems: 'flex-end' },
   rowMe:         { justifyContent: 'flex-end' },
   rowThem:       { justifyContent: 'flex-start' },
-  avatar:        { width: 28, height: 28, borderRadius: 14, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', marginRight: 6, flexShrink: 0 },
-  avatarImg:     { width: 28, height: 28, borderRadius: 14 },
-  avatarText:    { fontSize: 10, fontWeight: '700', color: C.white },
-  bubbleWrap:    { maxWidth: '78%', borderRadius: 20, overflow: 'hidden' },
-  bubbleWrapMe:  { backgroundColor: C.blue, borderBottomRightRadius: 4 },
-  bubbleWrapThem:{ backgroundColor: C.white, borderBottomLeftRadius: 4, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
+  avatar:        { width: 30, height: 30, borderRadius: 15, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', marginRight: 7, flexShrink: 0 },
+  avatarImg:     { width: 30, height: 30, borderRadius: 15 },
+  avatarText:    { fontSize: 11, fontWeight: '700', color: C.white },
+  bubbleWrap:    { maxWidth: '74%', borderRadius: 18, overflow: 'hidden' },
+  bubbleWrapMe:  { backgroundColor: C.blue, borderBottomRightRadius: 6 },
+  bubbleWrapThem:{ backgroundColor: C.white, borderBottomLeftRadius: 6, borderWidth: StyleSheet.hairlineWidth, borderColor: C.slate200, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
   replyBar:      { borderLeftWidth: 3, borderColor: 'rgba(255,255,255,0.5)', backgroundColor: 'rgba(0,0,0,0.1)', paddingHorizontal: 10, paddingVertical: 6, marginBottom: 2 },
   replyBarThem:  { borderColor: C.blue, backgroundColor: C.blue + '10' },
   replyBarMe:    {},
   replyLabel:    { fontSize: 11, color: C.white, fontStyle: 'italic' },
   forwardedLabel:{ fontSize: 11, color: 'rgba(255,255,255,0.65)', fontStyle: 'italic', paddingHorizontal: 14, paddingTop: 10 },
-  text:          { fontSize: 14, color: C.navy, lineHeight: 20, paddingHorizontal: 14, paddingVertical: 10 },
+  text:          { fontSize: 15, color: C.navy, lineHeight: 21, paddingHorizontal: 13, paddingVertical: 9 },
   textMe:        { color: C.white },
   deletedRow:    { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 10 },
   deletedText:   { fontSize: 13, color: C.slate400, fontStyle: 'italic' },
@@ -1191,8 +1194,8 @@ const mkMS = (C: ColorPalette) => StyleSheet.create({
   meta:          { flexDirection: 'row', alignItems: 'center', gap: 4, paddingBottom: 6 },
   metaMe:        { justifyContent: 'flex-end', paddingRight: 10 },
   metaThem:      { paddingLeft: 12 },
-  time:          { fontSize: 10, color: C.slate400 },
-  timeMe:        { color: 'rgba(255,255,255,0.6)' },
+  time:          { fontSize: 10, color: C.slate400, opacity: 0.75 },
+  timeMe:        { color: 'rgba(255,255,255,0.55)' },
   tick:          { marginLeft: 2 },
   fileRow:       { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12 },
   fileIcon:      { width: 36, height: 36, borderRadius: 10, backgroundColor: C.blue + '18', alignItems: 'center', justifyContent: 'center' },
@@ -1207,20 +1210,21 @@ const mkMS = (C: ColorPalette) => StyleSheet.create({
 const mkG = (C: ColorPalette) => StyleSheet.create({
   flex:           { flex: 1, backgroundColor: C.bg },
   center:         { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg },
-  header:         { flexDirection: 'row', alignItems: 'center', backgroundColor: C.white, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderColor: C.slate100 },
-  backBtn:        { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', marginRight: 6 },
-  headerAvatar:   { width: 38, height: 38, borderRadius: 19, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', marginRight: 10, overflow: 'hidden' },
-  headerAvatarImg:{ width: 38, height: 38, borderRadius: 19 },
-  headerAvatarText:{ fontSize: 13, fontWeight: '700', color: C.white },
-  headerName:     { fontSize: 15, fontWeight: '700', color: C.navy },
-  onlineRow:      { flexDirection: 'row', alignItems: 'center', marginTop: 2, gap: 4 },
-  onlineDot:      { width: 6, height: 6, borderRadius: 3, backgroundColor: '#22C55E' },
-  onlineTxt:      { fontSize: 11, color: C.slate500 },
+  header:         { flexDirection: 'row', alignItems: 'center', backgroundColor: C.white, paddingBottom: 10, paddingHorizontal: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: C.slate200, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2, zIndex: 2 },
+  backBtn:        { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', marginRight: 2 },
+  headerAvatar:   { width: 46, height: 46, borderRadius: 23, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', marginRight: 11, overflow: 'hidden' },
+  headerAvatarImg:{ width: 46, height: 46, borderRadius: 23 },
+  headerAvatarText:{ fontSize: 16, fontWeight: '700', color: C.white },
+  headerName:     { fontSize: 16.5, fontWeight: '700', color: C.navy, letterSpacing: -0.2 },
+  headerMenuBtn:  { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  onlineRow:      { flexDirection: 'row', alignItems: 'center', marginTop: 2.5, gap: 5 },
+  onlineDot:      { width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#22C55E' },
+  onlineTxt:      { fontSize: 12, color: C.slate500 },
   loadMoreBtn:    { alignSelf: 'center', marginVertical: 12, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: C.white, borderRadius: 20, borderWidth: 1, borderColor: C.slate200 },
   loadMoreTxt:    { fontSize: 12, color: C.blue, fontWeight: '600' },
-  dateSep:        { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 16, paddingHorizontal: 8 },
-  dateSepLine:    { flex: 1, height: 1, backgroundColor: C.slate200 },
-  dateSepText:    { fontSize: 11, fontWeight: '700', color: C.slate400 },
+  dateSep:        { alignItems: 'center', marginVertical: 18 },
+  dateSepChip:    { backgroundColor: C.white, paddingHorizontal: 13, paddingVertical: 5, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, borderColor: C.slate200, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
+  dateSepText:    { fontSize: 11, fontWeight: '600', color: C.slate500 },
   typingBar:      { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 8 },
   typingBubble:   { backgroundColor: C.white, borderRadius: 16, borderBottomLeftRadius: 4, paddingHorizontal: 12, paddingVertical: 8, elevation: 1 },
   typingDots:     { flexDirection: 'row', gap: 3 },
@@ -1233,15 +1237,15 @@ const mkG = (C: ColorPalette) => StyleSheet.create({
   editBar:        { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.blue + '12', paddingHorizontal: 14, paddingVertical: 8, borderTopWidth: 1, borderColor: C.blue + '30' },
   editInput:      { flex: 1, fontSize: 14, color: C.navy, paddingVertical: 4, maxHeight: 80 },
   editSaveBtn:    { padding: 2 },
-  bar:            { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 10, paddingTop: 8, backgroundColor: C.white, gap: 8, borderTopWidth: StyleSheet.hairlineWidth, borderColor: C.slate200 },
-  pill:           { flex: 1, flexDirection: 'row', alignItems: 'flex-end', backgroundColor: C.bg, borderRadius: 24, paddingHorizontal: 4, minHeight: 44, borderWidth: 1, borderColor: C.slate100 },
-  pillIcon:       { width: 38, height: 44, alignItems: 'center', justifyContent: 'center' },
-  input:          { flex: 1, fontSize: 15, color: C.navy, maxHeight: 110, paddingVertical: Platform.OS === 'ios' ? 12 : 9, paddingHorizontal: 4 },
+  bar:            { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 10, paddingTop: 7, backgroundColor: C.white, gap: 8, borderTopWidth: StyleSheet.hairlineWidth, borderColor: C.slate200 },
+  pill:           { flex: 1, flexDirection: 'row', alignItems: 'flex-end', backgroundColor: C.bg, borderRadius: 21, paddingHorizontal: 3, minHeight: 42, borderWidth: 1, borderColor: C.slate200 },
+  pillIcon:       { width: 36, height: 42, alignItems: 'center', justifyContent: 'center' },
+  input:          { flex: 1, fontSize: 15, color: C.navy, maxHeight: 108, paddingVertical: Platform.OS === 'ios' ? 11 : 8, paddingHorizontal: 4, lineHeight: 20 },
   recordingWave:  { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12 },
   recDot:         { width: 8, height: 8, borderRadius: 4, backgroundColor: C.red500 },
   recDurationText:{ fontSize: 16, fontWeight: '700', color: C.navy },
   recHint:        { fontSize: 11, color: C.slate400 },
-  sendBtn:        { width: 44, height: 44, borderRadius: 22, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', shadowColor: C.blue, shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 4 },
+  sendBtn:        { width: 42, height: 42, borderRadius: 21, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', shadowColor: C.blue, shadowOpacity: 0.25, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 3 },
   sendBtnOff:     { opacity: 0.5 },
   headerInfo:     { flex: 1, flexDirection: 'row', alignItems: 'center' },
   headerAiBtn:    { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: C.blue + '15' },
