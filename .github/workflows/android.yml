@@ -87,7 +87,7 @@ jobs:
         working-directory: android
         # lintVital* is skipped in CI — Android lint analysis is the main
         # Metaspace consumer on 7 GB runners; lint still runs locally.
-        run: ./gradlew assembleRelease --no-daemon -x lintVitalRelease -x lintVitalAnalyzeRelease
+        run: ./gradlew assembleRelease --no-daemon --stacktrace -x lintVitalRelease -x lintVitalAnalyzeRelease
 
       - name: Rename APK
         run: cp android/app/build/outputs/apk/release/app-release.apk whiterock-connect.apk
