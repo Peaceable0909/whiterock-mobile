@@ -10,6 +10,7 @@ import { getAiAvatarUrl } from '@/lib/aiConfig'
 import { useColors, useTheme } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 import { FadeInUp } from '@/components/Anim'
+import { refreshStudentMemory } from '@/lib/aiPipeline'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { MarkdownText } from '@/components/MarkdownText'
 
@@ -42,8 +43,11 @@ export default function AIScreen() {
   const [myRole, setMyRole]     = useState<string>('student')
   const [memory, setMemory]     = useState<{ summary?: string; facts?: any } | null>(null)
   const [profile, setProfile]   = useState<any>(null)
+  const [docFacts, setDocFacts] = useState<any[]>([])
+  const [convSums, setConvSums] = useState<any[]>([])
   const [aiAvatar, setAiAvatar] = useState<string | null>(null)
   const listRef = useRef<FlatList>(null)
+  const exchangesSinceMemoryUpdate = useRef(0)
 
   // Load persistent history + student memory
   const init = useCallback(async () => {
@@ -51,7 +55,7 @@ export default function AIScreen() {
     if (!user) { setInitializing(false); return }
     setMyId(user.id)
 
-    const [{ data: dbUser }, { data: history }, { data: mem }, { data: prof }] = await Promise.all([
+    const [{ data: dbUser }, { data: history }, { data: mem }, { data: prof }, { data: facts }, { data: sums }] = await Promise.all([
       supabase.from('users').select('role').eq('id', user.id).single(),
       supabase.from('ai_chat_messages')
         .select('id, role, content, created_at')
@@ -66,12 +70,24 @@ export default function AIScreen() {
         .select('stage, school, program_of_interest, intake, nationality')
         .eq('user_id', user.id)
         .maybeSingle(),
+      supabase.from('document_facts')
+        .select('category, summary, extracted_fields, extracted_at')
+        .eq('student_id', user.id)
+        .order('extracted_at', { ascending: false })
+        .limit(12),
+      supabase.from('conversation_summaries')
+        .select('summary, key_points, pending_actions, updated_at')
+        .eq('student_id', user.id)
+        .order('updated_at', { ascending: false })
+        .limit(3),
     ])
 
     setMyRole(dbUser?.role ?? 'student')
     setMsgs((history ?? []) as Msg[])
     setMemory(mem)
     setProfile(prof)
+    setDocFacts(facts ?? [])
+    setConvSums(sums ?? [])
     getAiAvatarUrl().then(url => { if (url) setAiAvatar(url) })
     setInitializing(false)
     setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 100)
@@ -88,7 +104,34 @@ export default function AIScreen() {
     if (memory?.facts && Object.keys(memory.facts).length > 0) {
       parts.push(`Student facts: ${JSON.stringify(memory.facts)}`)
     }
-    return parts.join(' ')
+    if (docFacts.length > 0) {
+      const docs = docFacts.map(f =>
+        `- [${f.category}] ${f.summary ?? ''} ${f.extracted_fields ? JSON.stringify(f.extracted_fields).slice(0, 400) : ''}`
+      ).join('\n')
+      parts.push(`Documents on file (verified sources — trust these over conversation claims):\n${docs}`)
+    }
+    if (convSums.length > 0) {
+      const sums = convSums.map(s =>
+        `- ${s.summary ?? ''}${s.pending_actions?.length ? ` | pending: ${JSON.stringify(s.pending_actions)}` : ''}`
+      ).join('\n')
+      parts.push(`Counselor conversation history:\n${sums}`)
+    }
+    // Keep the context inside a sane prompt budget.
+    return parts.join('\n').slice(0, 6000)
+  }
+
+  // Distill the conversation into long-term memory every few exchanges;
+  // fire-and-forget so the chat never waits on it.
+  const maybeUpdateMemory = () => {
+    exchangesSinceMemoryUpdate.current += 1
+    if (exchangesSinceMemoryUpdate.current < 3) return
+    exchangesSinceMemoryUpdate.current = 0
+    refreshStudentMemory()
+      .then(() =>
+        supabase.from('ai_student_memory').select('summary, facts').eq('student_id', myId).maybeSingle()
+      )
+      .then(res => { if (res?.data) setMemory(res.data) })
+      .catch(() => {})
   }
 
   const send = async (text: string) => {
@@ -276,6 +319,8 @@ WhiteRock information always overrides training data. Never present training dat
         user_id: myId, role: 'assistant', content: assistantContent,
       }).select('id').single()
       if (savedAssist) assistantMsg.id = savedAssist.id
+
+      maybeUpdateMemory()
 
     } catch {
       const errMsg: Msg = { role: 'assistant', content: 'I am temporarily unavailable. Please try again.' }

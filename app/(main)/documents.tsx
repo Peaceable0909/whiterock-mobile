@@ -9,14 +9,13 @@ import { Ionicons } from '@expo/vector-icons'
 import { AppHeader } from '@/components/AppHeader'
 import { ImageModal } from '@/components/ImageModal'
 import { supabase, SUPABASE_URL, SUPABASE_ANON } from '@/lib/supabase'
+import { extractDocument, refreshStudentMemory } from '@/lib/aiPipeline'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Skeleton, SkeletonCard } from '@/components/Skeleton'
 
 const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif', 'avif'])
-
-const API_BASE     = 'https://whiterock-connect.vercel.app'
 
 const DOC_CATEGORIES = [
   { key: 'all',          label: 'All',            icon: 'folder-outline'         },
@@ -98,14 +97,12 @@ export default function DocumentsScreen() {
 
   useEffect(() => { load() }, [load])
 
-  const analyzeDocument = async (docId: string, url: string, category: string) => {
+  const analyzeDocument = async (docId: string) => {
     setAnalyzing(docId)
     try {
-      await fetch(`${API_BASE}/api/analyze-doc-image`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ documentId: docId, studentId: myId, category, imageUrl: url }),
-      })
+      // Edge function downloads the file itself, writes document_facts +
+      // ai_analysis, then folds the new facts into the student's AI memory.
+      await extractDocument(docId)
       await load()
     } catch { /* best-effort — analysis is non-critical */ }
     setAnalyzing(null)
@@ -163,10 +160,8 @@ export default function DocumentsScreen() {
       }).select('id').single()
       if (dbErr) throw dbErr
       await load()
-      if (doc?.id && isImage) {
-        // Generate a 24-hour signed URL for the AI analysis endpoint
-        const { data: sig } = await supabase.storage.from('documents').createSignedUrl(path, 86400)
-        if (sig?.signedUrl) analyzeDocument(doc.id, sig.signedUrl, category)
+      if (doc?.id && (isImage || fileType === 'pdf')) {
+        analyzeDocument(doc.id)
       }
     } catch (e: any) {
       Alert.alert('Upload failed', e.message)
@@ -197,6 +192,9 @@ export default function DocumentsScreen() {
               return
             }
             setDocs(prev => prev.filter(d => d.id !== doc.id))
+            // document_facts cascade-deleted with the row; rebuild memory so
+            // facts that came only from this document are forgotten too.
+            refreshStudentMemory().catch(() => {})
           },
         },
       ]
