@@ -5,6 +5,7 @@ import {
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
 import Constants from 'expo-constants'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { supabase } from '@/lib/supabase'
@@ -19,6 +20,13 @@ const showAlert = (title: string, msg: string) => {
   } else {
     Alert.alert(title, msg)
   }
+}
+
+const lighten = (hex: string, amt: number) => {
+  const n = parseInt(hex.replace('#', ''), 16)
+  const mix = (c: number) => Math.min(255, Math.round(c + (255 - c) * amt))
+  const r = mix((n >> 16) & 255), g = mix((n >> 8) & 255), b = mix(n & 255)
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`
 }
 
 export default function RegisterScreen() {
@@ -159,13 +167,22 @@ export default function RegisterScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[s.btn, (!codeRole || !accepted || loading) && { opacity: 0.5 }]}
           onPress={handleRegister}
           disabled={loading || !codeRole || !accepted}
+          activeOpacity={0.85}
         >
-          {loading
-            ? <ActivityIndicator color="#fff" />
-            : <Text style={s.btnText}>Create Account</Text>}
+          <LinearGradient
+            colors={[C.blue, lighten(C.blue, 0.35)]}
+            start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
+            style={[s.btn, (!codeRole || !accepted || loading) && { opacity: 0.5 }]}
+          >
+            {loading
+              ? <ActivityIndicator color="#fff" />
+              : <>
+                  <Text style={s.btnText}>Create Account</Text>
+                  <Ionicons name="arrow-forward" size={18} color="#fff" />
+                </>}
+          </LinearGradient>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => router.back()} style={s.switchRow}>
@@ -187,17 +204,17 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   brandName:     { fontSize: 13, fontWeight: '700', color: C.blue, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 },
   title:         { fontSize: 28, fontWeight: '800', color: C.navy },
   subtitle:      { fontSize: 14, color: C.slate500, marginTop: 6, textAlign: 'center' },
-  card:          { width: '100%', maxWidth: 400, backgroundColor: C.white, borderRadius: 24, padding: 24, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  card:          { width: '100%', maxWidth: 420 },
   label:         { fontSize: 10, fontWeight: '800', color: C.slate500, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 },
   codeRow:       { flexDirection: 'row', gap: 8 },
-  codeInputWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, height: 52, backgroundColor: C.bg, borderRadius: 14, paddingHorizontal: 14, borderWidth: 1, borderColor: C.slate200 },
+  codeInputWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, height: 54, backgroundColor: C.bg, borderRadius: 18, paddingHorizontal: 14, borderWidth: 1, borderColor: C.slate200 },
   codeInput:     { flex: 1, fontSize: 14, color: C.navy, letterSpacing: 2, fontWeight: '700' },
-  verifyBtn:     { height: 52, paddingHorizontal: 18, borderRadius: 14, backgroundColor: C.navy, alignItems: 'center', justifyContent: 'center' },
+  verifyBtn:     { height: 52, paddingHorizontal: 18, borderRadius: 18, backgroundColor: C.navy, alignItems: 'center', justifyContent: 'center' },
   verifyBtnOk:   { backgroundColor: C.green400 + '18', borderWidth: 1.5, borderColor: C.green400 + '40' },
   verifyText:    { color: C.white, fontWeight: '700', fontSize: 13 },
   codeOk:        { fontSize: 12, color: C.green400, fontWeight: '700', marginTop: 8 },
   codeHint:      { fontSize: 11, color: C.slate400, marginTop: 8 },
-  inputWrap:     { flexDirection: 'row', alignItems: 'center', height: 52, backgroundColor: C.bg, borderRadius: 14, borderWidth: 1, borderColor: C.slate200, marginBottom: 4 },
+  inputWrap:     { flexDirection: 'row', alignItems: 'center', height: 54, backgroundColor: C.bg, borderRadius: 18, borderWidth: 1, borderColor: C.slate200, marginBottom: 4 },
   inputIcon:     { marginLeft: 14, marginRight: 4 },
   input:         { flex: 1, height: 52, paddingHorizontal: 10, fontSize: 14, color: C.navy },
   eyeBtn:        { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
@@ -206,7 +223,7 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   checkboxOn:    { backgroundColor: C.blue, borderColor: C.blue },
   acceptTxt:     { flex: 1, fontSize: 12, color: C.slate500, lineHeight: 18 },
   acceptLink:    { color: C.blue, fontWeight: '700' },
-  btn:           { height: 54, backgroundColor: C.blue, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 20, shadowColor: C.blue, shadowOpacity: 0.35, shadowRadius: 10, elevation: 5 },
+  btn:           { height: 56, borderRadius: 19, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 20, shadowColor: C.blue, shadowOpacity: 0.35, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 6 },
   btnText:       { color: C.white, fontWeight: '800', fontSize: 16 },
   switchRow:     { marginTop: 16, paddingVertical: 12 },
   loginLink:     { fontSize: 14, color: C.slate500, textAlign: 'center' },
