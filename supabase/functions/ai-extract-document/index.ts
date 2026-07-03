@@ -77,7 +77,7 @@ Return JSON exactly as: {"summary": "<3-4 sentences an advisor would want>", "fi
       category: doc.category,
       extracted_fields: { ...(parsed.fields ?? {}), ...(parsed.issues?.length ? { issues: parsed.issues } : {}) },
       summary: parsed.summary ?? '',
-      model_used: 'gemini-2.0-flash',
+      model_used: 'gemini-2.5-flash',
       extracted_at: new Date().toISOString(),
     }, { onConflict: 'document_id' })
     await db.from('documents').update({ ai_analysis: parsed.summary ?? '' }).eq('id', doc.id)
