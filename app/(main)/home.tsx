@@ -10,6 +10,10 @@ import { Skeleton, SkeletonCard } from '@/components/Skeleton'
 import { FadeInUp, ScalePress } from '@/components/Anim'
 
 const JOURNEY_STAGES = ['lead','application_submitted','offer_received','deposit_paid','cas_requested','cas_issued','visa_submitted','visa_decision']
+const CAT_COLORS: Record<string, string> = {
+  visa: '#16A34A', scholarship: '#9333EA', announcement: '#1B4FD8',
+  new_school: '#0891B2', promotion: '#EA580C', event: '#DB2777', training: '#D97706',
+}
 const STAGE_LABEL: Record<string,string> = { lead:'New Lead', application_submitted:'Applied', offer_received:'Offer', deposit_paid:'Deposit', cas_requested:'CAS Pending', cas_issued:'CAS Issued', visa_submitted:'Visa Submitted', visa_decision:'Visa Decision' }
 
 export default function HomeScreen() {
@@ -224,15 +228,27 @@ export default function HomeScreen() {
           <Text style={s.sectionLabel}>LATEST UPDATES</Text>
           <View style={s.card}>
             {recentUpdates.length > 0 ? (
-              recentUpdates.map((u, i) => (
-                <TouchableOpacity key={u.id} activeOpacity={0.7} style={[s.updateRow, i < recentUpdates.length - 1 && { marginBottom: 16 }]} onPress={() => router.push('/(main)/updates')}>
-                  <View style={[s.updateBar, { backgroundColor: u.category === 'visa' ? C.green400 : C.blue }]} />
-                  <View>
-                    <Text style={s.updateTitle} numberOfLines={1}>{u.title}</Text>
-                    <Text style={s.updateSub}>{new Date(u.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} · {u.category}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))
+              recentUpdates.map((u, i) => {
+                const catColor = CAT_COLORS[u.category] ?? C.blue
+                const last = i === recentUpdates.length - 1
+                return (
+                  <TouchableOpacity key={u.id} activeOpacity={0.7} style={s.tlRow} onPress={() => router.push('/(main)/updates')}>
+                    <View style={s.tlIndicatorCol}>
+                      <View style={[s.tlDot, { backgroundColor: catColor, shadowColor: catColor }]} />
+                      {!last && <View style={s.tlLine} />}
+                    </View>
+                    <View style={[s.tlBody, !last && { paddingBottom: 18 }]}>
+                      <Text style={s.updateTitle} numberOfLines={1}>{u.title}</Text>
+                      <View style={s.tlMeta}>
+                        <Text style={s.tlDate}>{new Date(u.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</Text>
+                        <View style={[s.tlCat, { backgroundColor: catColor + '18' }]}>
+                          <Text style={[s.tlCatText, { color: catColor }]}>{(u.category ?? 'update').replace('_', ' ')}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                )
+              })
             ) : (
               <Text style={s.updateSub}>No recent updates</Text>
             )}
@@ -366,17 +382,19 @@ const mkSS = (C: ColorPalette) => StyleSheet.create({
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
   bg:               { flex: 1, backgroundColor: C.bg },
-  header:           { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 16, backgroundColor: C.white, borderBottomWidth: 1, borderColor: C.slate100 },
+  // The greeting sits directly on the canvas — no white header container,
+  // so the page reads as one continuous surface with floating cards.
+  header:           { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingBottom: 20 },
   headerActions:    { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  content:          { padding: 20, paddingBottom: 40 },
-  overline:         { fontSize: 10, fontWeight: '800', color: C.blue, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 2 },
-  heading:          { fontSize: 22, fontWeight: '800', color: C.navy },
-  bellBtn:          { width: 40, height: 40, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  content:          { paddingHorizontal: 24, paddingBottom: 40 },
+  overline:         { fontSize: 11, fontWeight: '800', color: C.blue, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4 },
+  heading:          { fontSize: 27, fontWeight: '800', color: C.navy, letterSpacing: -0.6 },
+  bellBtn:          { width: 42, height: 42, borderRadius: 21, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
   bellBadge:        { position: 'absolute', top: 8, right: 8, minWidth: 14, height: 14, borderRadius: 7, backgroundColor: C.red500, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.white },
   bellBadgeText:    { fontSize: 8, fontWeight: '900', color: C.white },
-  avatarBtn:        { width: 40, height: 40, borderRadius: 20, overflow: 'hidden', borderWidth: 1.5, borderColor: C.slate100 },
-  headerAvatar:     { width: 40, height: 40 },
-  headerAvatarFallback: { width: 40, height: 40, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
+  avatarBtn:        { width: 42, height: 42, borderRadius: 21, overflow: 'hidden', borderWidth: 1.5, borderColor: C.slate200 },
+  headerAvatar:     { width: 42, height: 42 },
+  headerAvatarFallback: { width: 42, height: 42, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
   headerAvatarText: { fontSize: 15, fontWeight: '800', color: C.white },
   sectionLabel:     { fontSize: 10, fontWeight: '800', color: C.slate400, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12, marginTop: 4, paddingHorizontal: 4 },
   card:             { backgroundColor: C.white, borderRadius: 24, padding: 20, marginBottom: 24, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
@@ -399,13 +417,20 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   agentAvatarText:  { color: C.white, fontWeight: '800', fontSize: 18 },
   agentName:        { fontSize: 16, fontWeight: '700', color: C.navy },
   agentRole:        { fontSize: 12, color: C.slate500, marginTop: 1 },
-  grid:             { flexDirection: 'row', gap: 14, marginBottom: 24 },
-  gridCard:         { flex: 1, backgroundColor: C.white, borderRadius: 22, padding: 18, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 },
+  grid:             { flexDirection: 'row', gap: 16, marginBottom: 24 },
+  gridCard:         { flex: 1, backgroundColor: C.white, borderRadius: 20, padding: 20, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 },
   gridLabel:        { fontSize: 9, fontWeight: '800', color: C.slate400, letterSpacing: 1, marginBottom: 2, marginTop: 12 },
   gridTitle:        { fontSize: 14, fontWeight: '700', color: C.navy },
-  updateRow:        { flexDirection: 'row', alignItems: 'center' },
-  updateBar:        { width: 4, height: 32, borderRadius: 2, marginRight: 12 },
-  updateTitle:      { fontSize: 14, fontWeight: '700', color: C.navy },
+  tlRow:            { flexDirection: 'row', alignItems: 'stretch' },
+  tlIndicatorCol:   { width: 20, alignItems: 'center' },
+  tlDot:            { width: 10, height: 10, borderRadius: 5, marginTop: 4, shadowOpacity: 0.5, shadowRadius: 4, elevation: 2 },
+  tlLine:           { flex: 1, width: 2, borderRadius: 1, backgroundColor: C.slate100, marginTop: 4 },
+  tlBody:           { flex: 1, marginLeft: 10 },
+  tlMeta:           { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  tlDate:           { fontSize: 11, color: C.slate400, fontWeight: '500' },
+  tlCat:            { paddingHorizontal: 8, paddingVertical: 2.5, borderRadius: 999 },
+  tlCatText:        { fontSize: 9.5, fontWeight: '800', textTransform: 'capitalize', letterSpacing: 0.3 },
+  updateTitle:      { fontSize: 14.5, fontWeight: '700', color: C.navy, letterSpacing: -0.1 },
   updateSub:        { fontSize: 11, color: C.slate400, marginTop: 2 },
   viewAll:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 20, borderTopWidth: 1, borderColor: C.slate100, paddingTop: 16 },
   viewAllText:      { fontSize: 13, fontWeight: '700', color: C.blue, marginRight: 4 },

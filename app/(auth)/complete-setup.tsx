@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 import { showAlert } from '@/lib/ui'
+import { fullSignOut } from '@/lib/auth'
 
 // Gate for accounts that are authenticated but not yet provisioned
 // (Google sign-ups, or email sign-ups confirmed after registration).
@@ -85,7 +86,7 @@ export default function CompleteSetupScreen() {
   }
 
   const cancel = async () => {
-    await supabase.auth.signOut()
+    await fullSignOut()
     router.replace('/(auth)/login')
   }
 

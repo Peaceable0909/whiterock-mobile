@@ -153,7 +153,7 @@ export default function AdminBroadcastScreen() {
 }
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
-  header:         { flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: 56, backgroundColor: C.white, borderBottomWidth: 1, borderColor: C.slate100 },
+  header:         { flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: 56 },
   backBtn:        { marginRight: 12 },
   title:          { fontSize: 18, fontWeight: '800', color: C.navy },
   label:          { fontSize: 11, fontWeight: '700', color: C.slate400, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, marginTop: 16 },

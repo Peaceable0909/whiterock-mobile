@@ -43,18 +43,16 @@ export default function MainLayout() {
   const isStudent = role === 'student'
   const isAdmin   = role === 'admin'
 
+  // The tab bar shares the page canvas — no white slab, no bezel. Selection
+  // is communicated purely by tint, so the nav feels part of the screen.
   const tabBarStyle = {
-    backgroundColor: C.white,
-    borderTopWidth: 1,
-    borderTopColor: C.slate100,
+    backgroundColor: C.bg,
+    borderTopWidth: 0,
     height: 60 + insets.bottom,
     paddingBottom: insets.bottom + 6,
     paddingTop: 8,
-    elevation: 12,
-    shadowColor: '#1B2B4A',
-    shadowOpacity: 0.10,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: -4 },
+    elevation: 0,
+    shadowOpacity: 0,
   }
 
   return (

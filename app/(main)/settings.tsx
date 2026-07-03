@@ -3,9 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView, Alert, Ac
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import AsyncStorage from '@react-native-async-storage/async-storage'
 import { supabase } from '@/lib/supabase'
-import { unregisterForPush } from '@/lib/notifications'
+import { fullSignOut } from '@/lib/auth'
 import { AppHeader } from '@/components/AppHeader'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
@@ -62,9 +61,7 @@ export default function SettingsScreen() {
     const doSignOut = async () => {
       setSigningOut(true)
       try {
-        await AsyncStorage.removeItem('cached_role')
-        await unregisterForPush()
-        await supabase.auth.signOut()
+        await fullSignOut()
       } finally {
         setSigningOut(false)
       }
@@ -85,7 +82,7 @@ export default function SettingsScreen() {
     if (Platform.OS === 'web') {
       if (confirm('This is permanent. All your data will be deleted. Are you sure?')) {
         supabase.functions.invoke('delete-own-account').then(res => {
-          if (!res.error) supabase.auth.signOut()
+          if (!res.error) fullSignOut()
           else showAlert('Error', res.error.message)
         })
       }
@@ -103,7 +100,7 @@ export default function SettingsScreen() {
           onPress: async () => {
             const { data, error } = await supabase.functions.invoke('delete-own-account')
             if (error) showAlert('Error', error.message)
-            else await supabase.auth.signOut()
+            else await fullSignOut()
           }
         }
       ]

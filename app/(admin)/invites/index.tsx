@@ -206,7 +206,7 @@ export default function AdminInvitesScreen() {
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
   center:          { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg },
-  header:          { flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: 56, backgroundColor: C.white, borderBottomWidth: 1, borderColor: C.slate100 },
+  header:          { flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: 56 },
   backBtn:         { marginRight: 12 },
   title:           { flex: 1, fontSize: 18, fontWeight: '800', color: C.navy },
   addBtn:          { width: 36, height: 36, borderRadius: 10, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },

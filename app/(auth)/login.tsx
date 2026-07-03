@@ -125,6 +125,9 @@ export default function LoginScreen() {
     try {
       setGoogleLoading(true)
       await GoogleSignin.GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true })
+      // Drop any lingering native Google session so the account picker always
+      // shows — otherwise Google silently reuses the previous account.
+      await GoogleSignin.GoogleSignin.signOut().catch(() => {})
       const response = await GoogleSignin.GoogleSignin.signIn()
       const idToken = (response as any).data?.idToken ?? (response as any).idToken
       if (!idToken) throw new Error('No ID token returned from Google')
