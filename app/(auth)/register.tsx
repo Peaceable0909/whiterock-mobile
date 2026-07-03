@@ -22,6 +22,10 @@ const showAlert = (title: string, msg: string) => {
   }
 }
 
+// Guard against obviously invalid addresses before Supabase sends a
+// confirmation email — bounces threaten the project's sending privileges.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+
 const lighten = (hex: string, amt: number) => {
   const n = parseInt(hex.replace('#', ''), 16)
   const mix = (c: number) => Math.min(255, Math.round(c + (255 - c) * amt))
@@ -59,6 +63,7 @@ export default function RegisterScreen() {
   const handleRegister = async () => {
     if (!codeRole) { showAlert('Invite Code', 'Verify your invite code first'); return }
     if (!name || !email || !password) { showAlert('Error', 'Please fill in all fields'); return }
+    if (!EMAIL_RE.test(email.trim())) { showAlert('Invalid Email', 'Please double-check your email address — a confirmation link will be sent to it.'); return }
     if (password.length < 6) { showAlert('Error', 'Password must be at least 6 characters'); return }
     if (!accepted) { showAlert('Policies', 'Please read and accept the Privacy Policy and Company Policy first.'); return }
     setLoading(true)

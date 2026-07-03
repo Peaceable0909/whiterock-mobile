@@ -31,6 +31,10 @@ const showAlert = (title: string, msg: string) => {
   }
 }
 
+// Guard against invalid addresses before triggering a reset email — bounced
+// emails threaten the project's sending privileges.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+
 // Lighten an #RRGGBB color toward white — used for the CTA gradient's end stop.
 const lighten = (hex: string, amt: number) => {
   const n = parseInt(hex.replace('#', ''), 16)
@@ -80,6 +84,7 @@ export default function LoginScreen() {
 
   const handleForgotPassword = async () => {
     if (!resetEmail.trim()) return
+    if (!EMAIL_RE.test(resetEmail.trim())) { showAlert('Invalid Email', 'Please double-check the email address.'); return }
     setResetSending(true)
     const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
       redirectTo: 'whiterock://reset-password',
