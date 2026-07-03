@@ -507,7 +507,7 @@ WhiteRock information always overrides training data. Never present training dat
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
   bg:             { flex: 1, backgroundColor: C.bg },
-  header:         { flexDirection: 'row', alignItems: 'center', backgroundColor: C.white, paddingTop: 8, paddingBottom: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderColor: C.slate100, gap: 12 },
+  header:         { flexDirection: 'row', alignItems: 'center', paddingTop: 8, paddingBottom: 12, paddingHorizontal: 16, gap: 12 },
   botAvatar:      { width: 40, height: 40, borderRadius: 20, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
   botAvatarImg:   { width: 40, height: 40, borderRadius: 20 },
   headerTitle:    { fontSize: 14, fontWeight: '800', color: C.navy },

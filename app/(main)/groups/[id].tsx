@@ -163,7 +163,7 @@ export default function GroupDetailScreen() {
 const mkS = (C: ColorPalette) => StyleSheet.create({
   bg:          { flex: 1, backgroundColor: C.bg },
   center:      { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
-  header:      { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.white, paddingHorizontal: 16, paddingBottom: 14, borderBottomWidth: 1, borderColor: C.slate100 },
+  header:      { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingBottom: 14 },
   backBtn:     { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   headerInfo:  { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   hAvatar:     { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },

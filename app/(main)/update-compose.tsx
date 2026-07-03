@@ -224,7 +224,7 @@ export default function UpdateComposeScreen() {
 }
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
-  header:        { flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: 56, backgroundColor: C.white, borderBottomWidth: 1, borderColor: C.slate100 },
+  header:        { flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: 56 },
   backBtn:       { marginRight: 12 },
   title:         { flex: 1, fontSize: 17, fontWeight: '800', color: C.navy },
   publishBtn:    { backgroundColor: C.blue, paddingHorizontal: 18, paddingVertical: 8, borderRadius: 20 },

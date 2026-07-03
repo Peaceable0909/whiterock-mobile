@@ -128,7 +128,7 @@ export default function ResourcesScreen() {
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
   bg:          { flex: 1, backgroundColor: C.bg },
-  header:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, backgroundColor: C.white, borderBottomWidth: 1, borderColor: C.slate100 },
+  header:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14 },
   back:        { width: 40, height: 40, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
   title:       { fontSize: 17, fontWeight: '800', color: C.navy },
 

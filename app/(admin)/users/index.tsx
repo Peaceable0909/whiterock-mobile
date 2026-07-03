@@ -129,7 +129,7 @@ export default function AdminUsersScreen() {
 const mkS = (C: ColorPalette) => StyleSheet.create({
   bg:          { flex: 1, backgroundColor: C.bg },
   center:      { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg },
-  header:      { flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: 56, backgroundColor: C.white, borderBottomWidth: 1, borderColor: C.slate100 },
+  header:      { flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: 56 },
   backBtn:     { marginRight: 12 },
   title:       { flex: 1, fontSize: 18, fontWeight: '800', color: C.navy },
   headerCount: { fontSize: 12, color: C.slate400 },

@@ -149,7 +149,7 @@ export default function AdminDashboard() {
 const mkS = (C: ColorPalette) => StyleSheet.create({
   bg:          { flex: 1, backgroundColor: C.bg },
   center:      { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg },
-  header:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 16, backgroundColor: C.white, borderBottomWidth: 1, borderColor: C.slate100 },
+  header:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 16 },
   logoContainer: { width: 44, height: 44, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.slate100 },
   logo:        { width: 28, height: 28 },
   overline:    { fontSize: 10, fontWeight: '800', color: C.blue, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 2 },

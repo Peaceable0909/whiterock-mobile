@@ -203,7 +203,7 @@ export default function AdminUserDetailScreen() {
 const mkS = (C: ColorPalette) => StyleSheet.create({
   center:         { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg },
   emptyText:      { fontSize: 14, color: C.slate400, fontWeight: '600' },
-  header:         { flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: 56, backgroundColor: C.white, borderBottomWidth: 1, borderColor: C.slate100 },
+  header:         { flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: 56 },
   backBtn:        { marginRight: 12 },
   headerTitle:    { fontSize: 18, fontWeight: '800', color: C.navy },
   profileCard:    { width: '100%', maxWidth: 500, backgroundColor: C.white, borderRadius: 20, padding: 24, alignItems: 'center', marginBottom: 14, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
