@@ -7,7 +7,7 @@ import {
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { VideoView, useVideoPlayer } from 'expo-video'
-import { useAudioRecorder, AudioModule, RecordingPresets } from 'expo-audio'
+import { useAudioRecorder, AudioModule, RecordingPresets, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio'
 import * as DocumentPicker from 'expo-document-picker'
 import * as WebBrowser from 'expo-web-browser'
 import { ImageModal } from '@/components/ImageModal'
@@ -114,29 +114,63 @@ const formatFileSize = (bytes: number) => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+// Telegram-style voice note: play/pause, deterministic waveform, playback
+// progress fill, duration counter and cyclable playback speed.
 function AudioMsg({ uri, isMe, C }: { uri: string; isMe: boolean; C: ColorPalette }) {
-  const player = useVideoPlayer(uri, p => { p.loop = false })
-  const [playing, setPlaying] = useState(false)
+  const player = useAudioPlayer(uri)
+  const status = useAudioPlayerStatus(player)
+  const [rate, setRate] = useState(1)
+
+  const playing  = !!status.playing
+  const duration = status.duration || 0
+  const position = status.currentTime || 0
+  const progress = duration > 0 ? Math.min(1, position / duration) : 0
+
+  // Pseudo-waveform seeded from the file url so it is stable per message.
+  const bars = useMemo(() => {
+    let h = 0
+    for (let i = 0; i < uri.length; i++) h = (h * 31 + uri.charCodeAt(i)) >>> 0
+    return Array.from({ length: 27 }, () => {
+      h = (h * 1103515245 + 12345) >>> 0
+      return 7 + (h % 15)
+    })
+  }, [uri])
+
   const toggle = () => {
-    if (playing) { player.pause(); setPlaying(false) }
-    else { player.play(); setPlaying(true) }
+    if (playing) { player.pause(); return }
+    if (duration > 0 && position >= duration - 0.05) player.seekTo(0)
+    player.play()
   }
+  const cycleRate = () => {
+    const next = rate === 1 ? 1.5 : rate === 1.5 ? 2 : 1
+    setRate(next)
+    player.setPlaybackRate(next)
+  }
+  const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
+  const fg  = isMe ? C.white : C.blue
+  const dim = isMe ? 'rgba(255,255,255,0.4)' : C.slate200
+
   return (
-    <TouchableOpacity onPress={toggle} activeOpacity={0.8}
-      style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 10 }}>
-      <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: isMe ? 'rgba(255,255,255,0.2)' : C.blue + '22', alignItems: 'center', justifyContent: 'center' }}>
-        <Ionicons name={playing ? 'pause' : 'play'} size={16} color={isMe ? C.white : C.blue} />
-      </View>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 9, minWidth: 220 }}>
+      <TouchableOpacity onPress={toggle} activeOpacity={0.8}
+        style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: isMe ? 'rgba(255,255,255,0.22)' : C.blue, alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name={playing ? 'pause' : 'play'} size={17} color={C.white} style={playing ? undefined : { marginLeft: 2 }} />
+      </TouchableOpacity>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 13, fontWeight: '600', color: isMe ? C.white : C.navy }}>
-          {playing ? 'Playingâ€¦' : 'Voice note'}
-        </Text>
-        <Text style={{ fontSize: 11, marginTop: 2, color: isMe ? 'rgba(255,255,255,0.6)' : C.slate400 }}>
-          {playing ? 'Tap to pause' : 'Tap to play'}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 1.5, height: 22 }}>
+          {bars.map((h, i) => (
+            <View key={i} style={{ flex: 1, height: h, borderRadius: 1.5, backgroundColor: (i + 0.5) / bars.length <= progress ? fg : dim }} />
+          ))}
+        </View>
+        <Text style={{ fontSize: 10.5, marginTop: 3, fontVariant: ['tabular-nums'], color: isMe ? 'rgba(255,255,255,0.65)' : C.slate400 }}>
+          {position > 0 ? `${fmt(position)} / ${fmt(duration)}` : fmt(duration)}
         </Text>
       </View>
-      <Ionicons name="mic-outline" size={14} color={isMe ? 'rgba(255,255,255,0.5)' : C.slate400} />
-    </TouchableOpacity>
+      <TouchableOpacity onPress={cycleRate} activeOpacity={0.7}
+        style={{ paddingHorizontal: 7, paddingVertical: 3, borderRadius: 9, backgroundColor: isMe ? 'rgba(255,255,255,0.18)' : C.slate100 }}>
+        <Text style={{ fontSize: 10, fontWeight: '800', color: isMe ? C.white : C.slate500 }}>{rate}x</Text>
+      </TouchableOpacity>
+    </View>
   )
 }
 
@@ -192,6 +226,12 @@ export default function ChatScreen() {
     sendScale.setValue(0.5)
     Animated.spring(sendScale, { toValue: 1, tension: 300, friction: 10, useNativeDriver: true }).start()
   }, [hasText])
+
+  // Android's multiline TextInput keeps its grown height after the text is
+  // cleared, distorting the composer after the first send. Track the content
+  // height explicitly and reset it whenever the input empties.
+  const [inputHeight, setInputHeight] = useState(0)
+  useEffect(() => { if (input === '') setInputHeight(0) }, [input])
 
   // Message actions
   const [menuVisible, setMenuVisible] = useState(false)
@@ -1030,7 +1070,11 @@ export default function ChatScreen() {
 
       <View style={{ flex: 1 }}>
         {resolvedWallpaper && 'uri' in resolvedWallpaper && (
-          <Image source={{ uri: resolvedWallpaper.uri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          <>
+            {/* Soft blur + dark scrim keep bubbles readable on any wallpaper */}
+            <Image source={{ uri: resolvedWallpaper.uri }} style={StyleSheet.absoluteFill} resizeMode="cover" blurRadius={7} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.16)' }]} />
+          </>
         )}
         <FlatList
           ref={listRef}
@@ -1123,9 +1167,10 @@ export default function ChatScreen() {
               <Ionicons name="happy-outline" size={22} color={C.slate500} />
             </TouchableOpacity>
             <TextInput
-              style={g.input}
+              style={[g.input, inputHeight > 0 && { height: Math.min(108, Math.max(40, inputHeight)) }]}
               value={input}
               onChangeText={setInput}
+              onContentSizeChange={e => setInputHeight(e.nativeEvent.contentSize.height + (Platform.OS === 'ios' ? 22 : 16))}
               placeholder="Message"
               placeholderTextColor={C.slate400}
               multiline

@@ -10,7 +10,7 @@ import Constants from 'expo-constants'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { supabase, SUPABASE_URL, SUPABASE_ANON } from '@/lib/supabase'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { unregisterForPush } from '@/lib/notifications'
+import { fullSignOut } from '@/lib/auth'
 import { useColors, useTheme, WALLPAPER_OPTIONS, ACCENT_COLORS, BUBBLE_COLORS } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 
@@ -174,7 +174,7 @@ export default function MoreScreen() {
           onPress: async () => {
             const { error } = await supabase.functions.invoke('delete-own-account')
             if (error) Alert.alert('Error', error.message)
-            else await supabase.auth.signOut()
+            else await fullSignOut()
           },
         },
       ]
@@ -468,11 +468,7 @@ export default function MoreScreen() {
               { text: 'Cancel', style: 'cancel' },
               {
                 text: 'Sign Out', style: 'destructive',
-                onPress: async () => {
-                  await AsyncStorage.removeItem('cached_role')
-                  await unregisterForPush()
-                  await supabase.auth.signOut()
-                },
+                onPress: () => fullSignOut(),
               },
             ])
           }}

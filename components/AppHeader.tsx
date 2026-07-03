@@ -19,12 +19,10 @@ export function AppHeader({ title, onBack, right, noBorder }: Props) {
   const handleBack = onBack ?? (() => router.back())
   const topPadding = Platform.OS === 'web' ? 16 : insets.top + 10
 
+  // Headers sit directly on the page canvas — the screen reads as one
+  // continuous surface with floating content cards, not stacked bezels.
   return (
-    <View style={[
-      s.base,
-      { paddingTop: topPadding, backgroundColor: C.white, borderColor: C.slate100 },
-      noBorder && { borderBottomWidth: 0 },
-    ]}>
+    <View style={[s.base, { paddingTop: topPadding }]}>
       {onBack !== null && (
         <TouchableOpacity onPress={handleBack} style={s.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Ionicons name="arrow-back" size={22} color={C.navy} />
@@ -37,8 +35,8 @@ export function AppHeader({ title, onBack, right, noBorder }: Props) {
 }
 
 const s = StyleSheet.create({
-  base:    { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 14, borderBottomWidth: 1, gap: 8 },
-  backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  title:   { flex: 1, fontSize: 17, fontWeight: '800' },
+  base:    { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingBottom: 14, gap: 8 },
+  backBtn: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  title:   { flex: 1, fontSize: 19, fontWeight: '800', letterSpacing: -0.3 },
   right:   { flexShrink: 0, minWidth: 36, alignItems: 'flex-end' },
 })
