@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView, ActivityIndicator, Alert, Image, Platform
 } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useRouter, useFocusEffect } from 'expo-router'
+import { policyGate } from '@/lib/policyGate'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import Constants from 'expo-constants'
@@ -46,6 +47,17 @@ export default function RegisterScreen() {
   const [showPw, setShowPw]     = useState(false)
   const [loading, setLoading]   = useState(false)
   const [accepted, setAccepted] = useState(false)
+
+  // The policy reader flow (Privacy → Company, scroll-to-accept) sets the
+  // gate; pick it up when this screen regains focus.
+  useFocusEffect(useCallback(() => {
+    if (policyGate.accepted) { setAccepted(true); policyGate.accepted = false }
+  }, []))
+
+  const startPolicyFlow = () => {
+    if (accepted) { setAccepted(false); return }
+    router.push('/(auth)/policy?type=privacy&accept=1')
+  }
 
   const verifyCode = async () => {
     if (!code.trim()) { showAlert('Invite Code', 'Enter your invite code first'); return }
@@ -159,15 +171,14 @@ export default function RegisterScreen() {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={s.acceptRow} onPress={() => setAccepted(a => !a)} activeOpacity={0.8}>
+        <TouchableOpacity style={s.acceptRow} onPress={startPolicyFlow} activeOpacity={0.8}>
           <View style={[s.checkbox, accepted && s.checkboxOn]}>
             {accepted && <Ionicons name="checkmark" size={13} color="#fff" />}
           </View>
           <Text style={s.acceptTxt}>
-            I have read and agree to the{' '}
-            <Text style={s.acceptLink} onPress={() => router.push('/(auth)/policy?type=privacy')}>Privacy Policy</Text>
-            {' '}and{' '}
-            <Text style={s.acceptLink} onPress={() => router.push('/(auth)/policy?type=company')}>Company Policy</Text>
+            {accepted
+              ? 'Privacy Policy and Company Policy accepted ✓'
+              : <>Tap to read and accept the <Text style={s.acceptLink}>Privacy Policy</Text> and <Text style={s.acceptLink}>Company Policy</Text></>}
           </Text>
         </TouchableOpacity>
 

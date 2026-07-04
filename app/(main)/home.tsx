@@ -85,6 +85,14 @@ export default function HomeScreen() {
     load()
   }
 
+  // Wallpaper colors can be lighter or darker than the active theme expects;
+  // derive the greeting ink from the actual canvas so it never disappears.
+  const wpColor = resolvedWallpaper && 'color' in resolvedWallpaper ? resolvedWallpaper.color : null
+  const wpIsLight = wpColor
+    ? (() => { const n = parseInt(wpColor.slice(1), 16); return ((0.299 * ((n >> 16) & 255)) + (0.587 * ((n >> 8) & 255)) + (0.114 * (n & 255))) / 255 > 0.6 })()
+    : null
+  const headingInk = wpIsLight == null ? C.navy : wpIsLight ? '#1B2B4A' : '#F1F5F9'
+
   const isStudent  = user?.role === 'student'
   const isAgent    = user?.role === 'agent'
   const stageIdx   = profile ? Math.max(JOURNEY_STAGES.indexOf(profile.stage), 0) : 0
@@ -118,7 +126,7 @@ export default function HomeScreen() {
       <View style={[s.header, { paddingTop: insets.top + 16 }]}>
         <View style={{ flex: 1 }}>
           <Text style={s.overline}>{(user?.role ?? 'Student').toUpperCase()}</Text>
-          <Text style={s.heading}>Welcome, {user?.name?.split(' ')[0] ?? 'User'}</Text>
+          <Text style={[s.heading, { color: headingInk }]}>Welcome, {user?.name?.split(' ')[0] ?? 'User'}</Text>
         </View>
         <View style={s.headerActions}>
           {user?.role === 'admin' && (
@@ -299,7 +307,9 @@ function AiBriefing({ userId, firstName, role }: { userId?: string, firstName?: 
     <TouchableOpacity
       activeOpacity={0.88}
       onPress={() => router.push('/(main)/briefing')}
-      style={{ backgroundColor: C.navy, borderRadius: 20, padding: 18, marginBottom: 20, shadowColor: C.navy, shadowOpacity: 0.25, shadowRadius: 10, elevation: 4 }}
+      // Brand-navy card in BOTH themes — C.navy flips to near-white in dark
+      // mode, which turned this into white-on-white.
+      style={{ backgroundColor: '#1B2B4A', borderRadius: 20, padding: 18, marginBottom: 20, shadowColor: '#1B2B4A', shadowOpacity: 0.25, shadowRadius: 10, elevation: 4 }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
         <View style={{ width: 26, height: 26, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' }}>
@@ -313,7 +323,7 @@ function AiBriefing({ userId, firstName, role }: { userId?: string, firstName?: 
           <Ionicons name="chevron-forward" size={12} color="rgba(255,255,255,0.5)" />
         </View>
       </View>
-      <Text style={{ fontSize: 14, color: C.white, lineHeight: 22, fontWeight: '500', marginBottom: stats ? 14 : 0 }}>
+      <Text style={{ fontSize: 14, color: '#FFFFFF', lineHeight: 22, fontWeight: '500', marginBottom: stats ? 14 : 0 }}>
         {greeting}, {firstName}. Tap to view your personalised AI briefing for today.
       </Text>
       {stats && (

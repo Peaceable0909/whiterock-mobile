@@ -7,7 +7,7 @@ import { View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { registerForPush } from '@/lib/notifications'
 import { supabase } from '@/lib/supabase'
-import { useColors } from '@/lib/theme'
+import { useColors, useTheme } from '@/lib/theme'
 
 export default function MainLayout() {
   const [role, setRole] = useState<string | null>(null)
@@ -45,8 +45,12 @@ export default function MainLayout() {
 
   // The tab bar shares the page canvas — no white slab, no bezel. Selection
   // is communicated purely by tint, so the nav feels part of the screen.
+  // When a solid-colour wallpaper is set, the bar adopts it so the canvas
+  // stays continuous instead of showing a themed slab.
+  const { resolvedWallpaper } = useTheme()
+  const canvas = resolvedWallpaper && 'color' in resolvedWallpaper ? resolvedWallpaper.color : C.bg
   const tabBarStyle = {
-    backgroundColor: C.bg,
+    backgroundColor: canvas,
     borderTopWidth: 0,
     height: 60 + insets.bottom,
     paddingBottom: insets.bottom + 6,

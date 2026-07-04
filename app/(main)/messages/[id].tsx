@@ -1033,6 +1033,17 @@ export default function ChatScreen() {
     </Modal>
 
     <KeyboardAvoidingView style={g.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 0}>
+      {/* Wallpaper spans the whole screen — the header and composer sit
+          transparently on top, so the chat has no bezels at all. */}
+      {resolvedWallpaper && 'color' in resolvedWallpaper && (
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: resolvedWallpaper.color }]} />
+      )}
+      {resolvedWallpaper && 'uri' in resolvedWallpaper && (
+        <>
+          <Image source={{ uri: resolvedWallpaper.uri }} style={StyleSheet.absoluteFill} resizeMode="cover" blurRadius={7} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.16)' }]} />
+        </>
+      )}
       <View style={[g.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => router.back()} style={g.backBtn}>
           <Ionicons name="arrow-back" size={22} color={C.navy} />
@@ -1069,23 +1080,16 @@ export default function ChatScreen() {
       )}
 
       <View style={{ flex: 1 }}>
-        {resolvedWallpaper && 'uri' in resolvedWallpaper && (
-          <>
-            {/* Soft blur + dark scrim keep bubbles readable on any wallpaper */}
-            <Image source={{ uri: resolvedWallpaper.uri }} style={StyleSheet.absoluteFill} resizeMode="cover" blurRadius={7} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.16)' }]} />
-          </>
-        )}
         <FlatList
           ref={listRef}
           data={withSeparators}
           keyExtractor={m => m._id ?? m.id}
-          style={{ flex: 1, backgroundColor: resolvedWallpaper ? ('color' in resolvedWallpaper ? resolvedWallpaper.color : 'transparent') : C.bg }}
+          style={{ flex: 1, backgroundColor: 'transparent' }}
           contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 14, paddingBottom: 16 }}
           renderItem={renderMessage}
           ListHeaderComponent={hasMore ? (
             <TouchableOpacity onPress={loadOlderMessages} disabled={loadingMore} style={g.loadMoreBtn}>
-              {loadingMore ? <ActivityIndicator size="small" color={C.blue} /> : <Text style={g.loadMoreTxt}>â†‘ Load older messages</Text>}
+              {loadingMore ? <ActivityIndicator size="small" color={C.blue} /> : <Text style={g.loadMoreTxt}>↑ Load older messages</Text>}
             </TouchableOpacity>
           ) : null}
         />
@@ -1144,7 +1148,7 @@ export default function ChatScreen() {
       )}
 
       {isRecording ? (
-        <View style={[g.bar, { paddingBottom: insets.bottom + 10, backgroundColor: C.white }]}>
+        <View style={[g.bar, { paddingBottom: insets.bottom + 10 }]}>
           <TouchableOpacity onPress={cancelRecording} style={g.pillIcon}>
             <Ionicons name="trash-outline" size={22} color={C.red500} />
           </TouchableOpacity>
@@ -1255,7 +1259,7 @@ const mkMS = (C: ColorPalette) => StyleSheet.create({
 const mkG = (C: ColorPalette) => StyleSheet.create({
   flex:           { flex: 1, backgroundColor: C.bg },
   center:         { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg },
-  header:         { flexDirection: 'row', alignItems: 'center', backgroundColor: C.white, paddingBottom: 10, paddingHorizontal: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: C.slate200, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2, zIndex: 2 },
+  header:         { flexDirection: 'row', alignItems: 'center', paddingBottom: 10, paddingHorizontal: 12, zIndex: 2 },
   backBtn:        { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', marginRight: 2 },
   headerAvatar:   { width: 46, height: 46, borderRadius: 23, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', marginRight: 11, overflow: 'hidden' },
   headerAvatarImg:{ width: 46, height: 46, borderRadius: 23 },
@@ -1282,11 +1286,11 @@ const mkG = (C: ColorPalette) => StyleSheet.create({
   editBar:        { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.blue + '12', paddingHorizontal: 14, paddingVertical: 8, borderTopWidth: 1, borderColor: C.blue + '30' },
   editInput:      { flex: 1, fontSize: 14, color: C.navy, paddingVertical: 4, maxHeight: 80 },
   editSaveBtn:    { padding: 2 },
-  bar:            { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 10, paddingTop: 7, backgroundColor: C.white, gap: 8, borderTopWidth: StyleSheet.hairlineWidth, borderColor: C.slate200 },
-  pill:           { flex: 1, flexDirection: 'row', alignItems: 'flex-end', backgroundColor: C.bg, borderRadius: 21, paddingHorizontal: 3, minHeight: 42, borderWidth: 1, borderColor: C.slate200 },
+  bar:            { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 10, paddingTop: 7, gap: 8 },
+  pill:           { flex: 1, flexDirection: 'row', alignItems: 'flex-end', backgroundColor: C.white, borderRadius: 21, paddingHorizontal: 3, minHeight: 42, borderWidth: 1, borderColor: C.slate200, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 3 },
   pillIcon:       { width: 36, height: 42, alignItems: 'center', justifyContent: 'center' },
   input:          { flex: 1, fontSize: 15, color: C.navy, maxHeight: 108, paddingVertical: Platform.OS === 'ios' ? 11 : 8, paddingHorizontal: 4, lineHeight: 20 },
-  recordingWave:  { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12 },
+  recordingWave:  { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, backgroundColor: C.white, borderRadius: 21, minHeight: 42, borderWidth: 1, borderColor: C.slate200 },
   recDot:         { width: 8, height: 8, borderRadius: 4, backgroundColor: C.red500 },
   recDurationText:{ fontSize: 16, fontWeight: '700', color: C.navy },
   recHint:        { fontSize: 11, color: C.slate400 },
