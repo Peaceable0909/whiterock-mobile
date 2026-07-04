@@ -372,7 +372,7 @@ WhiteRock information always overrides training data. Never present training dat
   }
 
   return (
-    <KeyboardAvoidingView style={s.bg} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
+    <KeyboardAvoidingView style={s.bg} behavior='padding' keyboardVerticalOffset={0}>
       {/* Header */}
       <View style={[s.header, { paddingTop: insets.top + 8 }]}>
         {aiAvatar
