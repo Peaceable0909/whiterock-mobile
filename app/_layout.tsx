@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar'
 import { Animated, Image, StyleSheet, View } from 'react-native'
 import { supabase } from '@/lib/supabase'
 import { ThemeProvider, useTheme } from '@/lib/theme'
+import { AppCanvas } from '@/components/AppCanvas'
 import type { Session } from '@supabase/supabase-js'
 
 // Total intro duration in ms (logo visible → fade-out starts)
@@ -13,11 +14,14 @@ const INTRO_MS = HOLD_MS + FADE_MS   // ~2.2s visible, gone by 2.5s
 
 function ThemedRoot() {
   const { isDark } = useTheme()
+  // The shared canvas (base colour + doodle + optional photo) lives once at
+  // the root; every navigator below renders transparent scenes on top of it.
   return (
-    <>
+    <View style={{ flex: 1 }}>
+      <AppCanvas />
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <Slot />
-    </>
+    </View>
   )
 }
 

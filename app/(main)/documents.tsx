@@ -448,7 +448,7 @@ export default function DocumentsScreen() {
 }
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
-  bg:            { flex: 1, backgroundColor: C.bg },
+  bg:            { flex: 1, backgroundColor: 'transparent' },
   center:        { flex: 1, alignItems: 'center', justifyContent: 'center' },
   statsRow:      { flexDirection: 'row', backgroundColor: C.white, borderRadius: 18, marginBottom: 4, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 },
   statCell:      { flex: 1, alignItems: 'center', paddingVertical: 14 },

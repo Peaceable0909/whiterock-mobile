@@ -11,5 +11,6 @@ export default function AdminLayout() {
       <ActivityIndicator color={C.blue} size="large" />
     </View>
   )
-  return <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }} />
+  // Transparent scenes — the shared AppCanvas at the root shows through.
+  return <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right', contentStyle: { backgroundColor: 'transparent' } }} />
 }

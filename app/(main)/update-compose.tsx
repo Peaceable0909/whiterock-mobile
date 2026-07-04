@@ -94,7 +94,7 @@ export default function UpdateComposeScreen() {
 
   if (loadingEdit) {
     return (
-      <View style={{ flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator color={C.blue} size="large" />
       </View>
     )
@@ -102,7 +102,7 @@ export default function UpdateComposeScreen() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
         <View style={s.header}>
           <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
             <Ionicons name="close" size={22} color={C.navy} />

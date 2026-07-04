@@ -122,7 +122,7 @@ export default function AdminAnalyticsScreen() {
   const maxLoad  = Math.max(1, ...stats.counselorLoad.map(c => c.count))
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <View style={[s.header, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Ionicons name="arrow-back" size={22} color={C.navy} />

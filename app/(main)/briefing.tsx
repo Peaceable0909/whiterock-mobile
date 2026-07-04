@@ -727,7 +727,7 @@ function CounsellorMini({ label, value, danger, C }: {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
-  bg:               { flex: 1, backgroundColor: C.bg },
+  bg:               { flex: 1, backgroundColor: 'transparent' },
   header:           { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
   backBtn:          { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   settingsBtn:      { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },

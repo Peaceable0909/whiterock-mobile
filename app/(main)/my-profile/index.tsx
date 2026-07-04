@@ -41,7 +41,7 @@ export default function MyProfileScreen() {
 }
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
-  bg:             { flex: 1, backgroundColor: C.bg },
+  bg:             { flex: 1, backgroundColor: 'transparent' },
   header:         { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 14 },
   backBtn:        { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle:    { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '800', color: C.navy },

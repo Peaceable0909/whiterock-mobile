@@ -147,7 +147,7 @@ export default function AdminDashboard() {
 }
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
-  bg:          { flex: 1, backgroundColor: C.bg },
+  bg:          { flex: 1, backgroundColor: 'transparent' },
   center:      { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg },
   header:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 16 },
   logoContainer: { width: 44, height: 44, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.slate100 },

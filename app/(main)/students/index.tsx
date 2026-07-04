@@ -162,7 +162,7 @@ export default function StudentsScreen() {
 }
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
-  bg:           { flex: 1, backgroundColor: C.bg },
+  bg:           { flex: 1, backgroundColor: 'transparent' },
   center:       { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
   emptyText:    { fontSize: 14, color: C.slate400, fontWeight: '600' },
   searchWrap:   { flexDirection: 'row', alignItems: 'center', margin: 12, backgroundColor: C.white, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: C.slate100 },

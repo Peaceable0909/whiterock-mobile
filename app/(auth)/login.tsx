@@ -300,7 +300,7 @@ export default function LoginScreen() {
 }
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
-  bg:           { flex: 1, backgroundColor: C.bg },
+  bg:           { flex: 1, backgroundColor: 'transparent' },
   glowWrap:     { position: 'absolute', left: -90, bottom: -90 },
   glowRing:     { position: 'absolute', left: 0, bottom: 0, borderWidth: 1, borderColor: C.blue + '26' },
   glowFill:     { position: 'absolute', left: -30, bottom: -30, width: 300, height: 300, borderRadius: 150, backgroundColor: C.blue + '0A' },

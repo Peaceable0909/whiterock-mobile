@@ -182,7 +182,7 @@ export default function SettingsScreen() {
 }
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
-  bg:           { flex: 1, backgroundColor: C.bg },
+  bg:           { flex: 1, backgroundColor: 'transparent' },
   center:       { flex: 1, alignItems: 'center', justifyContent: 'center' },
   sectionLabel: { fontSize: 11, fontWeight: '700', color: C.slate400, marginLeft: 20, marginTop: 24, marginBottom: 8, letterSpacing: 1 },
   card:         { backgroundColor: C.white, borderRadius: 16, marginHorizontal: 16, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
