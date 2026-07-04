@@ -332,6 +332,21 @@ export default function MoreScreen() {
       </View>
 
       {/* â”€â”€ App info â”€â”€ */}
+      {user?.role === 'admin' && (
+        <>
+          <Text style={s.sectionLabel}>ADMINISTRATION</Text>
+          <View style={s.card}>
+            <TouchableOpacity style={s.row} onPress={() => router.push('/(admin)/dashboard')}>
+              <View style={[s.iconBox, { backgroundColor: C.blue + '18' }]}>
+                <Ionicons name="shield-checkmark-outline" size={18} color={C.blue} />
+              </View>
+              <Text style={s.rowLabel}>Admin Console</Text>
+              <Ionicons name="chevron-forward" size={15} color={C.slate400} />
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
+
       <Text style={s.sectionLabel}>APP</Text>
       <View style={s.card}>
         <View style={[s.row, s.border]}>

@@ -121,8 +121,10 @@ export default function AIScreen() {
   }
 
   // Distill the conversation into long-term memory every few exchanges;
-  // fire-and-forget so the chat never waits on it.
+  // fire-and-forget so the chat never waits on it. Student-only: staff
+  // conversations are general-purpose and have no student memory row.
   const maybeUpdateMemory = () => {
+    if (myRole !== 'student') return
     exchangesSinceMemoryUpdate.current += 1
     if (exchangesSinceMemoryUpdate.current < 3) return
     exchangesSinceMemoryUpdate.current = 0
@@ -152,7 +154,10 @@ export default function AIScreen() {
 
     try {
       const context = buildContext()
-      const systemPrompt = `You are the WhiteRock Connect AI — a friendly student support assistant for international education.
+      const persona = myRole === 'student'
+        ? 'You are the WhiteRock Connect AI — a friendly student support assistant for international education.'
+        : `You are the WhiteRock Connect AI assisting a staff member (${myRole}) of a UK admissions consultancy. Help with UK admissions strategy, visa and CAS rules, financial-evidence requirements, drafting professional messages to students, summarising cases, and planning. Be precise and practical.`
+      const systemPrompt = `${persona}
 ${context ? `\nSTUDENT CONTEXT:\n${context}\nPersonalise every response to this specific student.\n` : ''}
 ==============================================
 MOBILE FORMATTING — FOLLOW THESE RULES EXACTLY
@@ -364,37 +369,6 @@ WhiteRock information always overrides training data. Never present training dat
 
   if (initializing) {
     return <View style={s.bg}><View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator color={C.blue} size="large" /></View></View>
-  }
-
-  if (myRole !== 'student') {
-    return (
-      <View style={[s.bg, { flex: 1 }]}>
-        <View style={[s.header, { paddingTop: insets.top + 8 }]}>
-          <View style={s.botAvatar}><Ionicons name="hardware-chip-outline" size={20} color={C.white} /></View>
-          <Text style={s.headerTitle}>Apply AI</Text>
-        </View>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
-          <View style={{ width: 72, height: 72, borderRadius: 22, backgroundColor: C.blue + '14', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
-            <Ionicons name="people-outline" size={32} color={C.blue} />
-          </View>
-          <Text style={{ fontSize: 20, fontWeight: '800', color: C.navy, textAlign: 'center', marginBottom: 10 }}>
-            This AI is for students
-          </Text>
-          <Text style={{ fontSize: 14, color: C.slate500, textAlign: 'center', lineHeight: 22 }}>
-            As a staff member, use the AI Assist tool inside each student conversation to draft replies.
-          </Text>
-          <View style={{ marginTop: 24, backgroundColor: C.blue + '10', borderRadius: 16, padding: 16, width: '100%' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-              <Ionicons name="sparkles-outline" size={16} color={C.blue} />
-              <Text style={{ fontSize: 13, fontWeight: '700', color: C.blue }}>How to use AI Assist</Text>
-            </View>
-            <Text style={{ fontSize: 13, color: C.slate500, lineHeight: 20 }}>
-              Open any student conversation → tap the AI Assist toggle above the input bar → tap Draft Reply.
-            </Text>
-          </View>
-        </View>
-      </View>
-    )
   }
 
   return (
