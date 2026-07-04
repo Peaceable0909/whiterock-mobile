@@ -121,6 +121,11 @@ export default function HomeScreen() {
           <Text style={s.heading}>Welcome, {user?.name?.split(' ')[0] ?? 'User'}</Text>
         </View>
         <View style={s.headerActions}>
+          {user?.role === 'admin' && (
+            <TouchableOpacity style={s.bellBtn} onPress={() => router.push('/(admin)/dashboard')} accessibilityLabel="Admin console">
+              <Ionicons name="shield-checkmark-outline" size={20} color={C.blue} />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity style={s.bellBtn} onPress={() => { setNotifUnread(0); router.push('/(main)/notifications') }}>
             <Ionicons name="notifications-outline" size={20} color={C.slate500} />
             {notifUnread > 0 && (
