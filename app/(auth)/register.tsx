@@ -212,7 +212,7 @@ export default function RegisterScreen() {
 }
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
-  bg:            { flex: 1, backgroundColor: C.bg },
+  bg:            { flex: 1, backgroundColor: 'transparent' },
   container:     { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24, paddingTop: 60 },
   hero:          { alignItems: 'center', marginBottom: 28 },
   logoContainer: { width: 80, height: 80, borderRadius: 20, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center', marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 4 },

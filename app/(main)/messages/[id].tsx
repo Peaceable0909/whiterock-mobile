@@ -187,7 +187,7 @@ function VideoMsg({ uri }: { uri: string }) {
 }
 
 export default function ChatScreen() {
-  const { C, resolvedWallpaper, bubbleColor } = useTheme()
+  const { C, bubbleColor } = useTheme()
   const bubbleHex = BUBBLE_COLORS.find(b => b.id === bubbleColor)?.color ?? C.blue
   const ms = mkMS(C)
   const g = mkG(C)
@@ -1033,17 +1033,8 @@ export default function ChatScreen() {
     </Modal>
 
     <KeyboardAvoidingView style={g.flex} behavior='padding' keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 0}>
-      {/* Wallpaper spans the whole screen — the header and composer sit
-          transparently on top, so the chat has no bezels at all. */}
-      {resolvedWallpaper && 'color' in resolvedWallpaper && (
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: resolvedWallpaper.color }]} />
-      )}
-      {resolvedWallpaper && 'uri' in resolvedWallpaper && (
-        <>
-          <Image source={{ uri: resolvedWallpaper.uri }} style={StyleSheet.absoluteFill} resizeMode="cover" blurRadius={7} />
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.16)' }]} />
-        </>
-      )}
+      {/* Background comes from the shared AppCanvas at the root — the header
+          and composer are transparent on top, so the chat has no bezels. */}
       <View style={[g.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => router.back()} style={g.backBtn}>
           <Ionicons name="arrow-back" size={22} color={C.navy} />
@@ -1257,7 +1248,7 @@ const mkMS = (C: ColorPalette) => StyleSheet.create({
 })
 
 const mkG = (C: ColorPalette) => StyleSheet.create({
-  flex:           { flex: 1, backgroundColor: C.bg },
+  flex:           { flex: 1, backgroundColor: 'transparent' },
   center:         { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg },
   header:         { flexDirection: 'row', alignItems: 'center', paddingBottom: 10, paddingHorizontal: 12, zIndex: 2 },
   backBtn:        { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', marginRight: 2 },

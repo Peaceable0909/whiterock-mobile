@@ -302,7 +302,7 @@ export default function MessagesScreen() {
 }
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
-  bg:             { flex: 1, backgroundColor: C.bg },
+  bg:             { flex: 1, backgroundColor: 'transparent' },
   center:         { flex: 1, alignItems: 'center', justifyContent: 'center' },
   pageHeader:     { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 2 },
   pageTitle:      { fontSize: 26, fontWeight: '800', color: C.navy, letterSpacing: -0.5 },

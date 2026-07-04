@@ -91,7 +91,7 @@ export default function AdminAssignScreen() {
   // Counselor picker view
   if (selectedStudent) {
     return (
-      <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
         <View style={[s.header, { paddingTop: insets.top + 16 }]}>
           <TouchableOpacity onPress={() => setSelectedStudent(null)} style={s.backBtn}>
             <Ionicons name="arrow-back" size={22} color={C.navy} />
@@ -140,7 +140,7 @@ export default function AdminAssignScreen() {
 
   // Student list view
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Ionicons name="arrow-back" size={22} color={C.navy} />

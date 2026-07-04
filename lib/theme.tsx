@@ -56,6 +56,8 @@ type Ctx = {
   setAccentColor: (c: string) => void
   bubbleColor: string
   setBubbleColor: (c: string) => void
+  doodle: boolean
+  setDoodle: (v: boolean) => void
 }
 
 const ThemeCtx = createContext<Ctx>({
@@ -65,6 +67,7 @@ const ThemeCtx = createContext<Ctx>({
   wallpaperBrightness: 1, setWallpaperBrightness: () => {},
   accentColor: 'blue', setAccentColor: () => {},
   bubbleColor: 'blue', setBubbleColor: () => {},
+  doodle: true, setDoodle: () => {},
 })
 
 function resolveWp(wp: string): ResolvedWallpaper | null {
@@ -80,6 +83,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [wallpaperBrightness, setWallpaperBrightnessState] = useState(1)
   const [accentColor, setAccentColorState]           = useState('blue')
   const [bubbleColor, setBubbleColorState]           = useState('blue')
+  const [doodle, setDoodleState]                     = useState(true)
   const [systemDark, setSystemDark]                  = useState(Appearance.getColorScheme() === 'dark')
   const isDark  = mode === 'dark' || (mode === 'system' && systemDark)
 
@@ -96,12 +100,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       AsyncStorage.getItem('app_wallpaper_brightness'),
       AsyncStorage.getItem('app_accent_color'),
       AsyncStorage.getItem('app_bubble_color'),
-    ]).then(([t, w, wb, ac, bc]) => {
+      AsyncStorage.getItem('app_doodle'),
+    ]).then(([t, w, wb, ac, bc, dd]) => {
       if (t === 'light' || t === 'dark' || t === 'system') setModeState(t)
       if (w !== null) setWallpaperState(w)
       if (wb !== null) { const n = parseFloat(wb); if (!isNaN(n)) setWallpaperBrightnessState(n) }
       if (ac !== null) setAccentColorState(ac)
       if (bc !== null) setBubbleColorState(bc)
+      if (dd !== null) setDoodleState(dd !== 'off')
     })
 
     // Sync from Supabase for cross-device persistence
@@ -128,6 +134,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       if (p.mobile_bubble_color !== undefined) {
         setBubbleColorState(p.mobile_bubble_color)
         AsyncStorage.setItem('app_bubble_color', p.mobile_bubble_color)
+      }
+      if (p.mobile_doodle !== undefined) {
+        setDoodleState(p.mobile_doodle !== 'off')
+        AsyncStorage.setItem('app_doodle', p.mobile_doodle)
       }
     }).catch(() => {})
   }, [])
@@ -181,6 +191,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     persistPrefs('mobile_bubble_color', bc)
   }
 
+  const setDoodle = (v: boolean) => {
+    setDoodleState(v)
+    AsyncStorage.setItem('app_doodle', v ? 'on' : 'off')
+    persistPrefs('mobile_doodle', v ? 'on' : 'off')
+  }
+
   const accentHex = ACCENT_COLORS.find(a => a.id === accentColor)?.color
   const baseC = isDark ? DARK : LIGHT
   const C = accentHex ? { ...baseC, blue: accentHex } : baseC
@@ -193,6 +209,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       wallpaperBrightness, setWallpaperBrightness,
       accentColor, setAccentColor,
       bubbleColor, setBubbleColor,
+      doodle, setDoodle,
     }}>
       {children}
     </ThemeCtx.Provider>

@@ -273,7 +273,7 @@ export default function NotificationsScreen() {
 }
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
-  bg:            { flex: 1, backgroundColor: C.bg },
+  bg:            { flex: 1, backgroundColor: 'transparent' },
   skeletonHeader:{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
   header:        { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 14, marginBottom: 2 },
   back:          { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', marginLeft: -6 },

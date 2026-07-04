@@ -43,14 +43,10 @@ export default function MainLayout() {
   const isStudent = role === 'student'
   const isAdmin   = role === 'admin'
 
-  // The tab bar shares the page canvas — no white slab, no bezel. Selection
-  // is communicated purely by tint, so the nav feels part of the screen.
-  // When a solid-colour wallpaper is set, the bar adopts it so the canvas
-  // stays continuous instead of showing a themed slab.
-  const { resolvedWallpaper } = useTheme()
-  const canvas = resolvedWallpaper && 'color' in resolvedWallpaper ? resolvedWallpaper.color : C.bg
+  // Fully transparent bar and scenes — the shared AppCanvas at the root is
+  // the only background, so the nav is part of the same continuous surface.
   const tabBarStyle = {
-    backgroundColor: canvas,
+    backgroundColor: 'transparent' as const,
     borderTopWidth: 0,
     height: 60 + insets.bottom,
     paddingBottom: insets.bottom + 6,
@@ -63,6 +59,7 @@ export default function MainLayout() {
     <Tabs screenOptions={{
       headerShown: false,
       tabBarStyle,
+      sceneStyle: { backgroundColor: 'transparent' },
       tabBarActiveTintColor: C.blue,
       tabBarInactiveTintColor: C.slate400,
       tabBarLabelStyle: { fontSize: 10, fontWeight: '600', marginTop: -2 },

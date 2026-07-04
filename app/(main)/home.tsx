@@ -18,7 +18,7 @@ const STAGE_LABEL: Record<string,string> = { lead:'New Lead', application_submit
 
 export default function HomeScreen() {
   const C = useColors()
-  const { resolvedWallpaper, wallpaperBrightness } = useTheme()
+  const { resolvedWallpaper } = useTheme()
   const s = mkS(C)
   const router  = useRouter()
   const insets  = useSafeAreaInsets()
@@ -113,16 +113,7 @@ export default function HomeScreen() {
   )
 
   return (
-    <View style={[s.bg, resolvedWallpaper && { backgroundColor: 'transparent' }]}>
-      {resolvedWallpaper && 'uri' in resolvedWallpaper && (
-        <Image source={{ uri: resolvedWallpaper.uri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-      )}
-      {resolvedWallpaper && 'color' in resolvedWallpaper && (
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: resolvedWallpaper.color }]} />
-      )}
-      {resolvedWallpaper && 'uri' in resolvedWallpaper && wallpaperBrightness < 1 && (
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000', opacity: 1 - wallpaperBrightness }]} />
-      )}
+    <View style={s.bg}>
       <View style={[s.header, { paddingTop: insets.top + 16 }]}>
         <View style={{ flex: 1 }}>
           <Text style={s.overline}>{(user?.role ?? 'Student').toUpperCase()}</Text>
@@ -156,7 +147,6 @@ export default function HomeScreen() {
       <ScrollView
         contentContainerStyle={s.content}
         showsVerticalScrollIndicator={false}
-        style={resolvedWallpaper ? { backgroundColor: 'transparent' } : undefined}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.blue} />}
       >
         {!isStudent && <AiBriefing userId={user?.id} firstName={user?.name?.split(' ')[0]} role={user?.role} />}
@@ -396,7 +386,7 @@ const mkSS = (C: ColorPalette) => StyleSheet.create({
 })
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
-  bg:               { flex: 1, backgroundColor: C.bg },
+  bg:               { flex: 1, backgroundColor: 'transparent' },
   // The greeting sits directly on the canvas — no white header container,
   // so the page reads as one continuous surface with floating cards.
   header:           { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingBottom: 20 },

@@ -30,7 +30,7 @@ const BRIGHTNESS_LEVELS = [
 
 export default function MoreScreen() {
   const C      = useColors()
-  const { mode, setMode, wallpaper, setWallpaper, wallpaperBrightness, setWallpaperBrightness, accentColor, setAccentColor, bubbleColor, setBubbleColor } = useTheme()
+  const { mode, setMode, wallpaper, setWallpaper, wallpaperBrightness, setWallpaperBrightness, accentColor, setAccentColor, bubbleColor, setBubbleColor, doodle, setDoodle } = useTheme()
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const s      = mkS(C)
@@ -400,6 +400,19 @@ export default function MoreScreen() {
           ))}
         </ScrollView>
 
+        <View style={[s.row, { borderTopWidth: 1, borderTopColor: C.slate100 }]}>
+          <View style={[s.iconBox, { backgroundColor: C.blue + '18' }]}>
+            <Ionicons name="color-wand-outline" size={18} color={C.blue} />
+          </View>
+          <Text style={s.rowLabel}>Doodle Pattern</Text>
+          <Switch
+            value={doodle}
+            onValueChange={setDoodle}
+            trackColor={{ false: C.slate200, true: C.blue + '66' }}
+            thumbColor={doodle ? C.blue : C.slate400}
+          />
+        </View>
+
         <TouchableOpacity
           style={[s.row, { borderTopWidth: 1, borderTopColor: C.slate100 }]}
           onPress={pickWallpaperPhoto}
@@ -512,7 +525,7 @@ export default function MoreScreen() {
 }
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
-  bg:             { flex: 1, backgroundColor: C.bg },
+  bg:             { flex: 1, backgroundColor: 'transparent' },
   center:         { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg },
   content:        { padding: 20, paddingBottom: 40 },
   pageHeader:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16, marginBottom: 8 },

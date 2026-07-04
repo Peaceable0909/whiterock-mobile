@@ -94,7 +94,7 @@ export default function JourneyTab() {
 }
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
-  bg:         { flex: 1, backgroundColor: C.bg },
+  bg:         { flex: 1, backgroundColor: 'transparent' },
   center:     { flex: 1, alignItems: 'center', justifyContent: 'center' },
   content:    { padding: 20 },
   timeline:   { marginVertical: 12 },

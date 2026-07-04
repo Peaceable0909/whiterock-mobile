@@ -461,7 +461,7 @@ Summarize the application status and suggest 2-3 next steps.`
 }
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
-  bg:               { flex: 1, backgroundColor: C.bg },
+  bg:               { flex: 1, backgroundColor: 'transparent' },
   center:           { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header:           { flexDirection: 'row', alignItems: 'center', paddingTop: 52, paddingBottom: 14, paddingHorizontal: 16 },
   back:             { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', marginRight: 8 },

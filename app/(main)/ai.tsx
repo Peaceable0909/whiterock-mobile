@@ -32,7 +32,7 @@ function fixAIFormatting(text: string): string {
 }
 
 export default function AIScreen() {
-  const { C, resolvedWallpaper } = useTheme()
+  const { C } = useTheme()
   const s = mkS(C)
   const insets = useSafeAreaInsets()
   const [msgs, setMsgs]         = useState<Msg[]>([])
@@ -394,20 +394,12 @@ WhiteRock information always overrides training data. Never present training dat
         )}
       </View>
 
-      {/* Messages — wallpaper-aware */}
-      {resolvedWallpaper && 'uri' in resolvedWallpaper && (
-        <Image source={{ uri: resolvedWallpaper.uri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-      )}
+      {/* Background comes from the shared AppCanvas at the root. */}
       <FlatList
         ref={listRef}
         data={msgs}
         keyExtractor={(_, i) => String(i)}
-        style={[
-          s.list,
-          resolvedWallpaper
-            ? { backgroundColor: 'color' in resolvedWallpaper ? resolvedWallpaper.color : 'transparent' }
-            : undefined,
-        ]}
+        style={s.list}
         contentContainerStyle={s.listContent}
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
         ListHeaderComponent={isEmpty ? (
@@ -480,7 +472,7 @@ WhiteRock information always overrides training data. Never present training dat
 }
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
-  bg:             { flex: 1, backgroundColor: C.bg },
+  bg:             { flex: 1, backgroundColor: 'transparent' },
   header:         { flexDirection: 'row', alignItems: 'center', paddingTop: 8, paddingBottom: 12, paddingHorizontal: 16, gap: 12 },
   botAvatar:      { width: 40, height: 40, borderRadius: 20, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
   botAvatarImg:   { width: 40, height: 40, borderRadius: 20 },
@@ -509,6 +501,6 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   bubbleText:     { fontSize: 14, color: C.navy, lineHeight: 20 },
   bubbleTextMe:   { color: C.white },
   inputBar:       { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 10, paddingTop: 8, backgroundColor: C.white, gap: 8, borderTopWidth: StyleSheet.hairlineWidth, borderColor: C.slate200 },
-  input:          { flex: 1, backgroundColor: C.bg, borderRadius: 24, paddingHorizontal: 18, paddingVertical: Platform.OS === 'ios' ? 12 : 9, fontSize: 15, color: C.navy, maxHeight: 110, borderWidth: 1, borderColor: C.slate100, minHeight: 44 },
+  input:          { flex: 1, backgroundColor: 'transparent', borderRadius: 24, paddingHorizontal: 18, paddingVertical: Platform.OS === 'ios' ? 12 : 9, fontSize: 15, color: C.navy, maxHeight: 110, borderWidth: 1, borderColor: C.slate100, minHeight: 44 },
   sendBtn:        { width: 44, height: 44, borderRadius: 22, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center', shadowColor: C.blue, shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 4 },
 })

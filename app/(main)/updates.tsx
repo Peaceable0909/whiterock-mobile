@@ -498,7 +498,7 @@ const mkC = (C: ColorPalette) => StyleSheet.create({
 })
 
 const mkG = (C: ColorPalette) => StyleSheet.create({
-  flex:               { flex: 1, backgroundColor: C.bg },
+  flex:               { flex: 1, backgroundColor: 'transparent' },
   center:             { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg },
   header:             { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingTop: 56, paddingBottom: 14 },
   headerTitle:        { fontSize: 20, fontWeight: '800', color: C.navy },

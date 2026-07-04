@@ -122,7 +122,7 @@ export default function GroupsScreen() {
 }
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
-  bg:           { flex: 1, backgroundColor: C.bg },
+  bg:           { flex: 1, backgroundColor: 'transparent' },
   center:       { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
   header:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 14 },
   backBtn:      { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },

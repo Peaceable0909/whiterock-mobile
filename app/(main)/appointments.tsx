@@ -355,7 +355,7 @@ export default function AppointmentsScreen() {
 }
 
 const mkS = (C: ColorPalette) => StyleSheet.create({
-  bg:             { flex: 1, backgroundColor: C.bg },
+  bg:             { flex: 1, backgroundColor: 'transparent' },
   center:         { flex: 1, alignItems: 'center', justifyContent: 'center' },
   tabRow:         { flexDirection: 'row', marginHorizontal: 14, marginBottom: 12, backgroundColor: C.white, borderRadius: 14, padding: 4, gap: 4 },
   tabBtn:         { flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center' },
