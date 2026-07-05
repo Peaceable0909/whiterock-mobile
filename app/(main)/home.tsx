@@ -117,7 +117,14 @@ export default function HomeScreen() {
       <View style={[s.header, { paddingTop: insets.top + 16 }]}>
         <View style={{ flex: 1 }}>
           <Text style={s.overline}>{(user?.role ?? 'Student').toUpperCase()}</Text>
-          <Text style={[s.heading, { color: headingInk }]}>Welcome, {user?.name?.split(' ')[0] ?? 'User'}</Text>
+          <View style={s.headingRow}>
+            <Text style={[s.heading, { color: headingInk }]}>Welcome, {user?.name?.split(' ')[0] ?? 'User'}</Text>
+            {!!user?.badge_color && (
+              <View style={[s.statusTick, {
+                backgroundColor: user.badge_color === 'red' ? C.red500 : user.badge_color === 'green' ? C.green400 : C.blue,
+              }]} />
+            )}
+          </View>
         </View>
         <View style={s.headerActions}>
           {user?.role === 'admin' && (
@@ -223,6 +230,13 @@ export default function HomeScreen() {
               </View>
               <Text style={s.gridLabel}>FILES</Text>
               <Text style={s.gridTitle}>Documents</Text>
+            </ScalePress>
+            <ScalePress containerStyle={{ flex: 1 }} style={s.gridCard} onPress={() => router.push('/(main)/groups' as any)}>
+              <View style={[s.iconCircle, { backgroundColor: '#EEF2FF' }]}>
+                <Ionicons name="people-circle-outline" size={18} color="#4F46E5" />
+              </View>
+              <Text style={s.gridLabel}>TEAM</Text>
+              <Text style={s.gridTitle}>Groups</Text>
             </ScalePress>
           </View>
         </FadeInUp>
@@ -394,6 +408,8 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   content:          { paddingHorizontal: 24, paddingBottom: 40 },
   overline:         { fontSize: 11, fontWeight: '800', color: C.blue, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4 },
   heading:          { fontSize: 27, fontWeight: '800', color: C.navy, letterSpacing: -0.6 },
+  headingRow:       { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  statusTick:       { width: 11, height: 11, borderRadius: 5.5, marginTop: 4 },
   bellBtn:          { width: 42, height: 42, borderRadius: 21, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
   bellBadge:        { position: 'absolute', top: 8, right: 8, minWidth: 14, height: 14, borderRadius: 7, backgroundColor: C.red500, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.white },
   bellBadgeText:    { fontSize: 8, fontWeight: '900', color: C.white },

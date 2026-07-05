@@ -59,28 +59,36 @@ export default function AdminAssignScreen() {
         .maybeSingle()
 
       const field = counselor.role === 'counselor' ? 'counselor_id' : 'agent_id'
+      let convId = existing?.id
 
       if (existing) {
-        await supabase.from('conversations').update({ [field]: counselor.id }).eq('id', existing.id)
+        const { error } = await supabase.from('conversations').update({ [field]: counselor.id }).eq('id', existing.id)
+        if (error) throw error
       } else {
-        await supabase.from('conversations').insert({ student_id: student.id, [field]: counselor.id })
+        const { data: created, error } = await supabase
+          .from('conversations').insert({ student_id: student.id, [field]: counselor.id })
+          .select('id').single()
+        if (error) throw error
+        convId = created?.id
       }
 
-      await supabase.from('student_profiles')
+      const { error: profileErr } = await supabase.from('student_profiles')
         .update({ [field]: counselor.id })
         .eq('user_id', student.id)
+      if (profileErr) throw profileErr
 
       await supabase.from('notifications').insert({
         user_id: student.id, type: 'info', is_read: false,
         title: 'Counselor Assigned',
         body: `${counselor.name} has been assigned to your application.`,
+        link: convId ? `/messages/${convId}` : undefined,
       })
 
       Alert.alert('Assigned ✓', `${counselor.name} is now assigned to ${student.name}.`)
       setSelectedStudent(null)
       await load()
     } catch (e: any) {
-      Alert.alert('Error', e.message)
+      Alert.alert('Assignment Failed', e.message ?? 'Could not save this assignment. Please try again.')
     }
     setAssigning(false)
   }

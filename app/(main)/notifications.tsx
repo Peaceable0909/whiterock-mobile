@@ -78,7 +78,6 @@ export default function NotificationsScreen() {
   const [loading, setLoading]     = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [userId, setUserId]       = useState<string | null>(null)
-  const [userRole, setUserRole]   = useState<string>('student')
   const uidRef = useRef<string | null>(null)
 
   const NOTIF_COLORS: Record<string, string> = {
@@ -110,8 +109,6 @@ export default function NotificationsScreen() {
       if (!user) return
       uidRef.current = user.id
       setUserId(user.id)
-      const { data: meUser } = await supabase.from('users').select('role').eq('id', user.id).maybeSingle()
-      setUserRole(meUser?.role ?? 'student')
       await fetchItems(user.id)
       setLoading(false)
       supabase.from('notifications')
@@ -152,20 +149,13 @@ export default function NotificationsScreen() {
       supabase.from('notifications').update({ is_read: true }).eq('id', item.id)
         .then(() => setItems(prev => prev.map(i => i.id === item.id ? { ...i, is_read: true } : i)))
     }
-    const d = item.data ?? {}
-    const convId    = d.convId    ?? d.conversation_id
-    const studentId = d.studentId ?? d.student_id
-    if (item.type === 'message' && convId) {
-      router.push(`/(main)/messages/${convId}`)
+    // link is the source of truth (e.g. '/messages/<id>', '/my-profile/journey').
+    // Older rows and a few generic types never got one, so fall back by type.
+    if (item.link) {
+      router.push(`/(main)${item.link}` as any)
     } else if (item.type === 'briefing') {
       router.push('/(main)/briefing' as any)
-    } else if (item.type === 'stage_update') {
-      if (studentId) router.push(`/(main)/students/${studentId}`)
-      else if (userRole === 'student') router.push('/(main)/my-profile')
-      // staff with missing studentId: no-op to avoid landing on wrong screen
-    } else if ((item.type === 'document' || item.type === 'visa') && studentId) {
-      router.push(`/(main)/students/${studentId}`)
-    } else if (item.type === 'document') {
+    } else if (item.type === 'document' || item.type === 'visa') {
       router.push('/(main)/documents')
     }
   }
@@ -264,6 +254,7 @@ export default function NotificationsScreen() {
                   </View>
                 </View>
               </View>
+              <Ionicons name="chevron-forward" size={16} color={C.slate300} style={s.cardChevron} />
             </TouchableOpacity>
           )
         }}
@@ -292,6 +283,7 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
     shadowOffset: { width: 0, height: 2 }, elevation: 2,
   },
   cardUnread:    { borderWidth: 1, borderColor: C.slate200 },
+  cardChevron:   { alignSelf: 'center', marginLeft: 2 },
   unreadBar:     { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 },
   iconCircle:    { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   cardTop:       { flexDirection: 'row', alignItems: 'center', gap: 6 },

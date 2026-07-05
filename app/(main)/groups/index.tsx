@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
   View, Text, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator,
-  RefreshControl,
+  RefreshControl, Image,
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -14,7 +14,7 @@ import { ColorPalette } from '@/constants/colors'
 type Group = {
   id: string; name: string; description?: string
   created_at: string; created_by: string
-  member_count?: number
+  member_count?: number; avatar_url?: string | null
 }
 
 const GROUP_COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#8B5CF6', '#EC4899']
@@ -99,7 +99,9 @@ export default function GroupsScreen() {
                 activeOpacity={0.82}
               >
                 <View style={[s.avatar, { backgroundColor: color }]}>
-                  <Text style={s.avatarTxt}>{initials(item.name)}</Text>
+                  {item.avatar_url
+                    ? <Image source={{ uri: item.avatar_url }} style={s.avatarImg} />
+                    : <Text style={s.avatarTxt}>{initials(item.name)}</Text>}
                 </View>
                 <View style={s.cardBody}>
                   <Text style={s.cardTitle} numberOfLines={1}>{item.name}</Text>
@@ -128,8 +130,9 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   backBtn:      { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle:  { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '800', color: C.navy },
   card:         { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: C.white, borderRadius: 18, padding: 14, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
-  avatar:       { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  avatar:       { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' },
   avatarTxt:    { fontSize: 16, fontWeight: '800', color: C.white },
+  avatarImg:    { width: 50, height: 50 },
   cardBody:     { flex: 1 },
   cardTitle:    { fontSize: 15, fontWeight: '700', color: C.navy, marginBottom: 3 },
   cardDesc:     { fontSize: 12, color: C.slate500, lineHeight: 17, marginBottom: 6 },
