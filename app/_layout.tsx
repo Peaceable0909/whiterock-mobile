@@ -94,7 +94,9 @@ export default function RootLayout() {
             router.replace('/(main)/home')
           }
         })
-        .catch(() => router.replace('/(main)/home'))
+        // Fail closed: a query error here (network, timeout) must not drop
+        // an unverified session straight into the app.
+        .catch(() => router.replace('/(auth)/login'))
         .finally(() => { setTimeout(() => { navigating.current = false }, 1500) })
     }
   // NOTE: 'role' deliberately excluded — re-running after setRole() caused
