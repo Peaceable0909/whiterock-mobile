@@ -51,7 +51,7 @@ export default function MoreScreen() {
   useEffect(() => {
     const load = async () => {
       const { data: { user: authUser } } = await supabase.auth.getUser()
-      if (!authUser) return
+      if (!authUser) { setLoading(false); return }
       const { data } = await supabase.from('users').select('*').eq('id', authUser.id).single()
       setUser(data)
       setPhoneInput(data?.phone ?? '')
@@ -169,6 +169,20 @@ export default function MoreScreen() {
     </View>
   )
 
+  if (!user) return (
+    <View style={[s.center, { padding: 24, gap: 16 }]}>
+      <Text style={{ fontSize: 14, color: C.slate500, textAlign: 'center' }}>
+        We couldn't load your profile. Your session may be out of date.
+      </Text>
+      <TouchableOpacity
+        onPress={() => fullSignOut()}
+        style={{ backgroundColor: C.blue, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12 }}
+      >
+        <Text style={{ color: C.white, fontWeight: '700' }}>Sign Out</Text>
+      </TouchableOpacity>
+    </View>
+  )
+
   const initials = user?.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() ?? 'U'
   const isAdmin  = user?.role === 'admin'
 
@@ -186,7 +200,7 @@ export default function MoreScreen() {
       {/* â”€â”€ Profile Card â”€â”€ */}
       <View style={s.profileCard}>
         <TouchableOpacity onPress={pickImage} disabled={uploading} style={s.avatarWrap}>
-          {user.avatar_url ? (
+          {user?.avatar_url ? (
             <Image source={{ uri: user.avatar_url }} style={s.avatarImg} />
           ) : (
             <View style={s.avatarFallback}>
