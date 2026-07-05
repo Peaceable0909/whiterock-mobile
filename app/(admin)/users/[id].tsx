@@ -71,7 +71,7 @@ export default function AdminUserDetailScreen() {
 
   const setBadgeColor = async (color: 'red' | 'green' | 'blue' | null) => {
     setSavingBadge(true)
-    const { error } = await supabase.from('users').update({ badge_color: color }).eq('id', id)
+    const { error } = await supabase.rpc('set_user_badge', { p_user: id, p_color: color })
     if (error) {
       showAlert('Error', error.message)
     } else {
@@ -164,10 +164,10 @@ export default function AdminUserDetailScreen() {
           </View>
         )}
 
-        {user.role === 'student' && (
+        {user.role !== 'student' && (
           <View style={s.card}>
             <Text style={s.cardTitle}>Status Tick</Text>
-            <Text style={s.tickHint}>Shown to {user.name.split(' ')[0]} on their own home screen.</Text>
+            <Text style={s.tickHint}>Shown to students who have {user.name.split(' ')[0]} as their agent or counselor.</Text>
             <View style={s.tickRow}>
               {BADGE_COLORS.map(c => {
                 const tickColor = c === 'red' ? C.red500 : c === 'green' ? C.green400 : C.blue

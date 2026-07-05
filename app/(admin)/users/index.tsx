@@ -35,7 +35,7 @@ export default function AdminUsersScreen() {
   const load = useCallback(async () => {
     const { data } = await supabase
       .from('users')
-      .select('id, name, email, role, is_online, created_at')
+      .select('id, name, email, role, is_online, created_at, badge_color')
       .order('created_at', { ascending: false })
     setUsers(data ?? [])
     setLoading(false)
@@ -112,6 +112,11 @@ export default function AdminUsersScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Text style={s.userName}>{item.name}</Text>
                   {item.is_online && <View style={s.onlineDot} />}
+                  {!!item.badge_color && (
+                    <View style={[s.statusTick, {
+                      backgroundColor: item.badge_color === 'red' ? C.red500 : item.badge_color === 'green' ? C.green400 : C.blue,
+                    }]} />
+                  )}
                 </View>
                 <Text style={s.userEmail} numberOfLines={1}>{item.email}</Text>
               </View>
@@ -148,6 +153,7 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   roleBadge:   { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   roleText:    { fontSize: 10, fontWeight: '700', textTransform: 'capitalize' },
   onlineDot:   { width: 7, height: 7, borderRadius: 4, backgroundColor: '#22C55E' },
+  statusTick:  { width: 8, height: 8, borderRadius: 4 },
   empty:       { alignItems: 'center', paddingTop: 60, gap: 8 },
   emptyText:   { fontSize: 14, color: C.slate400, fontWeight: '600' },
 })
