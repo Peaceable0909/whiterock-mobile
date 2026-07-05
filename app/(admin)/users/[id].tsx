@@ -15,6 +15,7 @@ const ROLES = ['student', 'counselor', 'agent', 'admin']
 const ROLE_COLOR: Record<string, string> = {
   student: '#1B4FD8', counselor: '#7C3AED', agent: '#059669', admin: '#DC2626',
 }
+const BADGE_COLORS = ['red', 'green', 'blue'] as const
 const STAGE_LABEL: Record<string,string> = {
   lead:'Lead', application_submitted:'Applied', offer_received:'Offer Received',
   deposit_paid:'Deposit Paid', cas_requested:'CAS Requested', cas_issued:'CAS Issued',
@@ -32,6 +33,7 @@ export default function AdminUserDetailScreen() {
   const [roleModal, setRoleModal] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [saving, setSaving]       = useState(false)
+  const [savingBadge, setSavingBadge] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -65,6 +67,17 @@ export default function AdminUserDetailScreen() {
     setUser((prev: any) => ({ ...prev, role: newRole }))
     setSaving(false)
     setRoleModal(false)
+  }
+
+  const setBadgeColor = async (color: 'red' | 'green' | 'blue' | null) => {
+    setSavingBadge(true)
+    const { error } = await supabase.from('users').update({ badge_color: color }).eq('id', id)
+    if (error) {
+      showAlert('Error', error.message)
+    } else {
+      setUser((prev: any) => ({ ...prev, badge_color: color }))
+    }
+    setSavingBadge(false)
   }
 
   const toggleDeactivation = () => {
@@ -151,6 +164,30 @@ export default function AdminUserDetailScreen() {
           </View>
         )}
 
+        {user.role === 'student' && (
+          <View style={s.card}>
+            <Text style={s.cardTitle}>Status Tick</Text>
+            <Text style={s.tickHint}>Shown to {user.name.split(' ')[0]} on their own home screen.</Text>
+            <View style={s.tickRow}>
+              {BADGE_COLORS.map(c => {
+                const tickColor = c === 'red' ? C.red500 : c === 'green' ? C.green400 : C.blue
+                const active = user.badge_color === c
+                return (
+                  <TouchableOpacity
+                    key={c}
+                    style={[s.tickDot, { backgroundColor: tickColor }, active && s.tickDotActive]}
+                    onPress={() => setBadgeColor(active ? null : c)}
+                    disabled={savingBadge}
+                  >
+                    {active && <Ionicons name="checkmark" size={18} color={C.white} />}
+                  </TouchableOpacity>
+                )
+              })}
+              {savingBadge && <ActivityIndicator color={C.blue} style={{ marginLeft: 8 }} />}
+            </View>
+          </View>
+        )}
+
         <View style={s.card}>
           <Text style={s.cardTitle}>Admin Actions</Text>
           <TouchableOpacity style={s.actionRow} onPress={() => setRoleModal(true)}>
@@ -216,6 +253,10 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   roleText:       { fontSize: 12, fontWeight: '700', textTransform: 'capitalize' },
   card:           { width: '100%', maxWidth: 500, backgroundColor: C.white, borderRadius: 16, padding: 16, marginBottom: 14, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 },
   cardTitle:      { fontSize: 11, fontWeight: '700', color: C.slate400, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 },
+  tickHint:       { fontSize: 12, color: C.slate400, marginTop: -6, marginBottom: 12 },
+  tickRow:        { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  tickDot:        { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', opacity: 0.35 },
+  tickDotActive:  { opacity: 1, transform: [{ scale: 1.08 }] },
   infoRow:        { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderColor: C.slate100 },
   infoLabel:      { fontSize: 12, color: C.slate400, fontWeight: '600' },
   infoVal:        { fontSize: 12, color: C.navy, fontWeight: '600', maxWidth: '60%', textAlign: 'right' },

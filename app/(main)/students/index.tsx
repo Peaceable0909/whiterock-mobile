@@ -129,7 +129,14 @@ export default function StudentsScreen() {
               <View style={s.avatar}><Text style={s.avatarText}>{initials}</Text></View>
               <View style={{ flex: 1 }}>
                 <View style={s.row}>
-                  <Text style={s.studentName}>{item.name}</Text>
+                  <View style={s.nameWrap}>
+                    <Text style={s.studentName} numberOfLines={1}>{item.name}</Text>
+                    {!!item.badge_color && (
+                      <View style={[s.statusTick, {
+                        backgroundColor: item.badge_color === 'red' ? C.red500 : item.badge_color === 'green' ? C.green400 : C.blue,
+                      }]} />
+                    )}
+                  </View>
                   <View style={s.stageBadge}><Text style={s.stageBadgeText}>{STAGE_LABEL[stage]}</Text></View>
                 </View>
                 {item.profile?.school && <Text style={s.school} numberOfLines={1}>{item.profile.school}</Text>}
@@ -182,7 +189,9 @@ const mkS = (C: ColorPalette) => StyleSheet.create({
   avatar:       { width: 52, height: 52, borderRadius: 14, backgroundColor: C.slate200, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   avatarText:   { fontSize: 18, fontWeight: '700', color: C.slate600 },
   row:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 },
-  studentName:  { fontSize: 14, fontWeight: '700', color: C.navy, flex: 1 },
+  nameWrap:     { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, marginRight: 8 },
+  studentName:  { fontSize: 14, fontWeight: '700', color: C.navy, flexShrink: 1 },
+  statusTick:   { width: 9, height: 9, borderRadius: 4.5, flexShrink: 0 },
   school:       { fontSize: 12, color: C.slate500, marginBottom: 6 },
   stageBadge:   { backgroundColor: '#EFF6FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, marginLeft: 6 },
   stageBadgeText:{ fontSize: 10, fontWeight: '700', color: C.blue },

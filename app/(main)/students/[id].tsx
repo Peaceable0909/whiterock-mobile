@@ -91,6 +91,7 @@ export default function StudentProfileScreen() {
       user_id: id, type: 'info', is_read: false,
       title: 'Application Stage Updated',
       body: `Your application has moved to: ${STAGE_LABEL[newStage]}`,
+      link: '/my-profile/journey',
     })
     setSavingStage(false)
     setStageModal(false)
@@ -104,6 +105,7 @@ export default function StudentProfileScreen() {
       user_id: id, type: 'info', is_read: false,
       title: `Document ${status === 'approved' ? 'Approved' : 'Rejected'}`,
       body: `Your document has been ${status}.`,
+      link: '/documents',
     })
     // Trigger AI extraction after approval so document_facts are populated
     if (status === 'approved') {
