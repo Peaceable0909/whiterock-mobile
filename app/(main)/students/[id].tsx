@@ -84,29 +84,20 @@ export default function StudentProfileScreen() {
   // ─── Stage update ───────────────────────────────────────────────
   const updateStage = async (newStage: string) => {
     setSavingStage(true)
+    // notify_on_stage_change (DB trigger) already notifies the student —
+    // no client-side insert here to avoid a duplicate notification.
     await supabase.from('student_profiles').update({ stage: newStage }).eq('user_id', id)
     setProfile((p: any) => ({ ...p, stage: newStage }))
-    // Notify student
-    await supabase.from('notifications').insert({
-      user_id: id, type: 'info', is_read: false,
-      title: 'Application Stage Updated',
-      body: `Your application has moved to: ${STAGE_LABEL[newStage]}`,
-      link: '/my-profile/journey',
-    })
     setSavingStage(false)
     setStageModal(false)
   }
 
   // ─── Document approve/reject ────────────────────────────────────
   const reviewDoc = async (docId: string, status: 'approved' | 'rejected') => {
+    // notify_on_document_review (DB trigger) already notifies the student —
+    // no client-side insert here to avoid a duplicate notification.
     await supabase.from('documents').update({ status, reviewed_by: myId }).eq('id', docId)
     setDocs(prev => prev.map(d => d.id === docId ? { ...d, status } : d))
-    await supabase.from('notifications').insert({
-      user_id: id, type: 'info', is_read: false,
-      title: `Document ${status === 'approved' ? 'Approved' : 'Rejected'}`,
-      body: `Your document has been ${status}.`,
-      link: '/documents',
-    })
     // Trigger AI extraction after approval so document_facts are populated
     if (status === 'approved') {
       const doc = docs.find(d => d.id === docId)
