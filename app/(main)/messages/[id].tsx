@@ -1032,7 +1032,7 @@ export default function ChatScreen() {
       </TouchableOpacity>
     </Modal>
 
-    <KeyboardAvoidingView style={g.flex} behavior='padding' keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 0}>
+    <KeyboardAvoidingView style={g.flex} behavior='padding' keyboardVerticalOffset={0}>
       {/* Background comes from the shared AppCanvas at the root — the header
           and composer are transparent on top, so the chat has no bezels. */}
       <View style={[g.header, { paddingTop: insets.top + 8 }]}>
