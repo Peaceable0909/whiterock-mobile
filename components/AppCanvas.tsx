@@ -38,7 +38,7 @@ export function AppCanvas() {
       )}
       {photo && (
         <>
-          <Image source={{ uri: photo }} style={StyleSheet.absoluteFill} resizeMode="cover" blurRadius={7} />
+          <Image source={{ uri: photo }} style={StyleSheet.absoluteFill} resizeMode="cover" />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000', opacity: Math.max(0.16, 1 - wallpaperBrightness) }]} />
         </>
       )}
