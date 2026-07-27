@@ -145,7 +145,7 @@ export default function HomeScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={s.content}
+        contentContainerStyle={[s.content, { paddingBottom: 100 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.blue} />}
       >
