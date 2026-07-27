@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
+import { getInitials } from '@/lib/ui'
 
 const STAGES = ['lead','application_submitted','offer_received','deposit_paid','cas_requested','cas_issued','visa_submitted','visa_decision']
 const STAGE_LABEL: Record<string,string> = { lead:'Lead', application_submitted:'Applied', offer_received:'Offer', deposit_paid:'Deposit', cas_requested:'CAS', cas_issued:'CAS Issued', visa_submitted:'Visa', visa_decision:'Decision' }
@@ -60,7 +61,7 @@ export default function StudentsScreen() {
 
   const filtered = students.filter(s => {
     const q = search.toLowerCase()
-    const matchSearch = !q || s.name.toLowerCase().includes(q) || s.profile?.school?.toLowerCase().includes(q)
+    const matchSearch = !q || (s.name ?? '').toLowerCase().includes(q) || s.profile?.school?.toLowerCase().includes(q)
     const matchFilter = filter === 'all' || s.profile?.stage === filter
     return matchSearch && matchFilter
   })
@@ -122,7 +123,7 @@ export default function StudentsScreen() {
           const stage    = item.profile?.stage ?? 'lead'
           const idx      = STAGES.indexOf(stage)
           const pct      = Math.round((idx / (STAGES.length - 1)) * 100)
-          const initials = item.name.split(' ').map((n:string)=>n[0]).join('').slice(0,2).toUpperCase()
+          const initials = getInitials(item.name)
           const cid      = convMap[item.id]
           return (
             <TouchableOpacity style={s.studentCard} onPress={() => router.push(`/(main)/students/${item.id}`)}>

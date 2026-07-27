@@ -29,6 +29,15 @@ export const confirmDialog = (
     ])
   })
 
+// Safe initials helper — `name` can be null/empty for users who haven't
+// finished onboarding yet (invited staff, Google sign-ins pre-redeem), and
+// calling .split() directly on that crashes the whole screen.
+export const getInitials = (name?: string | null): string => {
+  const trimmed = (name ?? '').trim()
+  if (!trimmed) return '?'
+  return trimmed.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()
+}
+
 // expo-haptics rejects on web; swallow everywhere so callers can fire-and-forget.
 const canHaptic = Platform.OS !== 'web'
 export const haptic = {
