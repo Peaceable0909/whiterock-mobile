@@ -11,6 +11,7 @@ import { getAiAvatarUrl } from '@/lib/aiConfig'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
 import { Skeleton, EmptyState } from '@/components/Skeleton'
+import { getInitials } from '@/lib/ui'
 
 const formatConvTime = (iso: string) => {
   const d = new Date(iso)
@@ -124,13 +125,12 @@ export default function MessagesScreen() {
   const filtered = convs.filter(c => {
     const other = role === 'student' ? (c.agent || c.counselor) : c.student
     if (!other) return false
-    return !search || other.name.toLowerCase().includes(search.toLowerCase())
+    return !search || (other.name ?? '').toLowerCase().includes(search.toLowerCase())
   })
 
-  const getInitials = (name: string) => (name ?? '?').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
-  const getUnread   = (c: any) => role === 'student' ? (c.unread_student ?? 0) : (c.unread_staff ?? 0)
+  const getUnread = (c: any) => role === 'student' ? (c.unread_student ?? 0) : (c.unread_staff ?? 0)
 
-  const filteredStudents = students.filter(s => !studentSearch || s.name.toLowerCase().includes(studentSearch.toLowerCase()))
+  const filteredStudents = students.filter(s => !studentSearch || (s.name ?? '').toLowerCase().includes(studentSearch.toLowerCase()))
 
   if (loading) return (
     <View style={[s.bg, { paddingTop: insets.top }]}>
@@ -277,7 +277,7 @@ export default function MessagesScreen() {
                 </View>
               }
               renderItem={({ item }) => {
-                const initials = item.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+                const initials = getInitials(item.name)
                 return (
                   <TouchableOpacity
                     style={s.studentRow}

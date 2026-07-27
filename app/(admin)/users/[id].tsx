@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
-import { showAlert, confirmDialog } from '@/lib/ui'
+import { showAlert, confirmDialog, getInitials } from '@/lib/ui'
 
 const ROLES = ['student', 'counselor', 'agent', 'admin']
 const ROLE_COLOR: Record<string, string> = {
@@ -114,7 +114,7 @@ export default function AdminUserDetailScreen() {
   if (loading) return <View style={s.center}><ActivityIndicator color={C.blue} /></View>
   if (!user)   return <View style={s.center}><Text style={s.emptyText}>User not found</Text></View>
 
-  const initials  = user.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+  const initials  = getInitials(user.name)
   const roleColor = ROLE_COLOR[user.role] ?? C.slate400
 
   return (
@@ -167,7 +167,7 @@ export default function AdminUserDetailScreen() {
         {user.role !== 'student' && (
           <View style={s.card}>
             <Text style={s.cardTitle}>Status Tick</Text>
-            <Text style={s.tickHint}>Shown to students who have {user.name.split(' ')[0]} as their agent or counselor.</Text>
+            <Text style={s.tickHint}>Shown to students who have {(user.name ?? 'this person').split(' ')[0]} as their agent or counselor.</Text>
             <View style={s.tickRow}>
               {BADGE_COLORS.map(c => {
                 const tickColor = c === 'red' ? C.red500 : c === 'green' ? C.green400 : C.blue

@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
+import { getInitials } from '@/lib/ui'
 
 const ROLE_FILTERS = [
   { key: 'all',       label: 'All' },
@@ -46,7 +47,7 @@ export default function AdminUsersScreen() {
 
   const filtered = users.filter(u => {
     const q = search.toLowerCase()
-    const matchSearch = !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+    const matchSearch = !q || (u.name ?? '').toLowerCase().includes(q) || (u.email ?? '').toLowerCase().includes(q)
     const matchFilter = filter === 'all' || u.role === filter
     return matchSearch && matchFilter
   })
@@ -101,7 +102,7 @@ export default function AdminUsersScreen() {
           </View>
         }
         renderItem={({ item }) => {
-          const initials = item.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+          const initials = getInitials(item.name)
           const roleColor = ROLE_COLOR[item.role] ?? C.slate400
           return (
             <TouchableOpacity style={s.userCard} onPress={() => router.push(`/(admin)/users/${item.id}`)}>

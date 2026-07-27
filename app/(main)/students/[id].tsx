@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
+import { getInitials } from '@/lib/ui'
 
 const STAGES = ['lead','application_submitted','offer_received','deposit_paid','cas_requested','cas_issued','visa_submitted','visa_decision']
 const STAGE_LABEL: Record<string,string> = {
@@ -205,7 +206,7 @@ Summarize the application status and suggest 2-3 next steps.`
   const stage    = profile?.stage ?? 'lead'
   const idx      = STAGES.indexOf(stage)
   const pct      = Math.round((idx / (STAGES.length - 1)) * 100)
-  const initials = student.name.split(' ').map((n:string)=>n[0]).join('').slice(0,2).toUpperCase()
+  const initials = getInitials(student.name)
 
   const pendingDocs   = docs.filter(d => d.status === 'pending').length
   const approvedDocs  = docs.filter(d => d.status === 'approved').length

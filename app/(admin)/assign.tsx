@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useColors } from '@/lib/theme'
 import { ColorPalette } from '@/constants/colors'
+import { getInitials } from '@/lib/ui'
 
 export default function AdminAssignScreen() {
   const C       = useColors()
@@ -122,7 +123,7 @@ export default function AdminAssignScreen() {
             </View>
           }
           renderItem={({ item }) => {
-            const initials = item.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+            const initials = getInitials(item.name)
             const color    = item.role === 'counselor' ? '#7C3AED' : '#059669'
             return (
               <TouchableOpacity
@@ -171,7 +172,7 @@ export default function AdminAssignScreen() {
           <View style={s.empty}><Text style={s.emptyText}>No students found</Text></View>
         }
         renderItem={({ item }) => {
-          const initials = item.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+          const initials = getInitials(item.name)
           const assigned = item.profile?.counselor_id || item.profile?.agent_id
           return (
             <TouchableOpacity style={s.userCard} onPress={() => setSelectedStudent(item)}>
